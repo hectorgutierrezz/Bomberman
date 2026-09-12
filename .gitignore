@@ -1,0 +1,46 @@
+# ==========================================
+# Visual Studio / C++ Gitignore per a Bomberman / 2D OpenGL
+# ==========================================
+
+# Carpetes de memòria cau i opcions d'entorn de Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Directoris de compilació (Build outputs)
+[Dd]ebug/
+[Rr]elease/
+[Xx]64/
+[Xx]86/
+[Bb]in/
+[Oo]bj/
+build/
+
+# Base de dades d'IntelliSense i fitxers temporals de compilació
+*.VC.db
+*.VC.opendb
+*.sdf
+*.opensdf
+*.ipch
+*.pch
+*.idb
+*.pdb
+*.ilk
+*.obj
+*.tlog
+*.log
+
+# Executables generats
+*.exe
+*.out
+*.app
+
+# Configuració local de l'editor
+.vscode/
+
+# Fitxers del sistema operatiu
+Thumbs.db
+Desktop.ini
+.DS_Store
