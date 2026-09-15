@@ -42,6 +42,13 @@ private:
 	void initShaders();
 	bool isKeyJustPressed(int key);
 
+	void renderMainMenu();
+	void renderInstructions();
+	void renderCredits();
+	void renderPauseOverlay();
+	void renderGameOver();
+	void renderWin();
+
 private:
 	TileMap *map;
 	Player *player;
@@ -51,6 +58,23 @@ private:
 	GameState gameState;
 	bool keyLastState[GLFW_KEY_LAST + 1];
 
+	Texture menuTex;
+	Sprite *menuSprite;
+
+	Texture instructionsTex;
+	Sprite *instructionsSprite;
+
+	Texture creditsTex;
+	Sprite *creditsSprite;
+
+	Texture pauseTex;
+	Sprite *pauseSprite;
+
+	Texture gameOverTex;
+	Sprite *gameOverSprite;
+
+	Texture winTex;
+	Sprite *winSprite;
 };
 
 

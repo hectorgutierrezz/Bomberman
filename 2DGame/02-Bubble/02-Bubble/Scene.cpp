@@ -11,17 +11,6 @@
 #define INIT_PLAYER_X_TILES 4
 #define INIT_PLAYER_Y_TILES 25
 
-enum GameState {
-	MAIN_MENU,
-	INSTRUCTIONS,
-	CREDITS,
-	PLAYING,
-	PAUSED,
-	GAME_OVER,
-	WIN
-};
-
-
 Scene::Scene()
 {
 	map = NULL;
@@ -52,51 +41,60 @@ void Scene::init()
 
 void Scene::update(int deltaTime)
 {
+	currentTime += deltaTime;
+
 	switch (gameState) {
 		case MAIN_MENU:
-			if(Game::instance().keyPressed()) {
+			if(isKeyJustPressed(GLFW_KEY_1)) {
 				gameState = PLAYING;
+			}
+			else if(isKeyJustPressed(GLFW_KEY_2)) {
+				gameState = INSTRUCTIONS;
+			}
+			else if(isKeyJustPressed(GLFW_KEY_3)) {
+				gameState = CREDITS;
 			}
 		break;
 
 		case INSTRUCTIONS:
-			if(Game::instance().getKey(GLFW_KEY_ENTER)) {
+			if(isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE)) {
 				gameState = MAIN_MENU;
 			}
 		break;
 
 		case CREDITS:
-			if(Game::instance().getKey(GLFW_KEY_ENTER)) {
+			if(isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE)) {
 				gameState = MAIN_MENU;
 			}
 		break;
 
 		case PLAYING:
-			if(Game::instance().keyPressed('esc')) {
+			if(isKeyJustPressed(GLFW_KEY_ESCAPE)) {
 				gameState = PAUSED;
+			}
+			else {
+				player->update(deltaTime);
 			}
 		break;
 
 		case PAUSED:
-			if(Game::instance().getKey(GLFW_KEY_ENTER)) {
+			if(isKeyJustPressed(GLFW_KEY_ESCAPE)) {
 				gameState = PLAYING;
 			}
 		break;
 
 		case GAME_OVER:
-			if(Game::instance().getKey(GLFW_KEY_ENTER)) {
+			if(isKeyJustPressed(GLFW_KEY_ENTER)) {
 				gameState = MAIN_MENU;
 			}
 		break;
 
 		case WIN:
-			if(Game::instance().getKey(GLFW_KEY_ENTER)) {
+			if(isKeyJustPressed(GLFW_KEY_ENTER)) {
 				gameState = MAIN_MENU;
 			}
 		break;
 	}
-	currentTime += deltaTime;
-	player->update(deltaTime);
 }
 
 void Scene::render()
@@ -109,9 +107,38 @@ void Scene::render()
 	modelview = glm::mat4(1.0f);
 	texProgram.setUniformMatrix4f("modelview", modelview);
 	texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
-	map->render();
-	player->render();
+	
+	switch (gameState) {
+        case MAIN_MENU:
+            renderMainMenu(); 
+            break;
+        case INSTRUCTIONS:
+            renderInstructions(); 
+            break;
+        case CREDITS:
+            renderCredits(); 
+            break;
+        case PLAYING:
+            map->render();
+            player->render();
+            renderEnemies();
+            renderBombs();
+            renderHUD();
+            break;
+        case PAUSED:
+            map->render();
+            player->render();
+            renderPauseOverlay();
+            break;
+        case GAME_OVER:
+            renderGameOverScreen();
+            break;
+        case WIN:
+            renderWinScreen();
+            break;
+    }
 }
+
 
 void Scene::initShaders()
 {
@@ -141,6 +168,20 @@ void Scene::initShaders()
 	texProgram.bindFragmentOutput("outColor");
 	vShader.free();
 	fShader.free();
+}
+
+bool Scene::isKeyJustPressed(int key)
+//aquesta funció la utilitzarem per a que detecti que ha sigut presionada un unic cop fins que la deixes de presionar
+{
+	bool pressed = Game::instance().getKey(key);
+	if(pressed && !keyLastState[key]) {
+		keyLastState[key] = true;
+		return true;
+	}
+	if(!pressed) {
+		keyLastState[key] = false;
+	}
+	return false;
 }
 
 
