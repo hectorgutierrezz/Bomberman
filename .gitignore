@@ -36,6 +36,13 @@ build/
 *.exe
 *.out
 *.app
+bomberman
+
+# Enllaços simbòlics de compilació
+/2DGame/02-Bubble/images
+/2DGame/02-Bubble/levels
+/2DGame/02-Bubble/shaders
+/libs/SOIL
 
 # Configuració local de l'editor
 .vscode/

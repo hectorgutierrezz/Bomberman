@@ -15,6 +15,9 @@ Scene::Scene()
 {
 	map = NULL;
 	player = NULL;
+	gameState = PLAYING;
+	for (int i = 0; i <= GLFW_KEY_LAST; ++i)
+		keyLastState[i] = false;
 }
 
 Scene::~Scene()
@@ -30,6 +33,9 @@ Scene::~Scene()
 void Scene::init()
 {
 	initShaders();
+	gameState = PLAYING;
+	for (int i = 0; i <= GLFW_KEY_LAST; ++i)
+		keyLastState[i] = false;
 	map = TileMap::createTileMap("levels/level01.txt", glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
@@ -131,10 +137,10 @@ void Scene::render()
             renderPauseOverlay();
             break;
         case GAME_OVER:
-            renderGameOverScreen();
+            renderGameOver();
             break;
         case WIN:
-            renderWinScreen();
+            renderWin();
             break;
     }
 }
@@ -184,5 +190,12 @@ bool Scene::isKeyJustPressed(int key)
 	return false;
 }
 
-
-
+void Scene::renderMainMenu() {}
+void Scene::renderInstructions() {}
+void Scene::renderCredits() {}
+void Scene::renderPauseOverlay() {}
+void Scene::renderGameOver() {}
+void Scene::renderWin() {}
+void Scene::renderEnemies() {}
+void Scene::renderBombs() {}
+void Scene::renderHUD() {}
