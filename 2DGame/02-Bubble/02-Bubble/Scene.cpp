@@ -21,6 +21,9 @@ Scene::Scene()
 	pauseSprite = NULL;
 	gameOverSprite = NULL;
 	winSprite = NULL;
+	gameState = MAIN_MENU;
+	for (int i = 0; i <= GLFW_KEY_LAST; ++i)
+		keyLastState[i] = false;
 }
 
 Scene::~Scene()
@@ -48,26 +51,6 @@ Scene::~Scene()
 void Scene::init()
 {
 	initShaders();
-	gameState = MAIN_MENU;
-
-	menuTex.loadFromFile("images/menu.png", TEXTURE_PIXEL_FORMAT_RGBA);
-	menuSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &menuTex, &texProgram);
-
-	instructionsTex.loadFromFile("images/instruccions.png", TEXTURE_PIXEL_FORMAT_RGBA);
-	instructionsSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &instructionsTex, &texProgram);
-
-	creditsTex.loadFromFile("images/credits.png", TEXTURE_PIXEL_FORMAT_RGBA);
-	creditsSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &creditsTex, &texProgram);
-
-	pauseTex.loadFromFile("images/pause.png", TEXTURE_PIXEL_FORMAT_RGBA);
-	pauseSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &pauseTex, &texProgram);
-
-	gameOverTex.loadFromFile("images/game_over.png", TEXTURE_PIXEL_FORMAT_RGBA);
-	gameOverSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &gameOverTex, &texProgram);
-
-	winTex.loadFromFile("images/win.png", TEXTURE_PIXEL_FORMAT_RGBA);
-	winSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &winTex, &texProgram);
-
 	map = TileMap::createTileMap("levels/level01.txt", glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
@@ -252,5 +235,12 @@ bool Scene::isKeyJustPressed(int key)
 	return false;
 }
 
-
-
+void Scene::renderMainMenu() {}
+void Scene::renderInstructions() {}
+void Scene::renderCredits() {}
+void Scene::renderPauseOverlay() {}
+void Scene::renderGameOver() {}
+void Scene::renderWin() {}
+void Scene::renderEnemies() {}
+void Scene::renderBombs() {}
+void Scene::renderHUD() {}

@@ -48,6 +48,9 @@ private:
 	void renderPauseOverlay();
 	void renderGameOver();
 	void renderWin();
+	void renderEnemies();
+	void renderBombs();
+	void renderHUD();
 
 private:
 	TileMap *map;
