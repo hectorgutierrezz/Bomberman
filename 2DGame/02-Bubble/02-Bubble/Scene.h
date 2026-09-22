@@ -5,9 +5,11 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <vector>
 #include "ShaderProgram.h"
 #include "TileMap.h"
 #include "Player.h"
+#include "Bomb.h"
 
 
 enum GameState {
@@ -51,6 +53,7 @@ private:
 	void renderEnemies();
 	void renderBombs();
 	void renderHUD();
+	void placeBomb();
 
 private:
 	TileMap *map;
@@ -78,6 +81,8 @@ private:
 
 	Texture winTex;
 	Sprite *winSprite;
+
+	std::vector<Bomb*> bombs;
 };
 
 

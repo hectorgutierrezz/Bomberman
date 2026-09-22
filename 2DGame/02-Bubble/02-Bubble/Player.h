@@ -2,8 +2,10 @@
 #define _PLAYER_INCLUDE
 
 
+#include <vector>
 #include "Sprite.h"
 #include "TileMap.h"
+#include "Bomb.h"
 
 
 // Player is basically a Sprite that represents the player. As such it has
@@ -23,6 +25,8 @@ public:
 	
 	void setTileMap(TileMap *tileMap);
 	void setPosition(const glm::vec2 &pos);
+	void setBombs(const std::vector<Bomb*> *bombsList);
+	glm::ivec2 getPosition() const { return posPlayer; }
 	
 private:
 	bool bJumping;
@@ -31,6 +35,7 @@ private:
 	Texture spritesheet;
 	Sprite *sprite;
 	TileMap *map;
+	const std::vector<Bomb*> *bombs;
 
 };
 

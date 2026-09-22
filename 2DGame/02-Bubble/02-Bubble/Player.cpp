@@ -20,6 +20,7 @@ Player::Player()
 {
 	sprite = NULL;
 	map = NULL;
+	bombs = NULL;
 }
 
 Player::~Player()
@@ -138,6 +139,21 @@ void Player::update(int deltaTime)
 			}
 		}
 	}
+
+	if(bombs != NULL)
+	{
+		for(size_t i = 0; i < bombs->size(); ++i)
+		{
+			Bomb *bomb = (*bombs)[i];
+			if(bomb != NULL && bomb->isActive() && bomb->isSolidOnTop(posPlayer, glm::ivec2(32, 32)))
+			{
+				posPlayer.y = bomb->getTop() - 32;
+				bJumping = false;
+				jumpAngle = 0;
+				break;
+			}
+		}
+	}
 	
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 }
@@ -156,6 +172,11 @@ void Player::setPosition(const glm::vec2 &pos)
 {
 	posPlayer = pos;
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+}
+
+void Player::setBombs(const std::vector<Bomb*> *bombsList)
+{
+	bombs = bombsList;
 }
 
 

@@ -51,11 +51,13 @@ Scene::~Scene()
 void Scene::init()
 {
 	initShaders();
+	bombs.clear();
 	map = TileMap::createTileMap("levels/level01.txt", glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
 	player->setPosition(glm::vec2(INIT_PLAYER_X_TILES * map->getTileSize(), INIT_PLAYER_Y_TILES * map->getTileSize()));
 	player->setTileMap(map);
+	player->setBombs(&bombs);
 	projection = glm::ortho(0.f, float(SCREEN_WIDTH), float(SCREEN_HEIGHT), 0.f);
 	currentTime = 0.0f;
 }
@@ -94,6 +96,18 @@ void Scene::update(int deltaTime)
 				gameState = PAUSED;
 			}
 			else {
+				if(isKeyJustPressed(GLFW_KEY_SPACE) || isKeyJustPressed(GLFW_KEY_X)) {
+					placeBomb();
+				}
+				for(size_t i = 0; i < bombs.size(); ++i) {
+					if(bombs[i] != NULL) {
+						bombs[i]->update(deltaTime);
+						if(!bombs[i]->isActive()) {
+							delete bombs[i];
+							bombs[i] = NULL;
+						}
+					}
+				}
 				player->update(deltaTime);
 			}
 		break;
@@ -141,9 +155,9 @@ void Scene::render()
             break;
         case PLAYING:
             map->render();
+            renderBombs();
             player->render();
             //renderEnemies();
-            //renderBombs();
             //renderHUD();
             break;
         case PAUSED:
@@ -235,12 +249,30 @@ bool Scene::isKeyJustPressed(int key)
 	return false;
 }
 
-void Scene::renderMainMenu() {}
-void Scene::renderInstructions() {}
-void Scene::renderCredits() {}
-void Scene::renderPauseOverlay() {}
-void Scene::renderGameOver() {}
-void Scene::renderWin() {}
 void Scene::renderEnemies() {}
-void Scene::renderBombs() {}
+void Scene::renderBombs() {
+	for(size_t i = 0; i < bombs.size(); ++i) {
+		if(bombs[i] != NULL)
+			bombs[i]->render();
+	}
+}
 void Scene::renderHUD() {}
+
+void Scene::placeBomb()
+{
+	if(player == NULL || map == NULL)
+		return;
+
+	glm::ivec2 playerPos = player->getPosition();
+	for(size_t i = 0; i < bombs.size(); ++i) {
+		if(bombs[i] != NULL && bombs[i]->isActive()) {
+			if(abs(bombs[i]->getPosition().x - float(playerPos.x)) < 20.f && abs(bombs[i]->getPosition().y - float(playerPos.y)) < 20.f)
+				return;
+		}
+	}
+
+	Bomb *bomb = new Bomb();
+	bomb->init(texProgram);
+	bomb->setPosition(glm::vec2(float(playerPos.x), float(playerPos.y)));
+	bombs.push_back(bomb);
+}
