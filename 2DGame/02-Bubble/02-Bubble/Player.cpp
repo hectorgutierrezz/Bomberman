@@ -84,6 +84,7 @@ void Player::update(int deltaTime)
 	{
 		if(sprite->animation() != MOVE_LEFT)
 			sprite->changeAnimation(MOVE_LEFT);
+		sprite->setFlippedHorizontally(true);
 		posPlayer.x -= 2;
 		if(map->collisionMoveLeft(posPlayer, glm::ivec2(32, 32)))
 		{
@@ -95,6 +96,7 @@ void Player::update(int deltaTime)
 	{
 		if(sprite->animation() != MOVE_RIGHT)
 			sprite->changeAnimation(MOVE_RIGHT);
+		sprite->setFlippedHorizontally(false);
 		posPlayer.x += 2;
 		if(map->collisionMoveRight(posPlayer, glm::ivec2(32, 32)))
 		{
@@ -105,9 +107,15 @@ void Player::update(int deltaTime)
 	else
 	{
 		if(sprite->animation() == MOVE_LEFT)
+		{
 			sprite->changeAnimation(STAND_LEFT);
+			sprite->setFlippedHorizontally(true);
+		}
 		else if(sprite->animation() == MOVE_RIGHT)
+		{
 			sprite->changeAnimation(STAND_RIGHT);
+			sprite->setFlippedHorizontally(false);
+		}
 	}
 	
 	if(bJumping)
