@@ -15,6 +15,12 @@ Scene::Scene()
 {
 	map = NULL;
 	player = NULL;
+	menuSprite = NULL;
+	instructionsSprite = NULL;
+	creditsSprite = NULL;
+	pauseSprite = NULL;
+	gameOverSprite = NULL;
+	winSprite = NULL;
 }
 
 Scene::~Scene()
@@ -24,12 +30,44 @@ Scene::~Scene()
 		delete map;
 	if(player != NULL)
 		delete player;
+	if(menuSprite != NULL)
+		delete menuSprite;
+	if(instructionsSprite != NULL)
+		delete instructionsSprite;
+	if(creditsSprite != NULL)
+		delete creditsSprite;
+	if(pauseSprite != NULL)
+		delete pauseSprite;
+	if(gameOverSprite != NULL)
+		delete gameOverSprite;
+	if(winSprite != NULL)
+		delete winSprite;
 }
 
 
 void Scene::init()
 {
 	initShaders();
+	gameState = MAIN_MENU;
+
+	menuTex.loadFromFile("images/menu.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	menuSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &menuTex, &texProgram);
+
+	instructionsTex.loadFromFile("images/instruccions.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	instructionsSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &instructionsTex, &texProgram);
+
+	creditsTex.loadFromFile("images/credits.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	creditsSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &creditsTex, &texProgram);
+
+	pauseTex.loadFromFile("images/pause.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	pauseSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &pauseTex, &texProgram);
+
+	gameOverTex.loadFromFile("images/game_over.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	gameOverSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &gameOverTex, &texProgram);
+
+	winTex.loadFromFile("images/win.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	winSprite = Sprite::createSprite(glm::ivec2(640, 480), glm::vec2(1.0f, 1.0f), &winTex, &texProgram);
+
 	map = TileMap::createTileMap("levels/level01.txt", glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
@@ -121,9 +159,9 @@ void Scene::render()
         case PLAYING:
             map->render();
             player->render();
-            renderEnemies();
-            renderBombs();
-            renderHUD();
+            //renderEnemies();
+            //renderBombs();
+            //renderHUD();
             break;
         case PAUSED:
             map->render();
@@ -131,10 +169,10 @@ void Scene::render()
             renderPauseOverlay();
             break;
         case GAME_OVER:
-            renderGameOverScreen();
+            renderGameOver();
             break;
         case WIN:
-            renderWinScreen();
+            renderWin();
             break;
     }
 }
@@ -168,6 +206,36 @@ void Scene::initShaders()
 	texProgram.bindFragmentOutput("outColor");
 	vShader.free();
 	fShader.free();
+}
+
+void Scene::renderMainMenu() {
+	if(menuSprite != NULL)
+		menuSprite->render();
+}
+
+void Scene::renderInstructions() {
+	if(instructionsSprite != NULL)
+		instructionsSprite->render();
+}
+
+void Scene::renderCredits() {
+	if(creditsSprite != NULL)
+		creditsSprite->render();
+}
+
+void Scene::renderPauseOverlay() {
+	if(pauseSprite != NULL)
+		pauseSprite->render();
+}
+
+void Scene::renderGameOver() {
+	if(gameOverSprite != NULL)
+		gameOverSprite->render();
+}
+
+void Scene::renderWin() {
+	if(winSprite != NULL)
+		winSprite->render();
 }
 
 bool Scene::isKeyJustPressed(int key)
