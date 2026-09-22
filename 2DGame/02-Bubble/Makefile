@@ -4,8 +4,8 @@
 
 CXX      ?= g++
 CC       ?= gcc
-CXXFLAGS ?= -std=c++11 -Wall -Wextra -O2
-CFLAGS   ?= -Wall -Wextra -O2
+CXXFLAGS ?= -std=c++11 -Wall -Wextra -O2 -DGLEW_NO_GLU
+CFLAGS   ?= -Wall -Wextra -O2 -DGLEW_NO_GLU
 
 # Directorios relativos
 SRC_DIR   := 02-Bubble
