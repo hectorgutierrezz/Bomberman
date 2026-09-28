@@ -35,6 +35,9 @@ public:
 	bool isTileSolid(int tileX, int tileY) const;
 	int getTileSize() const { return tileSize; }
 	int getBlockSize() const { return blockSize; }
+	// Mida total del mapa en p\u00edxels de m\u00f3n (per al clamping de la c\u00e0mera)
+	int getMapWidth()  const { return mapSize.x * tileSize; }
+	int getMapHeight() const { return mapSize.y * tileSize; }
 	
 private:
 	bool loadLevel(const string &levelFile);

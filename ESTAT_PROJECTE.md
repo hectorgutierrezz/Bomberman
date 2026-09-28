@@ -33,13 +33,14 @@ Aquest document resumeix l'estat actual del desenvolupament del videojoc **Pocke
   - Màquina d'estats (`MAIN_MENU`, `INSTRUCTIONS`, `CREDITS`, `PLAYING`, `PAUSED`, `GAME_OVER`, `WIN`).
   - Inicia directament en `PLAYING` per a desenvolupament i proves ràpides.
   - Gestiona la col·lecció de bombes (`std::vector<Bomb*>`) i explosions (`std::vector<Explosion*>`).
-  - Permet posar bombes amb `Espai` o `X`, aliniades automàticament a la graella del mapa.
+  - Col·locació de bombes amb `Espai` o `X` al davant del personatge (segons la direcció que mira), amb comprovació d'obstacles per si hi ha paret.
   - Implementa reacció en cadena d'explosions (detonació immediata si una flama toca una altra bomba) i dany al jugador.
 - **`Bomb.h` / `Bomb.cpp`**:
   - Utilitza el spritesheet `images/Bomberman/Bomb On (52x56).png` (4 frames, 208x56 px) amb textura compartida a memòria.
   - Mida i offset calculats per centrar la bomba al bloc de 32x32 i recolzar-la a terra.
   - Temporitzador de mecha de 2.2 segons abans de la detonació.
-  - Permet saltar a sobre (`isSolidOnTop`) actuant com a plataforma sòlida.
+  - Sistema de solidesa física dinàmica: permeable mentre el jugador hi és a sobre o se'n solapa al posar-la, i completament sòlida en separar-se'n.
+  - Permet recolzar-se i saltar a sobre (`collisionDown`, `isSolidOnTop`) i actuar com a mur lateral (`collisionLeft`, `collisionRight`).
 - **`Explosion.h` / `Explosion.cpp`**:
   - Utilitza el spritesheet `images/Bomberman/Boooooom (52x56).png` (6 frames, 312x56 px).
   - Propagació en creu en 4 direccions (amunt, avall, esquerra, dreta) a partir del centre de la bomba.

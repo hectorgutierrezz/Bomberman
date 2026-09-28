@@ -8,6 +8,7 @@ Bomb::Bomb()
 	sprite = NULL;
 	active = false;
 	bExploded = false;
+	playerInside = true;
 	fuseTime = 2200.f;
 	position = glm::vec2(0.f);
 	tileMapDispl = glm::ivec2(0);
@@ -41,6 +42,7 @@ void Bomb::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 	active = true;
 	bExploded = false;
+	playerInside = true;
 	fuseTime = 2200.f;
 
 	// Centrar bomba en bloc de 32x32: la bomba fa 18x21 px centrada a (28, 39) al quad de 52x56
@@ -85,23 +87,103 @@ void Bomb::explode()
 	bExploded = true;
 }
 
-bool Bomb::isSolidOnTop(const glm::ivec2 &playerPos, const glm::ivec2 &playerSize) const
+bool Bomb::checkOverlap(const glm::ivec2 &pPos, const glm::ivec2 &pSize) const
 {
-	if(!active)
+	int bLeft = int(position.x);
+	int bRight = bLeft + 32;
+	int bTop = int(position.y);
+	int bBottom = bTop + 32;
+
+	int pLeft = pPos.x;
+	int pRight = pPos.x + pSize.x;
+	int pTop = pPos.y;
+	int pBottom = pPos.y + pSize.y;
+
+	bool overlapX = (pRight > bLeft + 2) && (pLeft < bRight - 2);
+	bool overlapY = (pBottom > bTop + 2) && (pTop < bBottom - 2);
+
+	return overlapX && overlapY;
+}
+
+void Bomb::updatePlayerOverlap(const glm::ivec2 &playerPos, const glm::ivec2 &playerSize)
+{
+	if(playerInside)
+	{
+		if(!checkOverlap(playerPos, playerSize))
+		{
+			playerInside = false;
+		}
+	}
+}
+
+bool Bomb::collisionDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const
+{
+	if(!isSolidForPlayer())
 		return false;
 
-	int bombLeft = int(position.x);
-	int bombRight = bombLeft + 32;
-	int bombTop = int(position.y);
+	int bLeft = int(position.x);
+	int bRight = bLeft + 32;
+	int bTop = int(position.y);
 
-	int playerLeft = playerPos.x;
-	int playerRight = playerPos.x + playerSize.x;
-	int playerBottom = playerPos.y + playerSize.y;
+	int pLeft = pos.x;
+	int pRight = pos.x + size.x;
+	int pBottom = pos.y + size.y;
 
-	// Solapament horitzontal amb marge de tolerància
-	bool horizontalOverlap = (playerRight > bombLeft + 6) && (playerLeft < bombRight - 6);
-	// El jugador està caient sobre la cara superior de la bomba
-	bool onTop = (playerBottom >= bombTop - 4) && (playerBottom <= bombTop + 8);
+	// Solapament horitzontal amb marge
+	bool overlapX = (pRight > bLeft + 4) && (pLeft < bRight - 4);
+	// El jugador cau o reposa sobre la cara superior
+	if(overlapX && pBottom >= bTop && pBottom <= bTop + 10)
+	{
+		*posY = bTop - size.y;
+		return true;
+	}
+	return false;
+}
 
-	return horizontalOverlap && onTop;
+bool Bomb::collisionLeft(const glm::ivec2 &pos, const glm::ivec2 &size) const
+{
+	if(!isSolidForPlayer())
+		return false;
+
+	int bRight = int(position.x) + 32;
+	int bTop = int(position.y);
+	int bBottom = bTop + 32;
+
+	int pLeft = pos.x;
+	int pTop = pos.y;
+	int pBottom = pTop + size.y;
+
+	bool overlapY = (pBottom > bTop + 4) && (pTop < bBottom - 4);
+	if(overlapY && pLeft <= bRight && pLeft >= bRight - 4)
+	{
+		return true;
+	}
+	return false;
+}
+
+bool Bomb::collisionRight(const glm::ivec2 &pos, const glm::ivec2 &size) const
+{
+	if(!isSolidForPlayer())
+		return false;
+
+	int bLeft = int(position.x);
+	int bTop = int(position.y);
+	int bBottom = bTop + 32;
+
+	int pRight = pos.x + size.x;
+	int pTop = pos.y;
+	int pBottom = pTop + size.y;
+
+	bool overlapY = (pBottom > bTop + 4) && (pTop < bBottom - 4);
+	if(overlapY && pRight >= bLeft && pRight <= bLeft + 4)
+	{
+		return true;
+	}
+	return false;
+}
+
+bool Bomb::isSolidOnTop(const glm::ivec2 &playerPos, const glm::ivec2 &playerSize) const
+{
+	int dummyY = 0;
+	return collisionDown(playerPos, playerSize, &dummyY);
 }

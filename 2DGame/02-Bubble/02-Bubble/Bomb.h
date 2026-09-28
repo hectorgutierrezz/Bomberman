@@ -19,9 +19,23 @@ public:
 	bool isActive() const { return active; }
 	bool shouldExplode() const { return bExploded; }
 	void explode();
+
+	// Gestió de solapament i solidesa amb el jugador
+	void updatePlayerOverlap(const glm::ivec2 &playerPos, const glm::ivec2 &playerSize);
+	bool isSolidForPlayer() const { return active && !playerInside; }
+	bool isPlayerInside() const { return playerInside; }
+
+	// Col·lisions físiques
+	bool collisionDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
+	bool collisionLeft(const glm::ivec2 &pos, const glm::ivec2 &size) const;
+	bool collisionRight(const glm::ivec2 &pos, const glm::ivec2 &size) const;
+
 	bool isSolidOnTop(const glm::ivec2 &playerPos, const glm::ivec2 &playerSize) const;
 	int getTop() const { return int(position.y); }
 	const glm::vec2 &getPosition() const { return position; }
+
+private:
+	bool checkOverlap(const glm::ivec2 &pPos, const glm::ivec2 &pSize) const;
 
 private:
 	static Texture bombTexture;
@@ -33,6 +47,7 @@ private:
 	float fuseTime;
 	bool active;
 	bool bExploded;
+	bool playerInside;
 };
 
 #endif // _BOMB_INCLUDE

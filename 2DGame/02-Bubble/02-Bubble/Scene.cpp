@@ -11,6 +11,14 @@
 #define INIT_PLAYER_X_TILES 4
 #define INIT_PLAYER_Y_TILES 25
 
+// Mida de la finestra de càmera en world pixels (zoom ~2.5x respecte 640x480)
+// 256 unitats horitz. → 640/256 = 2.5x, 224 unitats vert. → 480/224 ≈ 2.14x
+#define CAM_VIEW_W 256.f
+#define CAM_VIEW_H 224.f
+
+// Límits del món on pot anar la càmera (marge = SCREEN_X + 36 tiles*16px)
+// Calculat dinàmicament a init() a partir del mapa
+
 Scene::Scene()
 {
 	map = NULL;
@@ -77,8 +85,24 @@ void Scene::init()
 	player->setPosition(glm::vec2(INIT_PLAYER_X_TILES * map->getTileSize(), INIT_PLAYER_Y_TILES * map->getTileSize()));
 	player->setTileMap(map);
 	player->setBombs(&bombs);
-	projection = glm::ortho(0.f, float(SCREEN_WIDTH), float(SCREEN_HEIGHT), 0.f);
 	currentTime = 0.0f;
+
+	// Inicialment la càmera es centra en la posició inicial del jugador
+	viewWidth  = CAM_VIEW_W;
+	viewHeight = CAM_VIEW_H;
+	glm::ivec2 initPos = player->getPosition();
+	camX = float(SCREEN_X + initPos.x) + 16.f - viewWidth  * 0.5f;
+	camY = float(SCREEN_Y + initPos.y) + 16.f - viewHeight * 0.5f;
+
+	// Clamping inicial als límits del mapa
+	float mapRight  = float(SCREEN_X) + float(map->getMapWidth())  - viewWidth;
+	float mapBottom = float(SCREEN_Y) + float(map->getMapHeight()) - viewHeight;
+	if(camX < 0.f)        camX = 0.f;
+	if(camY < 0.f)        camY = 0.f;
+	if(camX > mapRight)   camX = mapRight;
+	if(camY > mapBottom)  camY = mapBottom;
+
+	projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
 }
 
 void Scene::update(int deltaTime)
@@ -172,6 +196,30 @@ void Scene::update(int deltaTime)
 				}
 
 				player->update(deltaTime);
+
+				// --- Actualitzar la càmera per seguir el jugador ---
+				{
+					glm::ivec2 pPos = player->getPosition();
+					// Centre del jugador en coordenades de món
+					float targetX = float(SCREEN_X + pPos.x) + 16.f - viewWidth  * 0.5f;
+					float targetY = float(SCREEN_Y + pPos.y) + 16.f - viewHeight * 0.5f;
+
+					// Interpolació suau (lerp) per evitar moviment brusc
+					float lerpSpeed = 0.12f;
+					camX += (targetX - camX) * lerpSpeed;
+					camY += (targetY - camY) * lerpSpeed;
+
+					// Clamping als límits del mapa
+					float mapRight  = float(SCREEN_X) + float(map->getMapWidth())  - viewWidth;
+					float mapBottom = float(SCREEN_Y) + float(map->getMapHeight()) - viewHeight;
+					if(camX < 0.f)        camX = 0.f;
+					if(camY < 0.f)        camY = 0.f;
+					if(camX > mapRight)   camX = mapRight;
+					if(camY > mapBottom)  camY = mapBottom;
+
+					// Reconstruir la matriu de projecció centrada a la càmera
+					projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
+				}
 			}
 		break;
 
@@ -343,11 +391,27 @@ void Scene::placeBomb()
 		return;
 
 	glm::ivec2 playerPos = player->getPosition();
-	// Alinear la bomba a la quadrícula de 16/32 px (la més propera al centre del jugador)
-	int bombX = int(round(playerPos.x / 16.f)) * 16;
-	int bombY = int(round(playerPos.y / 16.f)) * 16;
+	int dir = player->getFacingDirection(); // -1 per esquerra, +1 per dreta
 
-	// Evitar posar dues bombes al mateix tile
+	// Col·locar la bomba davant del jugador (un bloc de 32 px endavant)
+	int targetX = playerPos.x + dir * 32;
+	int targetY = playerPos.y;
+
+	int bombX = int(round(float(targetX) / 16.f)) * 16;
+	int bombY = int(round(float(targetY) / 16.f)) * 16;
+
+	// Comprovar si a la casella de davant hi ha un bloc sòlid del mapa (paret)
+	bool frontBlocked = map->isSolidTile(glm::ivec2(bombX + 8, bombY + 16)) ||
+	                    map->isSolidTile(glm::ivec2(bombX + 24, bombY + 16));
+
+	if(frontBlocked)
+	{
+		// Si al davant hi ha paret, es col·loca a la casella actual del jugador
+		bombX = int(round(float(playerPos.x) / 16.f)) * 16;
+		bombY = int(round(float(playerPos.y) / 16.f)) * 16;
+	}
+
+	// Evitar posar dues bombes a la mateixa casella
 	for(size_t i = 0; i < bombs.size(); ++i) {
 		if(bombs[i] != NULL && bombs[i]->isActive()) {
 			glm::vec2 bPos = bombs[i]->getPosition();
@@ -359,5 +423,6 @@ void Scene::placeBomb()
 	Bomb *bomb = new Bomb();
 	bomb->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
 	bomb->setPosition(glm::vec2(float(bombX), float(bombY)));
+	bomb->updatePlayerOverlap(playerPos, glm::ivec2(32, 32));
 	bombs.push_back(bomb);
 }

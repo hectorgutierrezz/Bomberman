@@ -1,93 +1,91 @@
 #ifndef _SCENE_INCLUDE
 #define _SCENE_INCLUDE
 
-
+#include "Bomb.h"
+#include "Explosion.h"
+#include "Player.h"
+#include "ShaderProgram.h"
+#include "TileMap.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vector>
-#include "ShaderProgram.h"
-#include "TileMap.h"
-#include "Player.h"
-#include "Bomb.h"
-#include "Explosion.h"
-
 
 enum GameState {
-	MAIN_MENU,
-	INSTRUCTIONS,
-	CREDITS,
-	PLAYING,
-	PAUSED,
-	GAME_OVER,
-	WIN
+  MAIN_MENU,
+  INSTRUCTIONS,
+  CREDITS,
+  PLAYING,
+  PAUSED,
+  GAME_OVER,
+  WIN
 };
 
 // Scene contains all the entities of our game.
 // It is responsible for updating and render them.
 
-
-class Scene
-{
+class Scene {
 
 public:
-	Scene();
-	~Scene();
+  Scene();
+  ~Scene();
 
-	void init();
-	void update(int deltaTime);
-	void render();
+  void init();
+  void update(int deltaTime);
+  void render();
 
-	GameState getGameState() const { return gameState; }
-	void setGameState(GameState state) { gameState = state; }
-
-private:
-	void initShaders();
-	bool isKeyJustPressed(int key);
-
-	void renderMainMenu();
-	void renderInstructions();
-	void renderCredits();
-	void renderPauseOverlay();
-	void renderGameOver();
-	void renderWin();
-	void renderEnemies();
-	void renderBombs();
-	void renderExplosions();
-	void renderHUD();
-	void placeBomb();
+  GameState getGameState() const { return gameState; }
+  void setGameState(GameState state) { gameState = state; }
 
 private:
-	TileMap *map;
-	Player *player;
-	ShaderProgram texProgram;
-	float currentTime;
-	glm::mat4 projection;
-	GameState gameState;
-	bool keyLastState[GLFW_KEY_LAST + 1];
+  void initShaders();
+  bool isKeyJustPressed(int key);
 
-	Texture menuTex;
-	Sprite *menuSprite;
+  void renderMainMenu();
+  void renderInstructions();
+  void renderCredits();
+  void renderPauseOverlay();
+  void renderGameOver();
+  void renderWin();
+  void renderEnemies();
+  void renderBombs();
+  void renderExplosions();
+  void renderHUD();
+  void placeBomb();
 
-	Texture instructionsTex;
-	Sprite *instructionsSprite;
+private:
+  TileMap *map;
+  Player *player;
+  ShaderProgram texProgram;
+  float currentTime;
+  glm::mat4 projection;
+  GameState gameState;
+  bool keyLastState[GLFW_KEY_LAST + 1];
 
-	Texture creditsTex;
-	Sprite *creditsSprite;
+  Texture menuTex;
+  Sprite *menuSprite;
 
-	Texture pauseTex;
-	Sprite *pauseSprite;
+  Texture instructionsTex;
+  Sprite *instructionsSprite;
 
-	Texture gameOverTex;
-	Sprite *gameOverSprite;
+  Texture creditsTex;
+  Sprite *creditsSprite;
 
-	Texture winTex;
-	Sprite *winSprite;
+  Texture pauseTex;
+  Sprite *pauseSprite;
 
-	std::vector<Bomb*> bombs;
-	std::vector<Explosion*> explosions;
+  Texture gameOverTex;
+  Sprite *gameOverSprite;
+
+  Texture winTex;
+  Sprite *winSprite;
+
+  std::vector<Bomb *> bombs;
+  std::vector<Explosion *> explosions;
+
+  // Càmera dinàmica centrada al jugador
+  float camX, camY;        // posició (cantonada superior-esquerra) de la càmera en world coords
+  float viewWidth, viewHeight; // quantes unitats del món es veuen (la «finestra de zoom»)
 };
 
-
 #endif // _SCENE_INCLUDE
-

@@ -27,10 +27,12 @@ public:
 	void setPosition(const glm::vec2 &pos);
 	void setBombs(const std::vector<Bomb*> *bombsList);
 	glm::ivec2 getPosition() const { return posPlayer; }
+	int getFacingDirection() const { return facingDirection; }
 	void hit();
 	
 private:
 	bool bJumping;
+	int facingDirection;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY;
 	Texture spritesheet;
