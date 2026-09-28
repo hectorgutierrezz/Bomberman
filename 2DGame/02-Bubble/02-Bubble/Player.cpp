@@ -187,6 +187,19 @@ void Player::setBombs(const std::vector<Bomb*> *bombsList)
 	bombs = bombsList;
 }
 
+void Player::hit()
+{
+	posPlayer = glm::ivec2(4 * 16, 25 * 16);
+	bJumping = false;
+	jumpAngle = 0;
+	if(sprite != NULL)
+	{
+		sprite->changeAnimation(IDLE);
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+	}
+}
+
+
 
 
 

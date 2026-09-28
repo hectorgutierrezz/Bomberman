@@ -10,6 +10,7 @@
 #include "TileMap.h"
 #include "Player.h"
 #include "Bomb.h"
+#include "Explosion.h"
 
 
 enum GameState {
@@ -52,6 +53,7 @@ private:
 	void renderWin();
 	void renderEnemies();
 	void renderBombs();
+	void renderExplosions();
 	void renderHUD();
 	void placeBomb();
 
@@ -83,6 +85,7 @@ private:
 	Sprite *winSprite;
 
 	std::vector<Bomb*> bombs;
+	std::vector<Explosion*> explosions;
 };
 
 

@@ -207,6 +207,21 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	return false;
 }
 
+bool TileMap::isTileSolid(int tileX, int tileY) const
+{
+	if(tileX < 0 || tileX >= mapSize.x || tileY < 0 || tileY >= mapSize.y)
+		return true;
+	return map[tileY * mapSize.x + tileX] != 0;
+}
+
+bool TileMap::isSolidTile(const glm::ivec2 &pos) const
+{
+	int x = pos.x / tileSize;
+	int y = pos.y / tileSize;
+	return isTileSolid(x, y);
+}
+
+
 
 
 

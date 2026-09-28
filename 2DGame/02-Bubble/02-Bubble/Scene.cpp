@@ -21,7 +21,7 @@ Scene::Scene()
 	pauseSprite = NULL;
 	gameOverSprite = NULL;
 	winSprite = NULL;
-	gameState = MAIN_MENU;
+	gameState = PLAYING;
 	for (int i = 0; i <= GLFW_KEY_LAST; ++i)
 		keyLastState[i] = false;
 }
@@ -45,13 +45,32 @@ Scene::~Scene()
 		delete gameOverSprite;
 	if(winSprite != NULL)
 		delete winSprite;
+	for(size_t i = 0; i < bombs.size(); ++i) {
+		if(bombs[i] != NULL)
+			delete bombs[i];
+	}
+	bombs.clear();
+	for(size_t i = 0; i < explosions.size(); ++i) {
+		if(explosions[i] != NULL)
+			delete explosions[i];
+	}
+	explosions.clear();
 }
 
 
 void Scene::init()
 {
 	initShaders();
+	for(size_t i = 0; i < bombs.size(); ++i) {
+		if(bombs[i] != NULL)
+			delete bombs[i];
+	}
 	bombs.clear();
+	for(size_t i = 0; i < explosions.size(); ++i) {
+		if(explosions[i] != NULL)
+			delete explosions[i];
+	}
+	explosions.clear();
 	map = TileMap::createTileMap("levels/level01.txt", glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
@@ -99,15 +118,59 @@ void Scene::update(int deltaTime)
 				if(isKeyJustPressed(GLFW_KEY_SPACE) || isKeyJustPressed(GLFW_KEY_X)) {
 					placeBomb();
 				}
+				// 1. Actualitzar bombes
 				for(size_t i = 0; i < bombs.size(); ++i) {
 					if(bombs[i] != NULL) {
 						bombs[i]->update(deltaTime);
-						if(!bombs[i]->isActive()) {
+						if(bombs[i]->shouldExplode()) {
+							Explosion *exp = new Explosion();
+							exp->init(bombs[i]->getPosition(), glm::ivec2(SCREEN_X, SCREEN_Y), 1, map, texProgram);
+							explosions.push_back(exp);
+
 							delete bombs[i];
 							bombs[i] = NULL;
 						}
 					}
 				}
+				for(auto it = bombs.begin(); it != bombs.end(); ) {
+					if(*it == NULL)
+						it = bombs.erase(it);
+					else
+						++it;
+				}
+
+				// 2. Actualitzar explosions
+				for(size_t i = 0; i < explosions.size(); ++i) {
+					if(explosions[i] != NULL) {
+						explosions[i]->update(deltaTime);
+
+						// Reacció en cadena amb altres bombes
+						for(size_t b = 0; b < bombs.size(); ++b) {
+							if(bombs[b] != NULL && bombs[b]->isActive()) {
+								if(explosions[i]->checkCollision(glm::ivec2(bombs[b]->getPosition()), glm::ivec2(32, 32))) {
+									bombs[b]->explode();
+								}
+							}
+						}
+
+						// Col·lisió amb el jugador
+						if(explosions[i]->checkCollision(player->getPosition(), glm::ivec2(32, 32))) {
+							player->hit();
+						}
+
+						if(!explosions[i]->isActive()) {
+							delete explosions[i];
+							explosions[i] = NULL;
+						}
+					}
+				}
+				for(auto it = explosions.begin(); it != explosions.end(); ) {
+					if(*it == NULL)
+						it = explosions.erase(it);
+					else
+						++it;
+				}
+
 				player->update(deltaTime);
 			}
 		break;
@@ -156,6 +219,7 @@ void Scene::render()
         case PLAYING:
             map->render();
             renderBombs();
+            renderExplosions();
             player->render();
             //renderEnemies();
             //renderHUD();
@@ -256,6 +320,12 @@ void Scene::renderBombs() {
 			bombs[i]->render();
 	}
 }
+void Scene::renderExplosions() {
+	for(size_t i = 0; i < explosions.size(); ++i) {
+		if(explosions[i] != NULL)
+			explosions[i]->render();
+	}
+}
 void Scene::renderHUD() {}
 
 void Scene::placeBomb()
@@ -263,16 +333,31 @@ void Scene::placeBomb()
 	if(player == NULL || map == NULL)
 		return;
 
+	// Limitar bombes actives simultànies (màxim 2 al principi)
+	int activeBombs = 0;
+	for(size_t i = 0; i < bombs.size(); ++i) {
+		if(bombs[i] != NULL && bombs[i]->isActive())
+			activeBombs++;
+	}
+	if(activeBombs >= 2)
+		return;
+
 	glm::ivec2 playerPos = player->getPosition();
+	// Alinear la bomba a la quadrícula de 16/32 px (la més propera al centre del jugador)
+	int bombX = int(round(playerPos.x / 16.f)) * 16;
+	int bombY = int(round(playerPos.y / 16.f)) * 16;
+
+	// Evitar posar dues bombes al mateix tile
 	for(size_t i = 0; i < bombs.size(); ++i) {
 		if(bombs[i] != NULL && bombs[i]->isActive()) {
-			if(abs(bombs[i]->getPosition().x - float(playerPos.x)) < 20.f && abs(bombs[i]->getPosition().y - float(playerPos.y)) < 20.f)
+			glm::vec2 bPos = bombs[i]->getPosition();
+			if(abs(bPos.x - float(bombX)) < 16.f && abs(bPos.y - float(bombY)) < 16.f)
 				return;
 		}
 	}
 
 	Bomb *bomb = new Bomb();
-	bomb->init(texProgram);
-	bomb->setPosition(glm::vec2(float(playerPos.x), float(playerPos.y)));
+	bomb->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+	bomb->setPosition(glm::vec2(float(bombX), float(bombY)));
 	bombs.push_back(bomb);
 }

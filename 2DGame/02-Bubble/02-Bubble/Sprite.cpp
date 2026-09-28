@@ -31,6 +31,9 @@ Sprite::Sprite(const glm::vec2 &quadSize, const glm::vec2 &sizeInSpritesheet, Te
 	texture = spritesheet;
 	shaderProgram = program;
 	currentAnimation = -1;
+	currentKeyframe = 0;
+	timeAnimation = 0.f;
+	texCoordDispl = glm::vec2(0.f);
 	position = glm::vec2(0.f);
 	this->quadSize = quadSize;
 	bFlipped = false;

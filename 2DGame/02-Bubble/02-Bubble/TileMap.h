@@ -28,11 +28,13 @@ public:
 	void render() const;
 	void free();
 	
-	int getTileSize() const { return tileSize; }
-
 	bool collisionMoveLeft(const glm::ivec2 &pos, const glm::ivec2 &size) const;
 	bool collisionMoveRight(const glm::ivec2 &pos, const glm::ivec2 &size) const;
 	bool collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
+	bool isSolidTile(const glm::ivec2 &pos) const;
+	bool isTileSolid(int tileX, int tileY) const;
+	int getTileSize() const { return tileSize; }
+	int getBlockSize() const { return blockSize; }
 	
 private:
 	bool loadLevel(const string &levelFile);
