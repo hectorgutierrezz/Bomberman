@@ -178,7 +178,12 @@ void Player::update(int deltaTime)
 		else
 		{
 			posPlayer.y = int(startY - 96 * sin(3.14159f * jumpAngle / 180.f));
-			if(jumpAngle > 90)
+			if(jumpAngle < 90)
+			{
+				if(map->collisionMoveUp(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+					bJumping = false;
+			}
+			else if(jumpAngle > 90)
 			{
 				bool hitGround = map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y);
 				if(!hitGround && bombs != NULL)
