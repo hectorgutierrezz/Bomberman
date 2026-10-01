@@ -25,6 +25,7 @@ Player::Player()
 	lives = 3;
 	maxBombs = 1;
 	invulnerableTime = 0;
+	godMode = false;
 }
 
 Player::~Player()
@@ -39,6 +40,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	lives = 3;
 	maxBombs = 1;
 	invulnerableTime = 0;
+	godMode = false;
 	spritesheet.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	
 	glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f); // 17x17 pixels normalitzats
@@ -277,7 +279,7 @@ void Player::setBombs(const std::vector<Bomb*> *bombsList)
 
 void Player::hit()
 {
-	if(invulnerableTime > 0 || lives <= 0)
+	if(godMode || invulnerableTime > 0 || lives <= 0)
 		return;
 
 	lives--;
@@ -285,14 +287,6 @@ void Player::hit()
 		return;
 
 	invulnerableTime = 2000;
-	posPlayer = glm::ivec2(4 * 16, 25 * 16);
-	bJumping = false;
-	jumpAngle = 0;
-	if(sprite != NULL)
-	{
-		sprite->changeAnimation(IDLE);
-		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
-	}
 }
 
 

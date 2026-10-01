@@ -6,10 +6,13 @@
 #include "Player.h"
 #include "ShaderProgram.h"
 #include "TileMap.h"
+#include "Sprite.h"
+#include "Texture.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vector>
+#include <string>
 
 enum GameState {
   MAIN_MENU,
@@ -52,8 +55,8 @@ private:
   void renderExplosions();
   void renderHUD();
   void placeBomb();
+  void showGodModeMessage(bool enabled);
 
-private:
   TileMap *map;
   Player *player;
   ShaderProgram texProgram;
@@ -86,6 +89,14 @@ private:
   // HUD: icones de vides (sprites del personatge)
   Texture hudTex;
   Sprite *lifeIcon;
+
+  // Missatge temporal de god mode
+  Texture godModeOnTex;
+  Texture godModeOffTex;
+  Sprite *godModeOnSprite;
+  Sprite *godModeOffSprite;
+  int godModeMsgTime;
+  bool godModeMsgActive;
 
   // Càmera dinàmica centrada al jugador
   float camX, camY;        // posició (cantonada superior-esquerra) de la càmera en world coords

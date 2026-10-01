@@ -61,6 +61,16 @@ void Texture::loadFromGlyphBuffer(unsigned char *buffer, int width, int height)
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 }
 
+void Texture::loadFromRGBABuffer(const unsigned char *buffer, int width, int height)
+{
+	widthTex = width;
+	heightTex = height;
+	glGenTextures(1, &texId);
+	glBindTexture(GL_TEXTURE_2D, texId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	glGenerateMipmap(GL_TEXTURE_2D);
+}
+
 void Texture::createEmptyTexture(int width, int height)
 {
 	glGenTextures(1, &texId);

@@ -30,11 +30,14 @@ public:
 	int getFacingDirection() const { return facingDirection; }
 	int getLives() const { return lives; }
 	int getMaxBombs() const { return maxBombs; }
-	bool isInvulnerable() const { return invulnerableTime > 0; }
+	bool isInvulnerable() const { return godMode || invulnerableTime > 0; }
+	void toggleGodMode() { godMode = !godMode; }
+	bool isGodMode() const { return godMode; }
 	void hit();
 	
 private:
 	bool bJumping;
+	bool godMode;
 	int facingDirection;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY;

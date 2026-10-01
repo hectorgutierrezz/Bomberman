@@ -3,6 +3,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Scene.h"
 #include "Game.h"
+#include "BitmapText.h"
 
 
 #define SCREEN_X 32
@@ -15,6 +16,8 @@
 // 256 unitats horitz. → 640/256 = 2.5x, 224 unitats vert. → 480/224 ≈ 2.14x
 #define CAM_VIEW_W 256.f
 #define CAM_VIEW_H 224.f
+
+#define GOD_MODE_MSG_DURATION 2000
 
 // Límits del món on pot anar la càmera (marge = SCREEN_X + 36 tiles*16px)
 // Calculat dinàmicament a init() a partir del mapa
@@ -30,6 +33,10 @@ Scene::Scene()
 	gameOverSprite = NULL;
 	winSprite = NULL;
 	lifeIcon = NULL;
+	godModeOnSprite = NULL;
+	godModeOffSprite = NULL;
+	godModeMsgTime = 0;
+	godModeMsgActive = false;
 	gameState = PLAYING;
 	for (int i = 0; i <= GLFW_KEY_LAST; ++i)
 		keyLastState[i] = false;
@@ -56,6 +63,10 @@ Scene::~Scene()
 		delete winSprite;
 	if(lifeIcon != NULL)
 		delete lifeIcon;
+	if(godModeOnSprite != NULL)
+		delete godModeOnSprite;
+	if(godModeOffSprite != NULL)
+		delete godModeOffSprite;
 	for(size_t i = 0; i < bombs.size(); ++i) {
 		if(bombs[i] != NULL)
 			delete bombs[i];
@@ -99,6 +110,15 @@ void Scene::init()
 	lifeIcon->addKeyframe(0, glm::vec2(0.f, 0.f));
 	lifeIcon->changeAnimation(0);
 
+	BitmapText::createTexture(godModeOnTex, "GOD MODE ON");
+	godModeOnSprite = Sprite::createSprite(
+		glm::vec2(float(godModeOnTex.width()), float(godModeOnTex.height())),
+		glm::vec2(1.f, 1.f), &godModeOnTex, &texProgram);
+	BitmapText::createTexture(godModeOffTex, "GOD MODE OFF");
+	godModeOffSprite = Sprite::createSprite(
+		glm::vec2(float(godModeOffTex.width()), float(godModeOffTex.height())),
+		glm::vec2(1.f, 1.f), &godModeOffTex, &texProgram);
+
 	// Inicialment la càmera es centra en la posició inicial del jugador
 	viewWidth  = CAM_VIEW_W;
 	viewHeight = CAM_VIEW_H;
@@ -120,6 +140,13 @@ void Scene::init()
 void Scene::update(int deltaTime)
 {
 	currentTime += deltaTime;
+
+	if(godModeMsgTime > 0)
+	{
+		godModeMsgTime -= deltaTime;
+		if(godModeMsgTime < 0)
+			godModeMsgTime = 0;
+	}
 
 	switch (gameState) {
 		case MAIN_MENU:
@@ -151,6 +178,10 @@ void Scene::update(int deltaTime)
 				gameState = PAUSED;
 			}
 			else {
+				if(isKeyJustPressed(GLFW_KEY_G)) {
+					player->toggleGodMode();
+					showGodModeMessage(player->isGodMode());
+				}
 				if(isKeyJustPressed(GLFW_KEY_SPACE) || isKeyJustPressed(GLFW_KEY_X)) {
 					placeBomb();
 				}
@@ -402,6 +433,32 @@ void Scene::renderHUD()
 		lifeIcon->setPosition(glm::vec2(x, y));
 		lifeIcon->render();
 	}
+
+	if(godModeMsgTime > 0)
+	{
+		Sprite *msgSprite = godModeMsgActive ? godModeOnSprite : godModeOffSprite;
+		if(msgSprite != NULL)
+		{
+			float msgW = godModeMsgActive ? float(godModeOnTex.width()) : float(godModeOffTex.width());
+			float x = camX + (viewWidth - msgW) * 0.5f;
+			float y = camY + 28.f;
+			msgSprite->setPosition(glm::vec2(x, y));
+
+			if(godModeMsgActive)
+				texProgram.setUniform4f("color", 1.0f, 1.0f, 0.0f, 1.0f); // groc
+			else
+				texProgram.setUniform4f("color", 1.0f, 0.15f, 0.15f, 1.0f); // vermell
+
+			msgSprite->render();
+			texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+		}
+	}
+}
+
+void Scene::showGodModeMessage(bool enabled)
+{
+	godModeMsgActive = enabled;
+	godModeMsgTime = GOD_MODE_MSG_DURATION;
 }
 
 void Scene::placeBomb()
