@@ -29,6 +29,7 @@ Scene::Scene()
 	pauseSprite = NULL;
 	gameOverSprite = NULL;
 	winSprite = NULL;
+	lifeIcon = NULL;
 	gameState = PLAYING;
 	for (int i = 0; i <= GLFW_KEY_LAST; ++i)
 		keyLastState[i] = false;
@@ -53,6 +54,8 @@ Scene::~Scene()
 		delete gameOverSprite;
 	if(winSprite != NULL)
 		delete winSprite;
+	if(lifeIcon != NULL)
+		delete lifeIcon;
 	for(size_t i = 0; i < bombs.size(); ++i) {
 		if(bombs[i] != NULL)
 			delete bombs[i];
@@ -86,6 +89,15 @@ void Scene::init()
 	player->setTileMap(map);
 	player->setBombs(&bombs);
 	currentTime = 0.0f;
+
+	// Icona de vida per al HUD (mateix spritesheet del jugador)
+	hudTex.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f);
+	lifeIcon = Sprite::createSprite(glm::ivec2(16, 16), sizeInUV, &hudTex, &texProgram);
+	lifeIcon->setNumberAnimations(1);
+	lifeIcon->setAnimationSpeed(0, 8);
+	lifeIcon->addKeyframe(0, glm::vec2(0.f, 0.f));
+	lifeIcon->changeAnimation(0);
 
 	// Inicialment la càmera es centra en la posició inicial del jugador
 	viewWidth  = CAM_VIEW_W;
@@ -177,9 +189,11 @@ void Scene::update(int deltaTime)
 							}
 						}
 
-						// Col·lisió amb el jugador
+						// Col·lisió amb el jugador: la explosió fa dany
 						if(explosions[i]->checkCollision(player->getPosition(), glm::ivec2(32, 32))) {
 							player->hit();
+							if(player->getLives() <= 0)
+								gameState = GAME_OVER;
 						}
 
 						if(!explosions[i]->isActive()) {
@@ -270,7 +284,7 @@ void Scene::render()
             renderExplosions();
             player->render();
             //renderEnemies();
-            //renderHUD();
+            renderHUD();
             break;
         case PAUSED:
             map->render();
@@ -374,20 +388,34 @@ void Scene::renderExplosions() {
 			explosions[i]->render();
 	}
 }
-void Scene::renderHUD() {}
+void Scene::renderHUD()
+{
+	if(player == NULL || lifeIcon == NULL)
+		return;
+
+	int lives = player->getLives();
+	for(int i = 0; i < lives; ++i)
+	{
+		// Fixat a la cantonada superior-esquerra de la càmera
+		float x = camX + 8.f + float(i) * 18.f;
+		float y = camY + 8.f;
+		lifeIcon->setPosition(glm::vec2(x, y));
+		lifeIcon->render();
+	}
+}
 
 void Scene::placeBomb()
 {
 	if(player == NULL || map == NULL)
 		return;
 
-	// Limitar bombes actives simultànies (màxim 2 al principi)
+	// Limitar bombes actives simultànies (1 de base; power-up Bomb Up incrementarà maxBombs)
 	int activeBombs = 0;
 	for(size_t i = 0; i < bombs.size(); ++i) {
 		if(bombs[i] != NULL && bombs[i]->isActive())
 			activeBombs++;
 	}
-	if(activeBombs >= 2)
+	if(activeBombs >= player->getMaxBombs())
 		return;
 
 	glm::ivec2 playerPos = player->getPosition();

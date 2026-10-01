@@ -28,6 +28,9 @@ public:
 	void setBombs(const std::vector<Bomb*> *bombsList);
 	glm::ivec2 getPosition() const { return posPlayer; }
 	int getFacingDirection() const { return facingDirection; }
+	int getLives() const { return lives; }
+	int getMaxBombs() const { return maxBombs; }
+	bool isInvulnerable() const { return invulnerableTime > 0; }
 	void hit();
 	
 private:
@@ -35,6 +38,9 @@ private:
 	int facingDirection;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY;
+	int lives;
+	int maxBombs;
+	int invulnerableTime;
 	Texture spritesheet;
 	Sprite *sprite;
 	TileMap *map;

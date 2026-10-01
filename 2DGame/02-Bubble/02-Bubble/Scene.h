@@ -83,6 +83,10 @@ private:
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;
 
+  // HUD: icones de vides (sprites del personatge)
+  Texture hudTex;
+  Sprite *lifeIcon;
+
   // Càmera dinàmica centrada al jugador
   float camX, camY;        // posició (cantonada superior-esquerra) de la càmera en world coords
   float viewWidth, viewHeight; // quantes unitats del món es veuen (la «finestra de zoom»)

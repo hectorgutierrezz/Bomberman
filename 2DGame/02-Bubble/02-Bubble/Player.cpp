@@ -22,6 +22,9 @@ Player::Player()
 	map = NULL;
 	bombs = NULL;
 	facingDirection = 1;
+	lives = 3;
+	maxBombs = 1;
+	invulnerableTime = 0;
 }
 
 Player::~Player()
@@ -33,6 +36,9 @@ Player::~Player()
 void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 {
 	bJumping = false;
+	lives = 3;
+	maxBombs = 1;
+	invulnerableTime = 0;
 	spritesheet.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	
 	glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f); // 17x17 pixels normalitzats
@@ -82,6 +88,13 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 void Player::update(int deltaTime)
 {
 	sprite->update(deltaTime);
+
+	if(invulnerableTime > 0)
+	{
+		invulnerableTime -= deltaTime;
+		if(invulnerableTime < 0)
+			invulnerableTime = 0;
+	}
 
 	// Actualitzar solapament del jugador amb les bombes actives
 	if(bombs != NULL)
@@ -240,6 +253,9 @@ void Player::update(int deltaTime)
 
 void Player::render()
 {
+	// Parpelleig durant la invulnerabilitat temporal després de rebre dany
+	if(invulnerableTime > 0 && ((invulnerableTime / 100) % 2 == 0))
+		return;
 	sprite->render();
 }
 
@@ -261,6 +277,14 @@ void Player::setBombs(const std::vector<Bomb*> *bombsList)
 
 void Player::hit()
 {
+	if(invulnerableTime > 0 || lives <= 0)
+		return;
+
+	lives--;
+	if(lives <= 0)
+		return;
+
+	invulnerableTime = 2000;
 	posPlayer = glm::ivec2(4 * 16, 25 * 16);
 	bJumping = false;
 	jumpAngle = 0;
