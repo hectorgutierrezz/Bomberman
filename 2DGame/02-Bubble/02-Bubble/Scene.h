@@ -56,6 +56,8 @@ private:
   void renderHUD();
   void placeBomb();
   void showGodModeMessage(bool enabled);
+  void startLevel();
+  void updateTimerHUD();
 
   TileMap *map;
   Player *player;
@@ -89,6 +91,12 @@ private:
   // HUD: icones de vides (sprites del personatge)
   Texture hudTex;
   Sprite *lifeIcon;
+
+  // HUD: comptador enrere de temps
+  int levelTimeLeft;
+  Texture timerTex;
+  Sprite *timerSprite;
+  int lastDisplayedSeconds;
 
   // Missatge temporal de god mode
   Texture godModeOnTex;

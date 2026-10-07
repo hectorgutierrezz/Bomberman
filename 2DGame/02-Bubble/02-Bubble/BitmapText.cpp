@@ -33,10 +33,33 @@ static const unsigned char FONT_X[5] = {0x31, 0x0A, 0x04, 0x0A, 0x31};
 static const unsigned char FONT_Y[5] = {0x03, 0x04, 0x38, 0x04, 0x03};
 static const unsigned char FONT_Z[5] = {0x31, 0x29, 0x25, 0x23, 0x21};
 
+static const unsigned char FONT_0[5] = {0x3E, 0x45, 0x49, 0x51, 0x3E};
+static const unsigned char FONT_1[5] = {0x00, 0x42, 0x7F, 0x40, 0x00};
+static const unsigned char FONT_2[5] = {0x42, 0x61, 0x51, 0x49, 0x46};
+static const unsigned char FONT_3[5] = {0x21, 0x41, 0x45, 0x4B, 0x31};
+static const unsigned char FONT_4[5] = {0x18, 0x14, 0x12, 0x7F, 0x10};
+static const unsigned char FONT_5[5] = {0x27, 0x45, 0x45, 0x45, 0x39};
+static const unsigned char FONT_6[5] = {0x3C, 0x4A, 0x49, 0x49, 0x30};
+static const unsigned char FONT_7[5] = {0x01, 0x71, 0x09, 0x05, 0x03};
+static const unsigned char FONT_8[5] = {0x36, 0x49, 0x49, 0x49, 0x36};
+static const unsigned char FONT_9[5] = {0x06, 0x49, 0x49, 0x29, 0x1E};
+static const unsigned char FONT_COLON[5] = {0x00, 0x36, 0x36, 0x00, 0x00};
+
 static const unsigned char *glyphFor(char c)
 {
 	switch(c)
 	{
+	case '0': return FONT_0;
+	case '1': return FONT_1;
+	case '2': return FONT_2;
+	case '3': return FONT_3;
+	case '4': return FONT_4;
+	case '5': return FONT_5;
+	case '6': return FONT_6;
+	case '7': return FONT_7;
+	case '8': return FONT_8;
+	case '9': return FONT_9;
+	case ':': return FONT_COLON;
 	case 'A': return FONT_A;
 	case 'B': return FONT_B;
 	case 'C': return FONT_C;
@@ -67,12 +90,11 @@ static const unsigned char *glyphFor(char c)
 	}
 }
 
-bool BitmapText::createTexture(Texture &tex, const std::string &text)
+bool BitmapText::createTexture(Texture &tex, const std::string &text, int scale)
 {
 	const int charW = 5;
 	const int charH = 7;
 	const int gap = 1;
-	const int scale = 3;
 
 	if(text.empty())
 		return false;

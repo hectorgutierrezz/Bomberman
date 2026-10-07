@@ -10,7 +10,7 @@
 class BitmapText
 {
 public:
-	static bool createTexture(Texture &tex, const std::string &text);
+	static bool createTexture(Texture &tex, const std::string &text, int scale = 3);
 };
 
 

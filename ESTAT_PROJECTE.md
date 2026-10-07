@@ -18,8 +18,8 @@ Aquest document resumeix l'estat actual del desenvolupament del videojoc **Pocke
 | **Objectes / Power-ups (4 tipus)** | Bàsica | **Pendent** | 0% | Cal implementar com a mínim: *Bomb Up*, *Fire Up*, *Cor/Invulnerabilitat* i *Porta de Sortida*. |
 | **3 Enemics amb IA Diferent** | Bàsica | **Pendent** | 0% | Falta crear les classes d'enemics (patrulla, caçador, ràpid). |
 | **Boss Final al Nivell 5** | Bàsica | **Pendent** | 0% | Falta dissenyar i programar el cap final del cinquè món. |
-| **Temps Límit per Nivell** | Bàsica | **Pendent** | 0% | Falta el cronòmetre de compte enrere per cada nivell. |
-| **Interfície Gràfica (HUD)** | Bàsica | **Pendent** | 0% | Falta mostrar: temps restant, vides, enemics restants, bombes màximes i abast de foc. |
+| **Temps Límit per Nivell** | Bàsica | **Completat** | 100% | Comptador enrere de 2 minuts (120s) per nivell. Si s'acaba el temps, el jugador perds i retorna al menú principal. |
+| **Interfície Gràfica (HUD)** | Bàsica | **En Progrés** | 50% | Es mostren les vides del jugador i el temporitzador de compte enrere (`TIME 02:00`). |
 | **Tecles de Truc (Cheats)** | Bàsica | **Pendent** | 0% | Falta implementar: `G` (God Mode), `K` (Kill enemies & obrir porta), `1`-`5` (saltar de nivell). |
 | **Àudio (Música i Efectes SFX)** | Polish | **Pendent** | 0% | Falta reproductor de so per a música de fons i efectes d'explosió, salt, agafar objectes. |
 | **Animacions i Game Feeling** | Polish | **Iniciat** | 30% | Sprites de Bomberman, animació de bomba (`Bomb On`) i explosió (`Boooooom`) completament funcionals. |

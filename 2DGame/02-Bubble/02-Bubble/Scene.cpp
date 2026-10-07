@@ -33,11 +33,14 @@ Scene::Scene()
 	gameOverSprite = NULL;
 	winSprite = NULL;
 	lifeIcon = NULL;
+	timerSprite = NULL;
 	godModeOnSprite = NULL;
 	godModeOffSprite = NULL;
 	godModeMsgTime = 0;
 	godModeMsgActive = false;
-	gameState = PLAYING;
+	levelTimeLeft = 120000;
+	lastDisplayedSeconds = -1;
+	gameState = MAIN_MENU;
 	for (int i = 0; i <= GLFW_KEY_LAST; ++i)
 		keyLastState[i] = false;
 }
@@ -63,6 +66,8 @@ Scene::~Scene()
 		delete winSprite;
 	if(lifeIcon != NULL)
 		delete lifeIcon;
+	if(timerSprite != NULL)
+		delete timerSprite;
 	if(godModeOnSprite != NULL)
 		delete godModeOnSprite;
 	if(godModeOffSprite != NULL)
@@ -80,9 +85,21 @@ Scene::~Scene()
 }
 
 
-void Scene::init()
+void Scene::startLevel()
 {
-	initShaders();
+	levelTimeLeft = 120000; // 2 minuts (120 segons) per nivell
+	lastDisplayedSeconds = -1;
+
+	if(timerSprite != NULL) {
+		delete timerSprite;
+		timerSprite = NULL;
+	}
+
+	if(player != NULL) {
+		player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+		player->setPosition(glm::vec2(INIT_PLAYER_X_TILES * map->getTileSize(), INIT_PLAYER_Y_TILES * map->getTileSize()));
+	}
+
 	for(size_t i = 0; i < bombs.size(); ++i) {
 		if(bombs[i] != NULL)
 			delete bombs[i];
@@ -93,6 +110,89 @@ void Scene::init()
 			delete explosions[i];
 	}
 	explosions.clear();
+}
+
+void Scene::init()
+{
+	initShaders();
+
+	if(menuSprite != NULL) { delete menuSprite; menuSprite = NULL; }
+	if(instructionsSprite != NULL) { delete instructionsSprite; instructionsSprite = NULL; }
+	if(creditsSprite != NULL) { delete creditsSprite; creditsSprite = NULL; }
+	if(pauseSprite != NULL) { delete pauseSprite; pauseSprite = NULL; }
+	if(gameOverSprite != NULL) { delete gameOverSprite; gameOverSprite = NULL; }
+	if(winSprite != NULL) { delete winSprite; winSprite = NULL; }
+	if(timerSprite != NULL) { delete timerSprite; timerSprite = NULL; }
+
+	levelTimeLeft = 120000;
+	lastDisplayedSeconds = -1;
+
+	for(size_t i = 0; i < bombs.size(); ++i) {
+		if(bombs[i] != NULL)
+			delete bombs[i];
+	}
+	bombs.clear();
+	for(size_t i = 0; i < explosions.size(); ++i) {
+		if(explosions[i] != NULL)
+			delete explosions[i];
+	}
+	explosions.clear();
+
+	// Carregar les imatges de menús i pantalles
+	if (menuTex.loadFromFile("images/Menu/main_menu.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
+	    menuTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Menus (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		menuSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &menuTex, &texProgram);
+		menuSprite->setNumberAnimations(1);
+		menuSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+		menuSprite->changeAnimation(0);
+	}
+
+	if (instructionsTex.loadFromFile("images/Menu/instructions.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
+	    instructionsTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Menus (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		instructionsSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &instructionsTex, &texProgram);
+		instructionsSprite->setNumberAnimations(1);
+		instructionsSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+		instructionsSprite->changeAnimation(0);
+	}
+
+	if (creditsTex.loadFromFile("images/Menu/credits.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
+	    creditsTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Menus (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		creditsSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &creditsTex, &texProgram);
+		creditsSprite->setNumberAnimations(1);
+		creditsSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+		creditsSprite->changeAnimation(0);
+	}
+
+	if (pauseTex.loadFromFile("images/Menu/pause.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
+	    pauseTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Menus (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		pauseSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &pauseTex, &texProgram);
+		pauseSprite->setNumberAnimations(1);
+		pauseSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+		pauseSprite->changeAnimation(0);
+	}
+
+	if (gameOverTex.loadFromFile("images/Menu/game_over.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
+	    gameOverTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Ending (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		gameOverSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &gameOverTex, &texProgram);
+		gameOverSprite->setNumberAnimations(1);
+		gameOverSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+		gameOverSprite->changeAnimation(0);
+	}
+
+	if (winTex.loadFromFile("images/Menu/win.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
+	    winTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Ending (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		winSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &winTex, &texProgram);
+		winSprite->setNumberAnimations(1);
+		winSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+		winSprite->changeAnimation(0);
+	}
+
 	map = TileMap::createTileMap("levels/level01.txt", glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
@@ -151,6 +251,7 @@ void Scene::update(int deltaTime)
 	switch (gameState) {
 		case MAIN_MENU:
 			if(isKeyJustPressed(GLFW_KEY_1)) {
+				startLevel();
 				gameState = PLAYING;
 			}
 			else if(isKeyJustPressed(GLFW_KEY_2)) {
@@ -178,6 +279,14 @@ void Scene::update(int deltaTime)
 				gameState = PAUSED;
 			}
 			else {
+				// Descomptar el temps del nivell
+				levelTimeLeft -= deltaTime;
+				if(levelTimeLeft <= 0) {
+					levelTimeLeft = 0;
+					gameState = MAIN_MENU; // Si el temps s'acaba, perds i et torna al menú principal
+					break;
+				}
+
 				if(isKeyJustPressed(GLFW_KEY_G)) {
 					player->toggleGodMode();
 					showGodModeMessage(player->isGodMode());
@@ -299,14 +408,19 @@ void Scene::render()
 	texProgram.setUniformMatrix4f("modelview", modelview);
 	texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
 	
+	glm::mat4 screenProjection = glm::ortho(0.f, float(SCREEN_WIDTH), float(SCREEN_HEIGHT), 0.f);
+
 	switch (gameState) {
         case MAIN_MENU:
+            texProgram.setUniformMatrix4f("projection", screenProjection);
             renderMainMenu(); 
             break;
         case INSTRUCTIONS:
+            texProgram.setUniformMatrix4f("projection", screenProjection);
             renderInstructions(); 
             break;
         case CREDITS:
+            texProgram.setUniformMatrix4f("projection", screenProjection);
             renderCredits(); 
             break;
         case PLAYING:
@@ -319,13 +433,18 @@ void Scene::render()
             break;
         case PAUSED:
             map->render();
+            renderBombs();
+            renderExplosions();
             player->render();
+            texProgram.setUniformMatrix4f("projection", screenProjection);
             renderPauseOverlay();
             break;
         case GAME_OVER:
+            texProgram.setUniformMatrix4f("projection", screenProjection);
             renderGameOver();
             break;
         case WIN:
+            texProgram.setUniformMatrix4f("projection", screenProjection);
             renderWin();
             break;
     }
@@ -419,6 +538,35 @@ void Scene::renderExplosions() {
 			explosions[i]->render();
 	}
 }
+void Scene::updateTimerHUD()
+{
+	int totalSecs = (levelTimeLeft + 999) / 1000;
+	if(totalSecs < 0) totalSecs = 0;
+
+	if(totalSecs != lastDisplayedSeconds)
+	{
+		lastDisplayedSeconds = totalSecs;
+		int mins = totalSecs / 60;
+		int secs = totalSecs % 60;
+
+		char buf[32];
+		snprintf(buf, sizeof(buf), "TIME %02d:%02d", mins, secs);
+
+		if(timerSprite != NULL)
+		{
+			delete timerSprite;
+			timerSprite = NULL;
+		}
+
+		if(BitmapText::createTexture(timerTex, buf, 2))
+		{
+			timerSprite = Sprite::createSprite(
+				glm::vec2(float(timerTex.width()), float(timerTex.height())),
+				glm::vec2(1.f, 1.f), &timerTex, &texProgram);
+		}
+	}
+}
+
 void Scene::renderHUD()
 {
 	if(player == NULL || lifeIcon == NULL)
@@ -432,6 +580,25 @@ void Scene::renderHUD()
 		float y = camY + 8.f;
 		lifeIcon->setPosition(glm::vec2(x, y));
 		lifeIcon->render();
+	}
+
+	// Renderització del comptador enrere de 2 minuts al HUD (cantonada superior dreta de la càmera)
+	updateTimerHUD();
+	if(timerSprite != NULL)
+	{
+		float timerW = float(timerTex.width());
+		float x = camX + viewWidth - timerW - 8.f;
+		float y = camY + 8.f;
+		timerSprite->setPosition(glm::vec2(x, y));
+
+		int totalSecs = (levelTimeLeft + 999) / 1000;
+		if(totalSecs <= 30)
+			texProgram.setUniform4f("color", 1.0f, 0.2f, 0.2f, 1.0f); // Vermell quan queden 30 segons o menys
+		else
+			texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+		timerSprite->render();
+		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}
 
 	if(godModeMsgTime > 0)
