@@ -10,7 +10,7 @@
 #define SCREEN_Y 16
 
 #define INIT_PLAYER_X_TILES 4
-#define INIT_PLAYER_Y_TILES 25
+// Y se calcula en startLevel según la altura del mapa (2 tiles por encima del suelo)
 
 // Mida de la finestra de càmera en world pixels (zoom ~2.5x respecte 640x480)
 // 256 unitats horitz. → 640/256 = 2.5x, 224 unitats vert. → 480/224 ≈ 2.14x
@@ -26,6 +26,8 @@ Scene::Scene()
 {
 	map = NULL;
 	player = NULL;
+	door = NULL;
+	currentLevel = 1;
 	menuSprite = NULL;
 	instructionsSprite = NULL;
 	creditsSprite = NULL;
@@ -34,12 +36,14 @@ Scene::Scene()
 	winSprite = NULL;
 	lifeIcon = NULL;
 	timerSprite = NULL;
+	levelHUDSprite = NULL;
 	godModeOnSprite = NULL;
 	godModeOffSprite = NULL;
 	godModeMsgTime = 0;
 	godModeMsgActive = false;
 	levelTimeLeft = 120000;
 	lastDisplayedSeconds = -1;
+	lastDisplayedLevel = -1;
 	gameState = MAIN_MENU;
 	for (int i = 0; i <= GLFW_KEY_LAST; ++i)
 		keyLastState[i] = false;
@@ -52,6 +56,8 @@ Scene::~Scene()
 		delete map;
 	if(player != NULL)
 		delete player;
+	if(door != NULL)
+		delete door;
 	if(menuSprite != NULL)
 		delete menuSprite;
 	if(instructionsSprite != NULL)
@@ -68,6 +74,8 @@ Scene::~Scene()
 		delete lifeIcon;
 	if(timerSprite != NULL)
 		delete timerSprite;
+	if(levelHUDSprite != NULL)
+		delete levelHUDSprite;
 	if(godModeOnSprite != NULL)
 		delete godModeOnSprite;
 	if(godModeOffSprite != NULL)
@@ -85,20 +93,58 @@ Scene::~Scene()
 }
 
 
-void Scene::startLevel()
+void Scene::startLevel(int levelNum)
 {
+	currentLevel = levelNum;
+	if(currentLevel < 1) currentLevel = 1;
+	if(currentLevel > 5) currentLevel = 5;
+
 	levelTimeLeft = 120000; // 2 minuts (120 segons) per nivell
 	lastDisplayedSeconds = -1;
+	lastDisplayedLevel = -1;
 
 	if(timerSprite != NULL) {
 		delete timerSprite;
 		timerSprite = NULL;
 	}
-
-	if(player != NULL) {
-		player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
-		player->setPosition(glm::vec2(INIT_PLAYER_X_TILES * map->getTileSize(), INIT_PLAYER_Y_TILES * map->getTileSize()));
+	if(levelHUDSprite != NULL) {
+		delete levelHUDSprite;
+		levelHUDSprite = NULL;
 	}
+
+	char levelPath[64];
+	snprintf(levelPath, sizeof(levelPath), "levels/level%02d.txt", currentLevel);
+
+	if(map != NULL) {
+		delete map;
+		map = NULL;
+	}
+	map = TileMap::createTileMap(levelPath, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
+
+	// Spawn i porta a 2 tiles per damunt del terra (última fila del mapa)
+	int tileSize = map->getTileSize();
+	int mapTilesY = map->getMapHeight() / tileSize;
+	int spawnTileY = mapTilesY - 3;
+	if(spawnTileY < 1) spawnTileY = 1;
+	int doorTileX = 30;
+	int doorTileY = spawnTileY;
+
+	if(player == NULL) {
+		player = new Player();
+	}
+	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+	player->setPosition(glm::vec2(INIT_PLAYER_X_TILES * tileSize, spawnTileY * tileSize));
+	player->setTileMap(map);
+	player->setBombs(&bombs);
+
+	// Inicialitzar / configurar la porta del nivell
+	if(door == NULL) {
+		door = new Door();
+		door->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+	}
+	door->setPosition(glm::vec2(doorTileX * tileSize, doorTileY * tileSize));
+	// De moment no hi ha enemics, així que la porta s'obre directament
+	door->setOpen(true);
 
 	for(size_t i = 0; i < bombs.size(); ++i) {
 		if(bombs[i] != NULL)
@@ -110,6 +156,32 @@ void Scene::startLevel()
 			delete explosions[i];
 	}
 	explosions.clear();
+
+	// Centrar la càmera al jugador al carregar el nivell
+	viewWidth  = CAM_VIEW_W;
+	viewHeight = CAM_VIEW_H;
+	glm::ivec2 initPos = player->getPosition();
+	camX = float(SCREEN_X + initPos.x) + 16.f - viewWidth  * 0.5f;
+	camY = float(SCREEN_Y + initPos.y) + 16.f - viewHeight * 0.5f;
+
+	float mapRight  = float(SCREEN_X) + float(map->getMapWidth())  - viewWidth;
+	float mapBottom = float(SCREEN_Y) + float(map->getMapHeight()) - viewHeight;
+	if(camX < 0.f)        camX = 0.f;
+	if(camY < 0.f)        camY = 0.f;
+	if(camX > mapRight)   camX = mapRight;
+	if(camY > mapBottom)  camY = mapBottom;
+
+	projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
+}
+
+void Scene::nextLevel()
+{
+	if(currentLevel < 5) {
+		startLevel(currentLevel + 1);
+	}
+	else {
+		gameState = WIN;
+	}
 }
 
 void Scene::init()
@@ -123,20 +195,7 @@ void Scene::init()
 	if(gameOverSprite != NULL) { delete gameOverSprite; gameOverSprite = NULL; }
 	if(winSprite != NULL) { delete winSprite; winSprite = NULL; }
 	if(timerSprite != NULL) { delete timerSprite; timerSprite = NULL; }
-
-	levelTimeLeft = 120000;
-	lastDisplayedSeconds = -1;
-
-	for(size_t i = 0; i < bombs.size(); ++i) {
-		if(bombs[i] != NULL)
-			delete bombs[i];
-	}
-	bombs.clear();
-	for(size_t i = 0; i < explosions.size(); ++i) {
-		if(explosions[i] != NULL)
-			delete explosions[i];
-	}
-	explosions.clear();
+	if(levelHUDSprite != NULL) { delete levelHUDSprite; levelHUDSprite = NULL; }
 
 	// Carregar les imatges de menús i pantalles
 	if (menuTex.loadFromFile("images/Menu/main_menu.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
@@ -193,12 +252,7 @@ void Scene::init()
 		winSprite->changeAnimation(0);
 	}
 
-	map = TileMap::createTileMap("levels/level01.txt", glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
-	player = new Player();
-	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
-	player->setPosition(glm::vec2(INIT_PLAYER_X_TILES * map->getTileSize(), INIT_PLAYER_Y_TILES * map->getTileSize()));
-	player->setTileMap(map);
-	player->setBombs(&bombs);
+	startLevel(1);
 	currentTime = 0.0f;
 
 	// Icona de vida per al HUD (mateix spritesheet del jugador)
@@ -218,23 +272,6 @@ void Scene::init()
 	godModeOffSprite = Sprite::createSprite(
 		glm::vec2(float(godModeOffTex.width()), float(godModeOffTex.height())),
 		glm::vec2(1.f, 1.f), &godModeOffTex, &texProgram);
-
-	// Inicialment la càmera es centra en la posició inicial del jugador
-	viewWidth  = CAM_VIEW_W;
-	viewHeight = CAM_VIEW_H;
-	glm::ivec2 initPos = player->getPosition();
-	camX = float(SCREEN_X + initPos.x) + 16.f - viewWidth  * 0.5f;
-	camY = float(SCREEN_Y + initPos.y) + 16.f - viewHeight * 0.5f;
-
-	// Clamping inicial als límits del mapa
-	float mapRight  = float(SCREEN_X) + float(map->getMapWidth())  - viewWidth;
-	float mapBottom = float(SCREEN_Y) + float(map->getMapHeight()) - viewHeight;
-	if(camX < 0.f)        camX = 0.f;
-	if(camY < 0.f)        camY = 0.f;
-	if(camX > mapRight)   camX = mapRight;
-	if(camY > mapBottom)  camY = mapBottom;
-
-	projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
 }
 
 void Scene::update(int deltaTime)
@@ -251,7 +288,7 @@ void Scene::update(int deltaTime)
 	switch (gameState) {
 		case MAIN_MENU:
 			if(isKeyJustPressed(GLFW_KEY_1)) {
-				startLevel();
+				startLevel(1);
 				gameState = PLAYING;
 			}
 			else if(isKeyJustPressed(GLFW_KEY_2)) {
@@ -287,6 +324,22 @@ void Scene::update(int deltaTime)
 					break;
 				}
 
+				// Tecles de drecera / debug per provar canvi de nivells
+				if(isKeyJustPressed(GLFW_KEY_N)) {
+					nextLevel();
+					break;
+				}
+				if(isKeyJustPressed(GLFW_KEY_P)) {
+					int prev = (currentLevel > 1) ? currentLevel - 1 : 1;
+					startLevel(prev);
+					break;
+				}
+				if(isKeyJustPressed(GLFW_KEY_1)) { startLevel(1); break; }
+				if(isKeyJustPressed(GLFW_KEY_2)) { startLevel(2); break; }
+				if(isKeyJustPressed(GLFW_KEY_3)) { startLevel(3); break; }
+				if(isKeyJustPressed(GLFW_KEY_4)) { startLevel(4); break; }
+				if(isKeyJustPressed(GLFW_KEY_5)) { startLevel(5); break; }
+
 				if(isKeyJustPressed(GLFW_KEY_G)) {
 					player->toggleGodMode();
 					showGodModeMessage(player->isGodMode());
@@ -294,6 +347,16 @@ void Scene::update(int deltaTime)
 				if(isKeyJustPressed(GLFW_KEY_SPACE) || isKeyJustPressed(GLFW_KEY_X)) {
 					placeBomb();
 				}
+
+				// Actualitzar porta i comprovar col·lisió per passar de nivell
+				if(door != NULL) {
+					door->update(deltaTime);
+					if(door->isOpen() && door->checkCollision(player->getPosition(), glm::ivec2(32, 32))) {
+						nextLevel();
+						break;
+					}
+				}
+
 				// 1. Actualitzar bombes
 				for(size_t i = 0; i < bombs.size(); ++i) {
 					if(bombs[i] != NULL) {
@@ -425,6 +488,7 @@ void Scene::render()
             break;
         case PLAYING:
             map->render();
+            if(door != NULL) door->render();
             renderBombs();
             renderExplosions();
             player->render();
@@ -433,6 +497,7 @@ void Scene::render()
             break;
         case PAUSED:
             map->render();
+            if(door != NULL) door->render();
             renderBombs();
             renderExplosions();
             player->render();
@@ -449,6 +514,7 @@ void Scene::render()
             break;
     }
 }
+
 
 
 void Scene::initShaders()
@@ -550,7 +616,7 @@ void Scene::updateTimerHUD()
 		int secs = totalSecs % 60;
 
 		char buf[32];
-		snprintf(buf, sizeof(buf), "TIME %02d:%02d", mins, secs);
+		snprintf(buf, sizeof(buf), "%02d:%02d", mins, secs);
 
 		if(timerSprite != NULL)
 		{
@@ -567,29 +633,54 @@ void Scene::updateTimerHUD()
 	}
 }
 
+void Scene::updateLevelHUD()
+{
+	if(currentLevel != lastDisplayedLevel)
+	{
+		lastDisplayedLevel = currentLevel;
+		char buf[32];
+		snprintf(buf, sizeof(buf), "1-%d", currentLevel);
+
+		if(levelHUDSprite != NULL)
+		{
+			delete levelHUDSprite;
+			levelHUDSprite = NULL;
+		}
+
+		if(BitmapText::createTexture(levelHUDTex, buf, 2))
+		{
+			levelHUDSprite = Sprite::createSprite(
+				glm::vec2(float(levelHUDTex.width()), float(levelHUDTex.height())),
+				glm::vec2(1.f, 1.f), &levelHUDTex, &texProgram);
+		}
+	}
+}
+
 void Scene::renderHUD()
 {
 	if(player == NULL || lifeIcon == NULL)
 		return;
 
+	const float hudY = camY + 8.f;
+	const float hudPad = 8.f;
+	const float livesRight = hudPad + float(player->getLives()) * 18.f;
+
 	int lives = player->getLives();
 	for(int i = 0; i < lives; ++i)
 	{
-		// Fixat a la cantonada superior-esquerra de la càmera
-		float x = camX + 8.f + float(i) * 18.f;
-		float y = camY + 8.f;
-		lifeIcon->setPosition(glm::vec2(x, y));
+		float x = camX + hudPad + float(i) * 18.f;
+		lifeIcon->setPosition(glm::vec2(x, hudY));
 		lifeIcon->render();
 	}
 
-	// Renderització del comptador enrere de 2 minuts al HUD (cantonada superior dreta de la càmera)
+	// Timer a la dreta; el nivell es centra al forat lliure entre vides i timer
 	updateTimerHUD();
+	float timerLeft = camX + viewWidth - hudPad;
 	if(timerSprite != NULL)
 	{
 		float timerW = float(timerTex.width());
-		float x = camX + viewWidth - timerW - 8.f;
-		float y = camY + 8.f;
-		timerSprite->setPosition(glm::vec2(x, y));
+		timerLeft = camX + viewWidth - timerW - hudPad;
+		timerSprite->setPosition(glm::vec2(timerLeft, hudY));
 
 		int totalSecs = (levelTimeLeft + 999) / 1000;
 		if(totalSecs <= 30)
@@ -600,6 +691,22 @@ void Scene::renderHUD()
 		timerSprite->render();
 		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 	}
+
+	updateLevelHUD();
+	if(levelHUDSprite != NULL)
+	{
+		float hudW = float(levelHUDTex.width());
+		float gapLeft = camX + livesRight + 4.f;
+		float gapRight = timerLeft - 4.f;
+		float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
+		// Si no hi ha espai al forat, queda just a la dreta de les vides
+		if(x < gapLeft)
+			x = gapLeft;
+		levelHUDSprite->setPosition(glm::vec2(x, hudY));
+		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+		levelHUDSprite->render();
+	}
+
 
 	if(godModeMsgTime > 0)
 	{
@@ -643,25 +750,10 @@ void Scene::placeBomb()
 		return;
 
 	glm::ivec2 playerPos = player->getPosition();
-	int dir = player->getFacingDirection(); // -1 per esquerra, +1 per dreta
 
-	// Col·locar la bomba davant del jugador (un bloc de 32 px endavant)
-	int targetX = playerPos.x + dir * 32;
-	int targetY = playerPos.y;
-
-	int bombX = int(round(float(targetX) / 16.f)) * 16;
-	int bombY = int(round(float(targetY) / 16.f)) * 16;
-
-	// Comprovar si a la casella de davant hi ha un bloc sòlid del mapa (paret)
-	bool frontBlocked = map->isSolidTile(glm::ivec2(bombX + 8, bombY + 16)) ||
-	                    map->isSolidTile(glm::ivec2(bombX + 24, bombY + 16));
-
-	if(frontBlocked)
-	{
-		// Si al davant hi ha paret, es col·loca a la casella actual del jugador
-		bombX = int(round(float(playerPos.x) / 16.f)) * 16;
-		bombY = int(round(float(playerPos.y) / 16.f)) * 16;
-	}
+	// Col·locar la bomba a la mateixa casella del jugador (directament a sota)
+	int bombX = int(round(float(playerPos.x) / 16.f)) * 16;
+	int bombY = int(round(float(playerPos.y) / 16.f)) * 16;
 
 	// Evitar posar dues bombes a la mateixa casella
 	for(size_t i = 0; i < bombs.size(); ++i) {

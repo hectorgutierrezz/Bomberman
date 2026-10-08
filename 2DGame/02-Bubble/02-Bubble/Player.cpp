@@ -41,6 +41,11 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	maxBombs = 1;
 	invulnerableTime = 0;
 	godMode = false;
+	if(sprite != NULL)
+	{
+		delete sprite;
+		sprite = NULL;
+	}
 	spritesheet.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	
 	glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f); // 17x17 pixels normalitzats

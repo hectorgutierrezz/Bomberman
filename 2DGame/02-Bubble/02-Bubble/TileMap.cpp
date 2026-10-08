@@ -90,10 +90,16 @@ bool TileMap::loadLevel(const string &levelFile)
 			else
 				map[j*mapSize.x+i] = tile - int('0');
 		}
-		fin.get(tile);
-#ifndef _WIN32
-		fin.get(tile);
-#endif
+		// End of line: support both LF (\n) and CRLF (\r\n).
+		// Old code always consumed 2 chars on non-Windows, which broke
+		// Unix-saved level files (LF only) and scrambled every row after the first.
+		int eol = fin.get();
+		if(eol == '\r')
+		{
+			int next = fin.peek();
+			if(next == '\n')
+				fin.get();
+		}
 	}
 	fin.close();
 	
@@ -162,7 +168,7 @@ bool TileMap::collisionMoveLeft(const glm::ivec2 &pos, const glm::ivec2 &size) c
 	y1 = (pos.y + size.y - 1) / tileSize;
 	for(int y=y0; y<=y1; y++)
 	{
-		if(map[y*mapSize.x+x] != 0)
+		if(isTileSolid(x, y))
 			return true;
 	}
 	
@@ -178,7 +184,7 @@ bool TileMap::collisionMoveRight(const glm::ivec2 &pos, const glm::ivec2 &size) 
 	y1 = (pos.y + size.y - 1) / tileSize;
 	for(int y=y0; y<=y1; y++)
 	{
-		if(map[y*mapSize.x+x] != 0)
+		if(isTileSolid(x, y))
 			return true;
 	}
 	
@@ -194,7 +200,7 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	y = (pos.y + size.y - 1) / tileSize;
 	for(int x=x0; x<=x1; x++)
 	{
-		if(map[y*mapSize.x+x] != 0)
+		if(isTileSolid(x, y))
 		{
 			if(*posY - tileSize * y + size.y <= 4)
 			{

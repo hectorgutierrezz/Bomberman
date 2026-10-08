@@ -2,6 +2,7 @@
 #define _SCENE_INCLUDE
 
 #include "Bomb.h"
+#include "Door.h"
 #include "Explosion.h"
 #include "Player.h"
 #include "ShaderProgram.h"
@@ -56,11 +57,16 @@ private:
   void renderHUD();
   void placeBomb();
   void showGodModeMessage(bool enabled);
-  void startLevel();
+  void startLevel(int levelNum = 1);
+  void nextLevel();
   void updateTimerHUD();
+  void updateLevelHUD();
 
   TileMap *map;
   Player *player;
+  Door *door;
+  int currentLevel;
+
   ShaderProgram texProgram;
   float currentTime;
   glm::mat4 projection;
@@ -98,6 +104,11 @@ private:
   Sprite *timerSprite;
   int lastDisplayedSeconds;
 
+  // HUD: indicador de nivell
+  Texture levelHUDTex;
+  Sprite *levelHUDSprite;
+  int lastDisplayedLevel;
+
   // Missatge temporal de god mode
   Texture godModeOnTex;
   Texture godModeOffTex;
@@ -112,3 +123,4 @@ private:
 };
 
 #endif // _SCENE_INCLUDE
+
