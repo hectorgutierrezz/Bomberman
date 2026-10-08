@@ -344,6 +344,9 @@ void Scene::update(int deltaTime)
 					player->toggleGodMode();
 					showGodModeMessage(player->isGodMode());
 				}
+				if(isKeyJustPressed(GLFW_KEY_K)) {
+					if(door != NULL) door->setOpen(true);
+				}
 				if(isKeyJustPressed(GLFW_KEY_SPACE) || isKeyJustPressed(GLFW_KEY_X)) {
 					placeBomb();
 				}
