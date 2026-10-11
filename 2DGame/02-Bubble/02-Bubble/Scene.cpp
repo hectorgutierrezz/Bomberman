@@ -84,6 +84,9 @@ Scene::Scene() {
   levelTimeLeft = 120000;
   lastDisplayedSeconds = -1;
   lastDisplayedLevel = -1;
+  externalLives = 3;
+  shieldSprite = NULL;
+  lastDisplayedInternalHp = -1;
   gameState = MAIN_MENU;
   for (int i = 0; i <= GLFW_KEY_LAST; ++i)
     keyLastState[i] = false;
@@ -100,6 +103,8 @@ Scene::~Scene() {
   freeMenuScreens();
   if (lifeIcon != NULL)
     delete lifeIcon;
+  if (shieldSprite != NULL)
+    delete shieldSprite;
   if (timerSprite != NULL)
     delete timerSprite;
   if (levelHUDSprite != NULL)
@@ -120,7 +125,7 @@ Scene::~Scene() {
   explosions.clear();
 }
 
-void Scene::startLevel(int levelNum) {
+void Scene::startLevel(int levelNum, bool keepPowerUps) {
   currentLevel = levelNum;
   if (currentLevel < 1)
     currentLevel = 1;
@@ -159,12 +164,17 @@ void Scene::startLevel(int levelNum) {
   int doorTileX = 30;
   int doorTileY = spawnTileY;
 
+  glm::vec2 spawnPos(INIT_PLAYER_X_TILES * tileSize, spawnTileY * tileSize);
+
   if (player == NULL) {
     player = new Player();
+    player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+    player->setPosition(spawnPos);
+  } else {
+    if (!keepPowerUps)
+      player->resetPowerUps();
+    player->respawn(spawnPos);
   }
-  player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
-  player->setPosition(
-      glm::vec2(INIT_PLAYER_X_TILES * tileSize, spawnTileY * tileSize));
   player->setTileMap(map);
   player->setBombs(&bombs);
 
@@ -211,9 +221,21 @@ void Scene::startLevel(int levelNum) {
 
 void Scene::nextLevel() {
   if (currentLevel < 5) {
-    startLevel(currentLevel + 1);
+    startLevel(currentLevel + 1, true);
   } else {
     gameState = WIN;
+  }
+}
+
+void Scene::onPlayerDeath() {
+  externalLives--;
+  if (externalLives <= 0) {
+    externalLives = 0;
+    bTimeOver = false;
+    gameState = GAME_OVER;
+  } else {
+    // Encara queden re-runs: es reinicia la pantalla mantenint els power-ups
+    startLevel(currentLevel, true);
   }
 }
 
@@ -365,10 +387,16 @@ void Scene::initMenuScreens() {
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
   addInst("  - K  : OPEN EXIT DOOR IMMEDIATELY", 2, 40.f, 344.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - 1-5: DIRECT LEVEL WARP (STAGES 1 TO 5)", 2, 40.f, 364.f,
+  addInst("  - H: ADD ONE LIFE", 2, 40.f, 364.f,
+          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+  addInst("  - B: ADD ONE BOMB UP", 2, 40.f, 384.f,
+          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+  addInst("  - N: GO TO THE NEXT LEVEL", 2, 40.f, 404.f,
+          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+  addInst("  - 1-5: DIRECT LEVEL WARP (STAGES 1 TO 5)", 2, 40.f, 424.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
 
-  addInst("[ PRESS ENTER OR ESC TO RETURN TO MENU ]", 2, 85.f, 442.f,
+  addInst("[ PRESS ENTER OR ESC TO RETURN TO MENU ]", 2, 85.f, 452.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
 
   // 3. Pantalla de Crèdits
@@ -433,8 +461,8 @@ void Scene::initMenuScreens() {
   }
   timeOverMsgLabel.init("TIME OVER!", 3, glm::vec2(225.f, 265.f),
                         glm::vec4(1.f, 0.3f, 0.2f, 1.f), &texProgram);
-  gameOverRetryLabel.init("PRESS ENTER TO RETRY LEVEL", 2,
-                          glm::vec2(155.f, 320.f),
+  gameOverRetryLabel.init("PRESS ENTER: RETRY WITHOUT POWERUPS", 2,
+                          glm::vec2(110.f, 320.f),
                           glm::vec4(1.f, 0.9f, 0.2f, 1.f), &texProgram);
   gameOverMenuLabel.init("PRESS M OR ESC TO MAIN MENU", 2,
                          glm::vec2(155.f, 360.f), glm::vec4(1.f), &texProgram);
@@ -479,6 +507,11 @@ void Scene::init() {
     delete levelHUDSprite;
     levelHUDSprite = NULL;
   }
+  if (shieldSprite != NULL) {
+    delete shieldSprite;
+    shieldSprite = NULL;
+  }
+  lastDisplayedInternalHp = -1;
   if (godModeOnSprite != NULL) {
     delete godModeOnSprite;
     godModeOnSprite = NULL;
@@ -490,7 +523,8 @@ void Scene::init() {
 
   initMenuScreens();
 
-  startLevel(1);
+  externalLives = 3;
+  startLevel(1, false);
   currentTime = 0.0f;
 
   // Icona de vida per al HUD (mateix spritesheet del jugador)
@@ -533,7 +567,8 @@ void Scene::update(int deltaTime) {
     } else if (isKeyJustPressed(GLFW_KEY_ENTER) ||
                isKeyJustPressed(GLFW_KEY_SPACE)) {
       if (menuOption == 0) {
-        startLevel(1);
+        externalLives = 3;
+        startLevel(1, false);
         gameState = PLAYING;
       } else if (menuOption == 1) {
         gameState = INSTRUCTIONS;
@@ -543,7 +578,8 @@ void Scene::update(int deltaTime) {
         Game::instance().exit();
       }
     } else if (isKeyJustPressed(GLFW_KEY_1)) {
-      startLevel(1);
+      externalLives = 3;
+      startLevel(1, false);
       gameState = PLAYING;
     } else if (isKeyJustPressed(GLFW_KEY_2)) {
       gameState = INSTRUCTIONS;
@@ -589,27 +625,27 @@ void Scene::update(int deltaTime) {
       }
       if (isKeyJustPressed(GLFW_KEY_P)) {
         int prev = (currentLevel > 1) ? currentLevel - 1 : 1;
-        startLevel(prev);
+        startLevel(prev, true);
         break;
       }
       if (isKeyJustPressed(GLFW_KEY_1)) {
-        startLevel(1);
+        startLevel(1, true);
         break;
       }
       if (isKeyJustPressed(GLFW_KEY_2)) {
-        startLevel(2);
+        startLevel(2, true);
         break;
       }
       if (isKeyJustPressed(GLFW_KEY_3)) {
-        startLevel(3);
+        startLevel(3, true);
         break;
       }
       if (isKeyJustPressed(GLFW_KEY_4)) {
-        startLevel(4);
+        startLevel(4, true);
         break;
       }
       if (isKeyJustPressed(GLFW_KEY_5)) {
-        startLevel(5);
+        startLevel(5, true);
         break;
       }
 
@@ -620,6 +656,13 @@ void Scene::update(int deltaTime) {
       if (isKeyJustPressed(GLFW_KEY_K)) {
         if (door != NULL)
           door->setOpen(true);
+      }
+      // Cheats de testeig per provar el sistema de power-ups i vides
+      if (isKeyJustPressed(GLFW_KEY_H)) {
+        player->addInternalLife(); // Afegeix vida interna (cor/escut)
+      }
+      if (isKeyJustPressed(GLFW_KEY_B)) {
+        player->addMaxBomb(); // Incrementa bombes simultànies
       }
       if (isKeyJustPressed(GLFW_KEY_SPACE) || isKeyJustPressed(GLFW_KEY_X)) {
         placeBomb();
@@ -673,13 +716,12 @@ void Scene::update(int deltaTime) {
             }
           }
 
-          // Col·lisió amb el jugador: la explosió fa dany
+          // Col·lisió amb el jugador: l'explosió fa dany
           if (explosions[i]->checkCollision(player->getPosition(),
                                             glm::ivec2(32, 32))) {
-            player->hit();
-            if (player->getLives() <= 0) {
-              bTimeOver = false;
-              gameState = GAME_OVER;
+            if (player->hit()) {
+              onPlayerDeath();
+              break;
             }
           }
 
@@ -737,7 +779,8 @@ void Scene::update(int deltaTime) {
 
   case GAME_OVER:
     if (isKeyJustPressed(GLFW_KEY_ENTER)) {
-      startLevel(currentLevel);
+      externalLives = 3;
+      startLevel(currentLevel, false); // Reiniciar la pantalla sense power-ups
       gameState = PLAYING;
     } else if (isKeyJustPressed(GLFW_KEY_ESCAPE) ||
                isKeyJustPressed(GLFW_KEY_M)) {
@@ -1028,13 +1071,38 @@ void Scene::renderHUD() {
 
   const float hudY = camY + 8.f;
   const float hudPad = 8.f;
-  const float livesRight = hudPad + float(player->getLives()) * 18.f;
+  const float livesRight = hudPad + float(externalLives) * 18.f;
 
-  int lives = player->getLives();
-  for (int i = 0; i < lives; ++i) {
+  // 1. Contador extern: nombre de re-runs fins al Game Over
+  for (int i = 0; i < externalLives; ++i) {
     float x = camX + hudPad + float(i) * 18.f;
     lifeIcon->setPosition(glm::vec2(x, hudY));
     lifeIcon->render();
+  }
+
+  // 2. Si té vida interna extra (> 1 per power-ups), mostrar indicador
+  float extraHpOffset = 0.f;
+  if (player->getInternalLives() > 1) {
+    if (shieldSprite == NULL ||
+        lastDisplayedInternalHp != player->getInternalLives()) {
+      lastDisplayedInternalHp = player->getInternalLives();
+      if (shieldSprite != NULL)
+        delete shieldSprite;
+      char buf[16];
+      snprintf(buf, sizeof(buf), "+%d HP", player->getInternalLives() - 1);
+      if (BitmapText::createTexture(shieldTex, buf, 1)) {
+        shieldSprite = Sprite::createSprite(
+            glm::vec2(float(shieldTex.width()), float(shieldTex.height())),
+            glm::vec2(1.f, 1.f), &shieldTex, &texProgram);
+      }
+    }
+    if (shieldSprite != NULL) {
+      extraHpOffset = float(shieldTex.width()) + 6.f;
+      shieldSprite->setPosition(glm::vec2(camX + livesRight + 2.f, hudY + 4.f));
+      texProgram.setUniform4f("color", 0.3f, 1.0f, 0.4f, 1.0f); // verd brillant
+      shieldSprite->render();
+      texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+    }
   }
 
   // Timer a la dreta; el nivell es centra al forat lliure entre vides i timer
@@ -1059,7 +1127,7 @@ void Scene::renderHUD() {
   updateLevelHUD();
   if (levelHUDSprite != NULL) {
     float hudW = float(levelHUDTex.width());
-    float gapLeft = camX + livesRight + 4.f;
+    float gapLeft = camX + livesRight + extraHpOffset + 4.f;
     float gapRight = timerLeft - 4.f;
     float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
     // Si no hi ha espai al forat, queda just a la dreta de les vides

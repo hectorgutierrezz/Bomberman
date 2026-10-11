@@ -28,12 +28,24 @@ public:
 	void setBombs(const std::vector<Bomb*> *bombsList);
 	glm::ivec2 getPosition() const { return posPlayer; }
 	int getFacingDirection() const { return facingDirection; }
-	int getLives() const { return lives; }
+	int getInternalLives() const { return internalLives; }
+	void setInternalLives(int l) { internalLives = l; }
+	void addInternalLife() { internalLives++; }
+	int getLives() const { return internalLives; } // Alias
+
 	int getMaxBombs() const { return maxBombs; }
+	void setMaxBombs(int b) { maxBombs = b; }
+	void addMaxBomb() { maxBombs++; }
+
+	void resetPowerUps();
+	void respawn(const glm::vec2 &pos);
+
 	bool isInvulnerable() const { return godMode || invulnerableTime > 0; }
 	void toggleGodMode() { godMode = !godMode; }
 	bool isGodMode() const { return godMode; }
-	void hit();
+
+	// Retorna true si el comptador intern arriba a 0 (mort), false si sobreviu
+	bool hit();
 	
 private:
 	bool bJumping;
@@ -41,8 +53,8 @@ private:
 	int facingDirection;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY;
-	int lives;
-	int maxBombs;
+	int internalLives; // 1 de base per pantalla; augmenta amb power-ups
+	int maxBombs;      // Es manté a través dels re-runs
 	int invulnerableTime;
 	Texture spritesheet;
 	Sprite *sprite;

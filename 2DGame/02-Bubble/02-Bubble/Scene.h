@@ -74,8 +74,9 @@ private:
   void renderHUD();
   void placeBomb();
   void showGodModeMessage(bool enabled);
-  void startLevel(int levelNum = 1);
+  void startLevel(int levelNum = 1, bool keepPowerUps = true);
   void nextLevel();
+  void onPlayerDeath();
   void updateTimerHUD();
   void updateLevelHUD();
 
@@ -83,6 +84,7 @@ private:
   Player *player;
   Door *door;
   int currentLevel;
+  int externalLives; // Contador extern (re-runs fins al Game Over)
 
   ShaderProgram texProgram;
   float currentTime;
@@ -142,6 +144,11 @@ private:
   // HUD: icones de vides (sprites del personatge)
   Texture hudTex;
   Sprite *lifeIcon;
+
+  // HUD: indicador de vida interna extra (> 1 per power-ups)
+  Texture shieldTex;
+  Sprite *shieldSprite;
+  int lastDisplayedInternalHp;
 
   // HUD: comptador enrere de temps
   int levelTimeLeft;

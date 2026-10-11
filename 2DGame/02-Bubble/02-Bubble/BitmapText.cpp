@@ -43,6 +43,7 @@ static const unsigned char FONT_6[5] = {0x3C, 0x4A, 0x49, 0x49, 0x30};
 static const unsigned char FONT_7[5] = {0x01, 0x71, 0x09, 0x05, 0x03};
 static const unsigned char FONT_8[5] = {0x36, 0x49, 0x49, 0x49, 0x36};
 static const unsigned char FONT_9[5] = {0x06, 0x49, 0x49, 0x29, 0x1E};
+static const unsigned char FONT_PLUS[5]  = {0x08, 0x08, 0x3E, 0x08, 0x08};
 static const unsigned char FONT_COLON[5] = {0x00, 0x36, 0x36, 0x00, 0x00};
 static const unsigned char FONT_MINUS[5] = {0x04, 0x04, 0x04, 0x04, 0x04};
 static const unsigned char FONT_DOT[5]   = {0x00, 0x20, 0x20, 0x00, 0x00};
@@ -59,6 +60,7 @@ static const unsigned char *glyphFor(char c)
 {
 	switch(c)
 	{
+	case '+': return FONT_PLUS;
 	case '0': return FONT_0;
 	case '1': return FONT_1;
 	case '2': return FONT_2;

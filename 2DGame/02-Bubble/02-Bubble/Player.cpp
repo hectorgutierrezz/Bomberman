@@ -22,7 +22,7 @@ Player::Player()
 	map = NULL;
 	bombs = NULL;
 	facingDirection = 1;
-	lives = 3;
+	internalLives = 1;
 	maxBombs = 1;
 	invulnerableTime = 0;
 	godMode = false;
@@ -37,7 +37,7 @@ Player::~Player()
 void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 {
 	bJumping = false;
-	lives = 3;
+	internalLives = 1;
 	maxBombs = 1;
 	invulnerableTime = 0;
 	godMode = false;
@@ -282,16 +282,35 @@ void Player::setBombs(const std::vector<Bomb*> *bombsList)
 	bombs = bombsList;
 }
 
-void Player::hit()
+void Player::resetPowerUps()
 {
-	if(godMode || invulnerableTime > 0 || lives <= 0)
-		return;
+	maxBombs = 1;
+	internalLives = 1;
+}
 
-	lives--;
-	if(lives <= 0)
-		return;
+void Player::respawn(const glm::vec2 &pos)
+{
+	bJumping = false;
+	invulnerableTime = 0;
+	internalLives = 1;
+	setPosition(pos);
+	if(sprite != NULL)
+		sprite->changeAnimation(IDLE);
+}
 
-	invulnerableTime = 2000;
+bool Player::hit()
+{
+	if(godMode || invulnerableTime > 0 || internalLives <= 0)
+		return false;
+
+	internalLives--;
+	if(internalLives > 0)
+	{
+		invulnerableTime = 2000;
+		return false;
+	}
+
+	return true;
 }
 
 
