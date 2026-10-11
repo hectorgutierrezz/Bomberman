@@ -19,8 +19,51 @@
 
 #define GOD_MODE_MSG_DURATION 2000
 
-// Límits del món on pot anar la càmera (marge = SCREEN_X + 36 tiles*16px)
-// Calculat dinàmicament a init() a partir del mapa
+TextLabel::~TextLabel()
+{
+	free();
+}
+
+void TextLabel::init(const std::string &text, int scale, const glm::vec2 &p, const glm::vec4 &col, ShaderProgram *program)
+{
+	free();
+	pos = p;
+	color = col;
+	if(BitmapText::createTexture(tex, text, scale))
+	{
+		sprite = Sprite::createSprite(glm::vec2(float(tex.width()), float(tex.height())), glm::vec2(1.f, 1.f), &tex, program);
+		sprite->setPosition(pos);
+	}
+}
+
+void TextLabel::render(ShaderProgram &program) const
+{
+	if(sprite != NULL)
+	{
+		program.setUniform4f("color", color.r, color.g, color.b, color.a);
+		sprite->render();
+		program.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	}
+}
+
+void TextLabel::renderWithColor(ShaderProgram &program, const glm::vec4 &c) const
+{
+	if(sprite != NULL)
+	{
+		program.setUniform4f("color", c.r, c.g, c.b, c.a);
+		sprite->render();
+		program.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+	}
+}
+
+void TextLabel::free()
+{
+	if(sprite != NULL)
+	{
+		delete sprite;
+		sprite = NULL;
+	}
+}
 
 Scene::Scene()
 {
@@ -28,12 +71,17 @@ Scene::Scene()
 	player = NULL;
 	door = NULL;
 	currentLevel = 1;
-	menuSprite = NULL;
-	instructionsSprite = NULL;
-	creditsSprite = NULL;
+	logoSprite = NULL;
+	copyrightSprite = NULL;
+	hudsonSprite = NULL;
+	cursorSprite = NULL;
 	pauseSprite = NULL;
 	gameOverSprite = NULL;
-	winSprite = NULL;
+	timeOverSprite = NULL;
+	worldClearSprite = NULL;
+	celebrateSprite = NULL;
+	menuOption = 0;
+	bTimeOver = false;
 	lifeIcon = NULL;
 	timerSprite = NULL;
 	levelHUDSprite = NULL;
@@ -58,18 +106,7 @@ Scene::~Scene()
 		delete player;
 	if(door != NULL)
 		delete door;
-	if(menuSprite != NULL)
-		delete menuSprite;
-	if(instructionsSprite != NULL)
-		delete instructionsSprite;
-	if(creditsSprite != NULL)
-		delete creditsSprite;
-	if(pauseSprite != NULL)
-		delete pauseSprite;
-	if(gameOverSprite != NULL)
-		delete gameOverSprite;
-	if(winSprite != NULL)
-		delete winSprite;
+	freeMenuScreens();
 	if(lifeIcon != NULL)
 		delete lifeIcon;
 	if(timerSprite != NULL)
@@ -184,73 +221,179 @@ void Scene::nextLevel()
 	}
 }
 
+void Scene::freeMenuScreens()
+{
+	if(logoSprite != NULL) { delete logoSprite; logoSprite = NULL; }
+	if(copyrightSprite != NULL) { delete copyrightSprite; copyrightSprite = NULL; }
+	if(hudsonSprite != NULL) { delete hudsonSprite; hudsonSprite = NULL; }
+	if(cursorSprite != NULL) { delete cursorSprite; cursorSprite = NULL; }
+	if(pauseSprite != NULL) { delete pauseSprite; pauseSprite = NULL; }
+	if(gameOverSprite != NULL) { delete gameOverSprite; gameOverSprite = NULL; }
+	if(timeOverSprite != NULL) { delete timeOverSprite; timeOverSprite = NULL; }
+	if(worldClearSprite != NULL) { delete worldClearSprite; worldClearSprite = NULL; }
+	if(celebrateSprite != NULL) { delete celebrateSprite; celebrateSprite = NULL; }
+
+	for(int i = 0; i < 4; ++i)
+		menuLabels[i].free();
+	menuFooterLabel.free();
+
+	for(size_t i = 0; i < instructionsLabels.size(); ++i) {
+		if(instructionsLabels[i] != NULL)
+			delete instructionsLabels[i];
+	}
+	instructionsLabels.clear();
+
+	for(size_t i = 0; i < creditsLabels.size(); ++i) {
+		if(creditsLabels[i] != NULL)
+			delete creditsLabels[i];
+	}
+	creditsLabels.clear();
+
+	pauseTitleLabel.free();
+	pauseResumeLabel.free();
+	pauseMenuLabel.free();
+
+	gameOverRetryLabel.free();
+	gameOverMenuLabel.free();
+	timeOverMsgLabel.free();
+
+	winCongratsLabel.free();
+	winSubLabel.free();
+	winPeaceLabel.free();
+	winPromptLabel.free();
+}
+
+void Scene::initMenuScreens()
+{
+	freeMenuScreens();
+
+	// 1. Menú Principal (Logo, Copyright, Hudson Bee, Cursor)
+	if(logoTex.loadFromFile("images/Menu/logo.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		logoSprite = Sprite::createSprite(glm::vec2(278.f, 160.f), glm::vec2(1.f, 1.f), &logoTex, &texProgram);
+		logoSprite->setPosition(glm::vec2((float(SCREEN_WIDTH) - 278.f) * 0.5f, 35.f));
+	}
+
+	if(copyrightTex.loadFromFile("images/Menu/copyright.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		copyrightSprite = Sprite::createSprite(glm::vec2(286.f, 27.f), glm::vec2(1.f, 1.f), &copyrightTex, &texProgram);
+		copyrightSprite->setPosition(glm::vec2((float(SCREEN_WIDTH) - 286.f) * 0.5f, 412.f));
+	}
+
+	if(hudsonTex.loadFromFile("images/Menu/hudson.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		hudsonSprite = Sprite::createSprite(glm::vec2(46.f, 44.f), glm::vec2(1.f, 1.f), &hudsonTex, &texProgram);
+		hudsonSprite->setPosition(glm::vec2(40.f, 404.f));
+	}
+
+	if(cursorTex.loadFromFile("images/Menu/cursor.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		cursorSprite = Sprite::createSprite(glm::vec2(24.f, 30.f), glm::vec2(1.f, 1.f), &cursorTex, &texProgram);
+	}
+
+	menuLabels[0].init("1. START GAME", 3, glm::vec2(204.f, 220.f), glm::vec4(1.f), &texProgram);
+	menuLabels[1].init("2. INSTRUCTIONS", 3, glm::vec2(186.f, 265.f), glm::vec4(1.f), &texProgram);
+	menuLabels[2].init("3. CREDITS", 3, glm::vec2(231.f, 310.f), glm::vec4(1.f), &texProgram);
+	menuLabels[3].init("4. EXIT", 3, glm::vec2(258.f, 355.f), glm::vec4(1.f), &texProgram);
+	menuFooterLabel.init("UP/DOWN: SELECT   ENTER: OK   ESC: EXIT", 2, glm::vec2(90.f, 452.f), glm::vec4(0.8f, 0.8f, 0.9f, 1.f), &texProgram);
+
+	// 2. Pantalla d'Instruccions
+	auto addInst = [&](const std::string &txt, int scale, float x, float y, const glm::vec4 &col) {
+		TextLabel *lbl = new TextLabel();
+		lbl->init(txt, scale, glm::vec2(x, y), col, &texProgram);
+		instructionsLabels.push_back(lbl);
+	};
+	addInst("INSTRUCTIONS & CONTROLS", 3, 100.f, 22.f, glm::vec4(1.f, 0.9f, 0.1f, 1.f));
+	addInst("CONTROLS:", 2, 40.f, 68.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+	addInst("  MOVE LEFT / RIGHT : ARROWS (OR A / D)", 2, 40.f, 90.f, glm::vec4(1.f));
+	addInst("  JUMP              : UP ARROW (OR W)", 2, 40.f, 110.f, glm::vec4(1.f));
+	addInst("  DROP BOMB         : SPACE / X KEY", 2, 40.f, 130.f, glm::vec4(1.f));
+	addInst("  PAUSE GAME        : P / ESC", 2, 40.f, 150.f, glm::vec4(1.f));
+
+	addInst("GAMEPLAY OBJECTIVE:", 2, 40.f, 185.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+	addInst("  - DROP BOMBS TO CLEAR ENEMIES AND OBSTACLES", 2, 40.f, 207.f, glm::vec4(1.f));
+	addInst("  - JUMP ON TOP OF BOMBS AS SOLID PLATFORMS!", 2, 40.f, 227.f, glm::vec4(1.f));
+	addInst("  - REACH THE EXIT DOOR TO COMPLETE THE LEVEL", 2, 40.f, 247.f, glm::vec4(1.f));
+	addInst("  - BEAT THE CLOCK: YOU HAVE 2 MINUTES (120s)!", 2, 40.f, 267.f, glm::vec4(1.f));
+
+	addInst("CHEATS (TRUCS DE PROVA):", 2, 40.f, 302.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+	addInst("  - G  : TOGGLE GOD MODE (INVINCIBILITY)", 2, 40.f, 324.f, glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+	addInst("  - K  : OPEN EXIT DOOR IMMEDIATELY", 2, 40.f, 344.f, glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+	addInst("  - 1-5: DIRECT LEVEL WARP (STAGES 1 TO 5)", 2, 40.f, 364.f, glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+
+	addInst("[ PRESS ENTER OR ESC TO RETURN TO MENU ]", 2, 85.f, 442.f, glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+
+	// 3. Pantalla de Crèdits
+	auto addCred = [&](const std::string &txt, int scale, float x, float y, const glm::vec4 &col) {
+		TextLabel *lbl = new TextLabel();
+		lbl->init(txt, scale, glm::vec2(x, y), col, &texProgram);
+		creditsLabels.push_back(lbl);
+	};
+	addCred("CREDITS", 3, 245.f, 28.f, glm::vec4(1.f, 0.9f, 0.1f, 1.f));
+	addCred("POCKET BOMBERMAN 2D", 2, 180.f, 85.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+	addCred("PROJECTE FIB - VJ (2026/27)", 2, 180.f, 110.f, glm::vec4(1.f));
+	addCred("FACULTAT D'INFORMATICA DE BARCELONA (UPC)", 2, 180.f, 135.f, glm::vec4(1.f));
+	addCred("AUTORS DEL PROJECTE:", 2, 180.f, 175.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+	addCred("  - HECTOR GUTIERREZ", 2, 180.f, 200.f, glm::vec4(1.f));
+	addCred("  - JAN", 2, 180.f, 225.f, glm::vec4(1.f));
+	addCred("RECURSOS ORIGINALS I SPRITES:", 2, 180.f, 265.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+	addCred("  (C) 1998 HUDSON SOFT / NINTENDO", 2, 180.f, 290.f, glm::vec4(1.f));
+	addCred("  SPRITE RIPS: FRET AND WOPPET", 2, 180.f, 315.f, glm::vec4(0.8f, 0.8f, 0.8f, 1.f));
+	addCred("AGRAIMENTS ALS PROFESSORS DE VIDEOJOCS", 2, 95.f, 375.f, glm::vec4(0.7f, 0.8f, 1.f, 1.f));
+	addCred("[ PRESS ENTER OR ESC TO RETURN TO MENU ]", 2, 85.f, 442.f, glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+
+	// 4. Pausa
+	if(pauseTex.loadFromFile("images/Menu/pause.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		pauseSprite = Sprite::createSprite(glm::vec2(208.f, 217.f), glm::vec2(1.f, 1.f), &pauseTex, &texProgram);
+		pauseSprite->setPosition(glm::vec2((float(SCREEN_WIDTH) - 208.f) * 0.5f, 45.f));
+	}
+	pauseTitleLabel.init("GAME PAUSED", 3, glm::vec2(210.f, 280.f), glm::vec4(1.f, 0.9f, 0.1f, 1.f), &texProgram);
+	pauseResumeLabel.init("PRESS P OR ESC TO RESUME", 2, glm::vec2(165.f, 335.f), glm::vec4(1.f), &texProgram);
+	pauseMenuLabel.init("PRESS M TO RETURN TO MAIN MENU", 2, glm::vec2(130.f, 370.f), glm::vec4(0.4f, 0.9f, 1.f, 1.f), &texProgram);
+
+	// 5. Game Over / Time Over
+	if(gameOverTex.loadFromFile("images/Menu/game_over.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		gameOverSprite = Sprite::createSprite(glm::vec2(310.f, 121.f), glm::vec2(1.f, 1.f), &gameOverTex, &texProgram);
+		gameOverSprite->setPosition(glm::vec2((float(SCREEN_WIDTH) - 310.f) * 0.5f, 100.f));
+	}
+	if(timeOverTex.loadFromFile("images/Menu/time_over.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		timeOverSprite = Sprite::createSprite(glm::vec2(205.f, 202.f), glm::vec2(1.f, 1.f), &timeOverTex, &texProgram);
+		timeOverSprite->setPosition(glm::vec2((float(SCREEN_WIDTH) - 205.f) * 0.5f, 45.f));
+	}
+	timeOverMsgLabel.init("TIME OVER!", 3, glm::vec2(225.f, 265.f), glm::vec4(1.f, 0.3f, 0.2f, 1.f), &texProgram);
+	gameOverRetryLabel.init("PRESS ENTER TO RETRY LEVEL", 2, glm::vec2(155.f, 320.f), glm::vec4(1.f, 0.9f, 0.2f, 1.f), &texProgram);
+	gameOverMenuLabel.init("PRESS M OR ESC TO MAIN MENU", 2, glm::vec2(155.f, 360.f), glm::vec4(1.f), &texProgram);
+
+	// 6. Victòria (Win)
+	if(worldClearTex.loadFromFile("images/Menu/world_clear.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		worldClearSprite = Sprite::createSprite(glm::vec2(316.f, 52.f), glm::vec2(1.f, 1.f), &worldClearTex, &texProgram);
+		worldClearSprite->setPosition(glm::vec2((float(SCREEN_WIDTH) - 316.f) * 0.5f, 60.f));
+	}
+	if(celebrateTex.loadFromFile("images/Menu/knights_celebrate.png", TEXTURE_PIXEL_FORMAT_RGBA))
+	{
+		celebrateSprite = Sprite::createSprite(glm::vec2(316.f, 79.f), glm::vec2(1.f, 1.f), &celebrateTex, &texProgram);
+		celebrateSprite->setPosition(glm::vec2((float(SCREEN_WIDTH) - 316.f) * 0.5f, 135.f));
+	}
+	winCongratsLabel.init("CONGRATULATIONS!", 3, glm::vec2(165.f, 240.f), glm::vec4(1.f, 0.9f, 0.1f, 1.f), &texProgram);
+	winSubLabel.init("YOU HAVE CLEARED ALL 5 WORLDS!", 2, glm::vec2(135.f, 295.f), glm::vec4(1.f), &texProgram);
+	winPeaceLabel.init("PEACE HAS RETURNED TO BOMBER ISLAND!", 2, glm::vec2(95.f, 330.f), glm::vec4(0.4f, 0.9f, 1.f, 1.f), &texProgram);
+	winPromptLabel.init("PRESS ENTER OR ESC FOR MAIN MENU", 2, glm::vec2(120.f, 390.f), glm::vec4(1.f, 0.9f, 0.2f, 1.f), &texProgram);
+}
+
 void Scene::init()
 {
 	initShaders();
 
-	if(menuSprite != NULL) { delete menuSprite; menuSprite = NULL; }
-	if(instructionsSprite != NULL) { delete instructionsSprite; instructionsSprite = NULL; }
-	if(creditsSprite != NULL) { delete creditsSprite; creditsSprite = NULL; }
-	if(pauseSprite != NULL) { delete pauseSprite; pauseSprite = NULL; }
-	if(gameOverSprite != NULL) { delete gameOverSprite; gameOverSprite = NULL; }
-	if(winSprite != NULL) { delete winSprite; winSprite = NULL; }
 	if(timerSprite != NULL) { delete timerSprite; timerSprite = NULL; }
 	if(levelHUDSprite != NULL) { delete levelHUDSprite; levelHUDSprite = NULL; }
+	if(godModeOnSprite != NULL) { delete godModeOnSprite; godModeOnSprite = NULL; }
+	if(godModeOffSprite != NULL) { delete godModeOffSprite; godModeOffSprite = NULL; }
 
-	// Carregar les imatges de menús i pantalles
-	if (menuTex.loadFromFile("images/Menu/main_menu.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
-	    menuTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Menus (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
-	{
-		menuSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &menuTex, &texProgram);
-		menuSprite->setNumberAnimations(1);
-		menuSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
-		menuSprite->changeAnimation(0);
-	}
-
-	if (instructionsTex.loadFromFile("images/Menu/instructions.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
-	    instructionsTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Menus (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
-	{
-		instructionsSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &instructionsTex, &texProgram);
-		instructionsSprite->setNumberAnimations(1);
-		instructionsSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
-		instructionsSprite->changeAnimation(0);
-	}
-
-	if (creditsTex.loadFromFile("images/Menu/credits.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
-	    creditsTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Menus (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
-	{
-		creditsSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &creditsTex, &texProgram);
-		creditsSprite->setNumberAnimations(1);
-		creditsSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
-		creditsSprite->changeAnimation(0);
-	}
-
-	if (pauseTex.loadFromFile("images/Menu/pause.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
-	    pauseTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Menus (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
-	{
-		pauseSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &pauseTex, &texProgram);
-		pauseSprite->setNumberAnimations(1);
-		pauseSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
-		pauseSprite->changeAnimation(0);
-	}
-
-	if (gameOverTex.loadFromFile("images/Menu/game_over.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
-	    gameOverTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Ending (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
-	{
-		gameOverSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &gameOverTex, &texProgram);
-		gameOverSprite->setNumberAnimations(1);
-		gameOverSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
-		gameOverSprite->changeAnimation(0);
-	}
-
-	if (winTex.loadFromFile("images/Menu/win.png", TEXTURE_PIXEL_FORMAT_RGBA) ||
-	    winTex.loadFromFile("images/Sprites/Original/Color/Intro_Ending_Menus/Game Boy _ GBC - Pocket Bomberman - Miscellaneous - Ending (Color).png", TEXTURE_PIXEL_FORMAT_RGBA))
-	{
-		winSprite = Sprite::createSprite(glm::vec2(SCREEN_WIDTH, SCREEN_HEIGHT), glm::vec2(1.f, 1.f), &winTex, &texProgram);
-		winSprite->setNumberAnimations(1);
-		winSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
-		winSprite->changeAnimation(0);
-	}
+	initMenuScreens();
 
 	startLevel(1);
 	currentTime = 0.0f;
@@ -287,7 +430,28 @@ void Scene::update(int deltaTime)
 
 	switch (gameState) {
 		case MAIN_MENU:
-			if(isKeyJustPressed(GLFW_KEY_1)) {
+			if(isKeyJustPressed(GLFW_KEY_UP) || isKeyJustPressed(GLFW_KEY_W)) {
+				menuOption = (menuOption + 3) % 4;
+			}
+			else if(isKeyJustPressed(GLFW_KEY_DOWN) || isKeyJustPressed(GLFW_KEY_S)) {
+				menuOption = (menuOption + 1) % 4;
+			}
+			else if(isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_SPACE)) {
+				if(menuOption == 0) {
+					startLevel(1);
+					gameState = PLAYING;
+				}
+				else if(menuOption == 1) {
+					gameState = INSTRUCTIONS;
+				}
+				else if(menuOption == 2) {
+					gameState = CREDITS;
+				}
+				else if(menuOption == 3) {
+					Game::instance().exit();
+				}
+			}
+			else if(isKeyJustPressed(GLFW_KEY_1)) {
 				startLevel(1);
 				gameState = PLAYING;
 			}
@@ -297,22 +461,25 @@ void Scene::update(int deltaTime)
 			else if(isKeyJustPressed(GLFW_KEY_3)) {
 				gameState = CREDITS;
 			}
+			else if(isKeyJustPressed(GLFW_KEY_4) || isKeyJustPressed(GLFW_KEY_ESCAPE)) {
+				Game::instance().exit();
+			}
 		break;
 
 		case INSTRUCTIONS:
-			if(isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE)) {
+			if(isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_SPACE)) {
 				gameState = MAIN_MENU;
 			}
 		break;
 
 		case CREDITS:
-			if(isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE)) {
+			if(isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_SPACE)) {
 				gameState = MAIN_MENU;
 			}
 		break;
 
 		case PLAYING:
-			if(isKeyJustPressed(GLFW_KEY_ESCAPE)) {
+			if(isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_P)) {
 				gameState = PAUSED;
 			}
 			else {
@@ -320,7 +487,8 @@ void Scene::update(int deltaTime)
 				levelTimeLeft -= deltaTime;
 				if(levelTimeLeft <= 0) {
 					levelTimeLeft = 0;
-					gameState = MAIN_MENU; // Si el temps s'acaba, perds i et torna al menú principal
+					bTimeOver = true;
+					gameState = GAME_OVER;
 					break;
 				}
 
@@ -398,8 +566,10 @@ void Scene::update(int deltaTime)
 						// Col·lisió amb el jugador: la explosió fa dany
 						if(explosions[i]->checkCollision(player->getPosition(), glm::ivec2(32, 32))) {
 							player->hit();
-							if(player->getLives() <= 0)
+							if(player->getLives() <= 0) {
+								bTimeOver = false;
 								gameState = GAME_OVER;
+							}
 						}
 
 						if(!explosions[i]->isActive()) {
@@ -420,16 +590,13 @@ void Scene::update(int deltaTime)
 				// --- Actualitzar la càmera per seguir el jugador ---
 				{
 					glm::ivec2 pPos = player->getPosition();
-					// Centre del jugador en coordenades de món
 					float targetX = float(SCREEN_X + pPos.x) + 16.f - viewWidth  * 0.5f;
 					float targetY = float(SCREEN_Y + pPos.y) + 16.f - viewHeight * 0.5f;
 
-					// Interpolació suau (lerp) per evitar moviment brusc
 					float lerpSpeed = 0.12f;
 					camX += (targetX - camX) * lerpSpeed;
 					camY += (targetY - camY) * lerpSpeed;
 
-					// Clamping als límits del mapa
 					float mapRight  = float(SCREEN_X) + float(map->getMapWidth())  - viewWidth;
 					float mapBottom = float(SCREEN_Y) + float(map->getMapHeight()) - viewHeight;
 					if(camX < 0.f)        camX = 0.f;
@@ -437,26 +604,32 @@ void Scene::update(int deltaTime)
 					if(camX > mapRight)   camX = mapRight;
 					if(camY > mapBottom)  camY = mapBottom;
 
-					// Reconstruir la matriu de projecció centrada a la càmera
 					projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
 				}
 			}
 		break;
 
 		case PAUSED:
-			if(isKeyJustPressed(GLFW_KEY_ESCAPE)) {
+			if(isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_P)) {
 				gameState = PLAYING;
+			}
+			else if(isKeyJustPressed(GLFW_KEY_M)) {
+				gameState = MAIN_MENU;
 			}
 		break;
 
 		case GAME_OVER:
 			if(isKeyJustPressed(GLFW_KEY_ENTER)) {
+				startLevel(currentLevel);
+				gameState = PLAYING;
+			}
+			else if(isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_M)) {
 				gameState = MAIN_MENU;
 			}
 		break;
 
 		case WIN:
-			if(isKeyJustPressed(GLFW_KEY_ENTER)) {
+			if(isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_SPACE)) {
 				gameState = MAIN_MENU;
 			}
 		break;
@@ -550,34 +723,129 @@ void Scene::initShaders()
 	fShader.free();
 }
 
-void Scene::renderMainMenu() {
-	if(menuSprite != NULL)
-		menuSprite->render();
+void Scene::renderMainMenu()
+{
+	glm::mat4 modelview = glm::mat4(1.0f);
+	texProgram.setUniformMatrix4f("modelview", modelview);
+	texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+	if(logoSprite != NULL)
+		logoSprite->render();
+
+	for(int i = 0; i < 4; ++i)
+	{
+		if(i == menuOption) {
+			menuLabels[i].renderWithColor(texProgram, glm::vec4(1.0f, 0.95f, 0.15f, 1.0f));
+		}
+		else {
+			menuLabels[i].renderWithColor(texProgram, glm::vec4(0.72f, 0.72f, 0.78f, 1.0f));
+		}
+	}
+
+	if(cursorSprite != NULL)
+	{
+		float bob = sin(currentTime * 0.008f) * 4.0f;
+		float cursorX = 142.f + bob;
+		float cursorY = 217.f + float(menuOption) * 45.f;
+		cursorSprite->setPosition(glm::vec2(cursorX, cursorY));
+		cursorSprite->render();
+	}
+
+	if(hudsonSprite != NULL)
+		hudsonSprite->render();
+
+	if(copyrightSprite != NULL)
+		copyrightSprite->render();
+
+	menuFooterLabel.render(texProgram);
 }
 
-void Scene::renderInstructions() {
-	if(instructionsSprite != NULL)
-		instructionsSprite->render();
+void Scene::renderInstructions()
+{
+	glm::mat4 modelview = glm::mat4(1.0f);
+	texProgram.setUniformMatrix4f("modelview", modelview);
+	texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+	for(size_t i = 0; i < instructionsLabels.size(); ++i)
+	{
+		if(instructionsLabels[i] != NULL)
+			instructionsLabels[i]->render(texProgram);
+	}
 }
 
-void Scene::renderCredits() {
-	if(creditsSprite != NULL)
-		creditsSprite->render();
+void Scene::renderCredits()
+{
+	glm::mat4 modelview = glm::mat4(1.0f);
+	texProgram.setUniformMatrix4f("modelview", modelview);
+	texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+	if(hudsonSprite != NULL)
+	{
+		hudsonSprite->setPosition(glm::vec2(70.f, 95.f));
+		hudsonSprite->render();
+		// Restore pos for main menu
+		hudsonSprite->setPosition(glm::vec2(40.f, 404.f));
+	}
+
+	for(size_t i = 0; i < creditsLabels.size(); ++i)
+	{
+		if(creditsLabels[i] != NULL)
+			creditsLabels[i]->render(texProgram);
+	}
 }
 
-void Scene::renderPauseOverlay() {
+void Scene::renderPauseOverlay()
+{
+	glm::mat4 modelview = glm::mat4(1.0f);
+	texProgram.setUniformMatrix4f("modelview", modelview);
+	texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
 	if(pauseSprite != NULL)
 		pauseSprite->render();
+
+	pauseTitleLabel.render(texProgram);
+	pauseResumeLabel.render(texProgram);
+	pauseMenuLabel.render(texProgram);
 }
 
-void Scene::renderGameOver() {
-	if(gameOverSprite != NULL)
-		gameOverSprite->render();
+void Scene::renderGameOver()
+{
+	glm::mat4 modelview = glm::mat4(1.0f);
+	texProgram.setUniformMatrix4f("modelview", modelview);
+	texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+	if(bTimeOver)
+	{
+		if(timeOverSprite != NULL)
+			timeOverSprite->render();
+		timeOverMsgLabel.render(texProgram);
+	}
+	else
+	{
+		if(gameOverSprite != NULL)
+			gameOverSprite->render();
+	}
+
+	gameOverRetryLabel.render(texProgram);
+	gameOverMenuLabel.render(texProgram);
 }
 
-void Scene::renderWin() {
-	if(winSprite != NULL)
-		winSprite->render();
+void Scene::renderWin()
+{
+	glm::mat4 modelview = glm::mat4(1.0f);
+	texProgram.setUniformMatrix4f("modelview", modelview);
+	texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+	if(worldClearSprite != NULL)
+		worldClearSprite->render();
+
+	if(celebrateSprite != NULL)
+		celebrateSprite->render();
+
+	winCongratsLabel.render(texProgram);
+	winSubLabel.render(texProgram);
+	winPeaceLabel.render(texProgram);
+	winPromptLabel.render(texProgram);
 }
 
 bool Scene::isKeyJustPressed(int key)

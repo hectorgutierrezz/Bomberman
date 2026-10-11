@@ -25,6 +25,20 @@ enum GameState {
   WIN
 };
 
+struct TextLabel {
+  Texture tex;
+  Sprite *sprite;
+  glm::vec2 pos;
+  glm::vec4 color;
+
+  TextLabel() : sprite(NULL), pos(0.f), color(1.f) {}
+  ~TextLabel();
+  void init(const std::string &text, int scale, const glm::vec2 &p, const glm::vec4 &col, ShaderProgram *program);
+  void render(ShaderProgram &program) const;
+  void renderWithColor(ShaderProgram &program, const glm::vec4 &c) const;
+  void free();
+};
+
 // Scene contains all the entities of our game.
 // It is responsible for updating and render them.
 
@@ -44,6 +58,9 @@ public:
 private:
   void initShaders();
   bool isKeyJustPressed(int key);
+
+  void initMenuScreens();
+  void freeMenuScreens();
 
   void renderMainMenu();
   void renderInstructions();
@@ -73,23 +90,51 @@ private:
   GameState gameState;
   bool keyLastState[GLFW_KEY_LAST + 1];
 
-  Texture menuTex;
-  Sprite *menuSprite;
+  // Menú Principal
+  Texture logoTex;
+  Sprite *logoSprite;
+  Texture copyrightTex;
+  Sprite *copyrightSprite;
+  Texture hudsonTex;
+  Sprite *hudsonSprite;
+  Texture cursorTex;
+  Sprite *cursorSprite;
+  int menuOption;
+  TextLabel menuLabels[4];
+  TextLabel menuFooterLabel;
 
-  Texture instructionsTex;
-  Sprite *instructionsSprite;
+  // Instruccions
+  std::vector<TextLabel*> instructionsLabels;
 
-  Texture creditsTex;
-  Sprite *creditsSprite;
+  // Crèdits
+  std::vector<TextLabel*> creditsLabels;
 
+  // Pausa
   Texture pauseTex;
   Sprite *pauseSprite;
+  TextLabel pauseTitleLabel;
+  TextLabel pauseResumeLabel;
+  TextLabel pauseMenuLabel;
 
+  // Game Over / Time Over
   Texture gameOverTex;
   Sprite *gameOverSprite;
+  Texture timeOverTex;
+  Sprite *timeOverSprite;
+  bool bTimeOver;
+  TextLabel gameOverRetryLabel;
+  TextLabel gameOverMenuLabel;
+  TextLabel timeOverMsgLabel;
 
-  Texture winTex;
-  Sprite *winSprite;
+  // Victòria (Win)
+  Texture worldClearTex;
+  Sprite *worldClearSprite;
+  Texture celebrateTex;
+  Sprite *celebrateSprite;
+  TextLabel winCongratsLabel;
+  TextLabel winSubLabel;
+  TextLabel winPeaceLabel;
+  TextLabel winPromptLabel;
 
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;

@@ -45,6 +45,15 @@ static const unsigned char FONT_8[5] = {0x36, 0x49, 0x49, 0x49, 0x36};
 static const unsigned char FONT_9[5] = {0x06, 0x49, 0x49, 0x29, 0x1E};
 static const unsigned char FONT_COLON[5] = {0x00, 0x36, 0x36, 0x00, 0x00};
 static const unsigned char FONT_MINUS[5] = {0x04, 0x04, 0x04, 0x04, 0x04};
+static const unsigned char FONT_DOT[5]   = {0x00, 0x20, 0x20, 0x00, 0x00};
+static const unsigned char FONT_EXCL[5]  = {0x00, 0x00, 0x2F, 0x00, 0x00};
+static const unsigned char FONT_SLASH[5] = {0x20, 0x10, 0x08, 0x04, 0x02};
+static const unsigned char FONT_OPAR[5]  = {0x00, 0x1C, 0x22, 0x41, 0x00};
+static const unsigned char FONT_CPAR[5]  = {0x00, 0x41, 0x22, 0x1C, 0x00};
+static const unsigned char FONT_GT[5]    = {0x41, 0x22, 0x14, 0x08, 0x00};
+static const unsigned char FONT_LT[5]    = {0x08, 0x14, 0x22, 0x41, 0x00};
+static const unsigned char FONT_OBRA[5]  = {0x00, 0x7F, 0x41, 0x41, 0x00};
+static const unsigned char FONT_CBRA[5]  = {0x00, 0x41, 0x41, 0x7F, 0x00};
 
 static const unsigned char *glyphFor(char c)
 {
@@ -62,6 +71,15 @@ static const unsigned char *glyphFor(char c)
 	case '9': return FONT_9;
 	case ':': return FONT_COLON;
 	case '-': return FONT_MINUS;
+	case '.': return FONT_DOT;
+	case '!': return FONT_EXCL;
+	case '/': return FONT_SLASH;
+	case '(': return FONT_OPAR;
+	case ')': return FONT_CPAR;
+	case '>': return FONT_GT;
+	case '<': return FONT_LT;
+	case '[': return FONT_OBRA;
+	case ']': return FONT_CBRA;
 	case 'A': return FONT_A;
 	case 'B': return FONT_B;
 	case 'C': return FONT_C;
