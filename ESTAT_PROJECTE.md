@@ -1,130 +1,152 @@
 # Estat del Projecte: Pocket Bomberman 2D (FIB - VJ 2026/27)
 
-Aquest document resumeix l'estat actual del desenvolupament del videojoc **Pocket Bomberman**, contrastat amb els requeriments de l'enunciat de la pràctica (**Part Bàsica: 6 punts** i **Polish: 4 punts**) i el pla d'implementació.
+Aquest document detalla l'estat actual del desenvolupament del videojoc **Pocket Bomberman** desenvolupat a `2DGame/`, contrastat punt per punt amb els requeriments de la guia de la pràctica (**FIB - Videojocs Curs 2026/27 Q1: Laboratori Exercici 2D**).
 
 ---
 
-## 1. Taula de Progrés Global vs Requeriments del PDF
+## 1. Avaluació vs Requeriments Oficials de l'Enunciat
 
-| Requeriment de l'Enunciat | Puntuació | Estat Actual | Progrés | Detalls / Tasques Pendents |
-| :--- | :---: | :---: | :---: | :--- |
-| **Entorn i Compilació en Linux** | - | **Completat** | 100% | `Makefile` operatiu, dependències locals (SOIL, GLEW, GLFW) i compatibilitat amb Linux sense necessitat de `sudo`. |
-| **Estructura de 4 Pantalles** | Bàsica | **Completat** | 100% | 4 pantalles principals requerides (`MAIN_MENU`, `INSTRUCTIONS`, `CREDITS`, `PLAYING`) més estats auxiliars (`PAUSED`, `GAME_OVER`, `WIN`). Menú interactiu amb cursor animat, sprites originals de GBC extrets i netejats (`images/Menu/`), i renderitzat amb `BitmapText`. Tecla `ESC` gestionada correctament per a pausa i tornada al menú. |
-| **Cinc Nivells i Porta de Sortida** | Bàsica | **Pendent** | 0% | Només existeix `level01.txt` del Bubble Bobble. Cal dissenyar els 5 nivells i la lògica de la porta de sortida. |
-| **Moviment i Salt de Bomberman** | Bàsica | **Iniciat** | 20% | Moviment, salt i físiques de Bomberman funcionals amb càmera dinàmica. Pendent substituir `bub.png` pel sprite definitiu de Bomberman i comptador de 3 vides. |
-| **Saltar sobre les Bombes** | Bàsica | **Completat** | 100% | Les bombes funcionen com a plataformes sòlides (`isSolidOnTop`). Bomberman es recolza i pot saltar des d'elles. |
-| **Sistema de Bombes i Explosions** | Bàsica | **Completat** | 90% | Classe `Bomb` (alineada a la graella, animació 4 frames `Bomb On`, mecha ~2.2s) i classe `Explosion` (animació 6 frames `Boooooom`, propagació en creu 4 direccions, col·lisió amb murs, reacció en cadena i impacte a jugador). |
-| **Blocs Destructibles** | Bàsica | **Pendent** | 0% | Falta adaptar `TileMap` perquè suporti rajoles destructibles (arbustos/blocs) i regeneri el VBO en trencar-los per les explosions. |
-| **Objectes / Power-ups (4 tipus)** | Bàsica | **Pendent** | 0% | Cal implementar com a mínim: *Bomb Up*, *Fire Up*, *Cor/Invulnerabilitat* i *Porta de Sortida*. |
-| **3 Enemics amb IA Diferent** | Bàsica | **Pendent** | 0% | Falta crear les classes d'enemics (patrulla, caçador, ràpid). |
-| **Boss Final al Nivell 5** | Bàsica | **Pendent** | 0% | Falta dissenyar i programar el cap final del cinquè món. |
-| **Temps Límit per Nivell** | Bàsica | **Completat** | 100% | Comptador enrere de 2 minuts (120s) per nivell. Si s'acaba el temps, es mostra la pantalla de *Time Over* amb Bomberman marejat i es pot reiniciar o anar al menú. |
-| **Interfície Gràfica (HUD)** | Bàsica | **En Progrés** | 60% | Es mostren les vides del jugador i el temporitzador de compte enrere (`TIME 02:00`). |
-| **Tecles de Truc (Cheats)** | Bàsica | **Pendent** | 0% | Falta implementar: `G` (God Mode), `K` (Kill enemies & obrir porta), `1`-`5` (saltar de nivell). Accés directe de desenvolupament 1-4 afegit al menú. |
-| **Àudio (Música i Efectes SFX)** | Polish | **Pendent** | 0% | Falta reproductor de so per a música de fons i efectes d'explosió, salt, agafar objectes. |
-| **Animacions i Game Feeling** | Polish | **En Progrés** | 45% | Sprites originals de menús de GBC, animació de bomba (`Bomb On`), explosió (`Boooooom`), cursor animat i pantalles de Game Over/Pausa autèntiques. |
+L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bàsica (6 punts)** i **Polish (4 punts)**.
+
+### 1.1. Part Bàsica (6 punts)
+
+| # | Requeriment de l'Enunciat (PDF) | Estat Actual | Progrés | Detall de la Implementació a `2DGame` |
+| :-: | :--- | :---: | :---: | :--- |
+| **1** | **Estructura bàsica de 4 pantalles**<br>*(Menú principal, jugar, instruccions, crèdits)* | **Completat** | 100% | Les 4 pantalles principals estan implementades (`MAIN_MENU`, `PLAYING`, `INSTRUCTIONS`, `CREDITS`) més estats auxiliars (`PAUSED`, `GAME_OVER`, `WIN`). Navegació amb fletxes/WASD, selecció amb Enter/Espai, dreceres 1-4 i tecla `ESC` per pausar o tornar enrere. Menús maquetats amb sprites originals de GBC (`images/Menu/`) i `BitmapText`. |
+| **2** | **Cinc nivells amb eliminació d'enemics i porta de sortida** | **En Progrés** | 60% | Creades les plantilles dels 5 nivells (`levels/level01.txt` fins a `level05.txt`). Classe [Door](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Door.h) implementada amb sprite de porta oberta/tancada i detecció de col·lisió de pas de nivell (`nextLevel()`). En superar el nivell 5 s'arriba a la pantalla de victòria (`WIN`). **Pendent:** dissenyar els mapes finals amb el tileset de GBC i condicionar l'obertura de la porta a haver eliminat tots els enemics (actualment s'obre per defecte en no haver-hi enemics encara). |
+| **3** | **Moviment d'esquerra a dreta i salt de Bomberman** | **Completat** | 100% | Físiques de moviment horitzontal, gravetat i salt parabòlic operatives a [Player.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Player.cpp). Substituït completament l'antic sprite de Bubble Bobble per l'spritesheet oficial de Bomberman (`bomber.png` de GBC) amb animacions d'`IDLE`, `STAND_LEFT/RIGHT`, `MOVE_LEFT/RIGHT` i `FALL`. Càmera dinàmica suau (*lerp*) que segueix el personatge. |
+| **4** | **Tres enemics amb comportaments diferents**<br>*(Contacte resta vida si no té el «cor»)* | **Pendent** | 0% | El sistema de dany i invulnerabilitat temporal del jugador ja existeix a `Player::hit()`, però encara no s'ha creat la jerarquia de classes d'enemics (`Enemy`) ni els 3 patrons d'IA diferenciats (patrulla terrestre, volador/perseguidor, saltador/ràpid). |
+| **5** | **Perdre les 3 vides implica perdre la partida i tornar al menú** | **Completat** | 95% | [Player](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Player.h) comença amb 3 vides. Cada cop que rep dany perd una vida i parpelleja invulnerable 2 segons. En arribar a 0 vides, s'activa l'estat `GAME_OVER` amb opció de tornar al menú principal (`ESC`/`M`) o reiniciar nivell (`ENTER`). |
+| **6** | **Deixar anar bombes (alineades amb tiles) que maten enemics o Bomberman** | **Completat** | 95% | La bomba s'alinea automàticament a la quadrícula (`round(pos/16)*16`). Classe [Bomb](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Bomb.h) amb animació de mecha i detonació a ~2.2s. Classe [Explosion](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Explosion.h) en creu (4 direccions) amb col·lisió contra parets, reaccions en cadena i dany a Bomberman. **Pendent:** danyar enemics i blocs destructibles. |
+| **7** | **Saltar sobre les seves bombes per arribar a zones elevades** | **Completat** | 100% | Fidels a *Pocket Bomberman*, les bombes no tenen gravetat i es mantenen fixes a l'aire on es col·loquen. Disposen de superfície superior sòlida (`isSolidOnTop`), permetent a Bomberman recolzar-s'hi i usar-les com a plataformes o escales per pujar a llocs inaccessibles. |
+| **8** | **Tiles destructibles (arbustos/blocs) que poden deixar anar objectes** | **Pendent** | 0% | Falta afegir identificadors de rajoles destructibles a [TileMap](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/TileMap.h), fer que les explosions les trenquin (regenerant la malla VBO) i generar objectes (*drop*) en trencar-se. |
+| **9** | **Quatre objectes (com a mínim ‘Bomb Up’ i ‘Fire Up’)** | **Pendent** | 15% | Codi base preparat (`Player::getMaxBombs()` i paràmetre de radi a `Explosion`), però falta crear les entitats i textures per als 4 objectes: `Bomb Up` (+1 bomba simultània), `Fire Up` (+1 radi d'explosió), `Cor` (protecció d'1 cop/vida) i un quart objecte (com `Patins` de velocitat o `Pedra de Poder`). |
+| **10** | **Temps límit per passar-se cada nivell** | **Completat** | 100% | Temporitzador enrere de 2 minuts (120s) per nivell. Si s'esgota el temps, el joc passa a la pantalla de *Time Over* amb el sprite original de Bomberman marejat amb rellotges als ulls. |
+| **11** | **Boss final al nivell 5** | **Pendent** | 0% | El nivell 5 està creat a nivell de mapa, però falta dissenyar i programar el cap final del món (comportament, vida/fases i patró d'atac basat en el joc original). |
+| **12** | **Interfície gràfica (HUD) amb dades mínimes requerides** | **En Progrés** | 60% | **Implementat:** Temps restant (`TIME MM:SS`, en vermell si <= 30s), Vides restants (icones de Bomberman), Nivell actual (`1-1`, `1-2`, ...) i avís de *God Mode*. <br>**Pendent segons enunciat:** comptador d'enemics restants, nombre de bombes simultànies i mida/potència de les explosions. |
+| **13** | **Tecles de truc (Cheats de correcció)** | **En Progrés** | 85% | - **`G` (God Mode):** IMPLEMENTAT a [Scene.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.cpp#L616-L619) (invulnerabilitat total + missatge en pantalla).<br>- **`K` (Eliminar enemics i obrir porta):** IMPLEMENTAT per obrir la porta (`door->setOpen(true)`); pendent afegir que elimini els enemics de la llista un cop existeixin.<br>- **`1`, `2`, `3`, `4`, `5` (Saltar de nivell):** IMPLEMENTAT (càrrega directa de qualsevol dels 5 nivells).<br>*(Extres de desenvolupament: `N` per a següent nivell, `P` per a nivell anterior).* |
 
 ---
 
-## 2. Estat Actual dels Fitxers del Projecte
+### 1.2. Polish (4 punts)
 
-### Codi Font (`2DGame/02-Bubble/02-Bubble/`)
-- **`Scene.h` / `Scene.cpp`**: 
+| Aspecte de Polish | Estat Actual | Progrés | Descripció i Estat |
+| :--- | :---: | :---: | :--- |
+| **So (Música de fons i efectes especials)** | **Pendent** | 0% | Falta incorporar el motor d'àudio (ex: llibreria lleugera com miniaudio, SDL2_mixer o irrKlang) per reproduir la música dels nivells/menús i els efectes de so (explosió, col·locar bomba, salt, agafar objectes, mal). |
+| **Interactivitat i Animacions de totes les entitats** | **En Progrés** | 50% | - **Fet:** Animacions de Bomberman (`bomber.png`), animació de metxa de la bomba (`Bomb On`, 4 frames), animació d'explosió fluida (`Boooooom`, 6 frames), cursor animat al menú, pantalla de pausa autèntica, pantalles de Game Over / Time Over i pantalla de victòria amb cavallers celebrant.<br>- **Pendent:** Animació de mort del jugador, animació de trencament de blocs, animacions per als 3 enemics i el Boss, transicions suaus entre pantalles. |
+| **Game feeling (Fidelitat, diversió i feedback)** | **En Progrés** | 50% | - **Fet:** Plataformes sobre bombes aèries autèntiques, càmera suau centrada en el jugador, estètica pixel-art de GBC, parpelleig en rebre dany, temporitzador que alerta en vermell quan queda poc temps.<br>- **Pendent:** Feedback d'impacte (*screenshake* a les explosions, partícules de runes, efectes sonors sincronitzats). |
+
+---
+
+### 1.3. Requisits del Lliurament Final (Pàgina 3 del PDF)
+
+| Requisit de Lliurament | Especificació del PDF | Estat de Preparació |
+| :--- | :--- | :--- |
+| **Format del fitxer** | `NomCognoms.zip` (màxim **200 MB** en total) | Pendent en finalitzar el projecte. |
+| **Fitxer `info.txt`** | Noms i cognoms dels integrants, funcionalitats implementades i instruccions del joc | Pendent de redactar abans de l'entrega. |
+| **Carpeta `Binari`** | Executable i tots els recursos necessaris (imatges, nivells, llibreries/dlls) llest per executar | El projecte compila netament amb `make` a Linux; falta generar el paquet autònom per al lliurament. |
+| **Carpeta `Projecte`** | Projecte compilable amb tot el codi font net | Organitzat a `2DGame/02-Bubble/`. |
+| **Vídeo `demo.avi`** | Vídeo de mostra d'**1 minut**, mida màxima **100 MB** (usant OBS/FRAPS i HandBrake) | Pendent de gravar i comprimir un cop integrat el polish. |
+
+---
+
+## 2. Mapa dels Fitxers del Projecte (`2DGame/02-Bubble/`)
+
+### Codi Font (`02-Bubble/`)
+- [Scene.h](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.h) / [Scene.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.cpp):
   - Màquina d'estats completa: `MAIN_MENU`, `INSTRUCTIONS`, `CREDITS`, `PLAYING`, `PAUSED`, `GAME_OVER`, `WIN`.
-  - Sistema de menús interactiu (`initMenuScreens`, `renderMainMenu`, `renderInstructions`, `renderCredits`, `renderPauseOverlay`, `renderGameOver`, `renderWin`).
-  - Navegació amb fletxes o W/S, selecció amb Enter o Espai, i dreceres numèriques 1-4.
-  - Pausa amb tecla `ESC` o `P`, represa amb `ESC`/`P` o retorn al menú amb `M`.
-  - Detecció de mort (Game Over clàssic) i fi de temps (Time Over amb sprite de Bomberman amb ulls de rellotge).
-  - Gestió de la col·lecció de bombes (`std::vector<Bomb*>`) i explosions (`std::vector<Explosion*>`).
-  - Càmera dinàmica (lerp suau) seguint el jugador durant la partida.
-- **`Game.h` / `Game.cpp`**:
-  - Bucle principal i callbacks de GLFW.
-  - Desacoblat el tancament brusc de la tecla `ESC`: ara `ESC` es delega a la `Scene` (per pausar, tornar enrere dels menús o sortir ordenadament mitjançant `Game::instance().exit()`).
-- **`BitmapText.h` / `BitmapText.cpp`**:
-  - Renderitzador de text pixel art retro basat en spritesheet (`images/hud_font.png`).
-  - Millorat el mapeig de glifs (`glyphFor`) per admetre caràcters de puntuació: `.`, `!`, `/`, `(`, `)`, `>`, `<`, `[`, `]`.
-- **`Bomb.h` / `Bomb.cpp`**:
-  - Utilitza el spritesheet `images/Bomberman/Bomb On (52x56).png` (4 frames, 208x56 px) amb textura compartida a memòria.
-  - Temporitzador de mecha de 2.2 segons abans de la detonació.
-  - Permet recolzar-se i saltar a sobre (`collisionDown`, `isSolidOnTop`) i actuar com a mur lateral.
-- **`Explosion.h` / `Explosion.cpp`**:
-  - Utilitza el spritesheet `images/Bomberman/Boooooom (52x56).png` (6 frames, 312x56 px).
-  - Propagació en creu en 4 direccions amb col·lisió contra rajoles de paret sòlida.
-  - Detecció de col·lisions (`checkCollision`) amb el jugador i altres bombes per reacció en cadena.
-- **`Player.h` / `Player.cpp`**: 
-  - Moviment horitzontal, salt parabòlic i recolzament sobre bombes sòlides.
-  - Mètode `hit()` per reiniciar posició al rebre l'impacte d'una explosió.
-- **`TileMap.h` / `TileMap.cpp`**: 
-  - Carrega `level01.txt` i `blocks.png`.
-  - Mètodes de consulta de sòlids: `isSolidTile(pos)` i `isTileSolid(tileX, tileY)`.
+  - Gestió de nivells 1 a 5 (`startLevel()`, `nextLevel()`).
+  - Gestió d'entitats: jugador, porta, vector de bombes i explosions.
+  - Tecles de truc: `G` (God Mode), `K` (Obrir porta / eliminar enemics), `1`..`5` (salt directe de nivell).
+  - HUD complet amb vides, temps i indicador de nivell.
+  - Càmera dinàmica 2D amb interpolació (*lerp*).
+- [Player.h](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Player.h) / [Player.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Player.cpp):
+  - Model i físiques de Bomberman amb spritesheet oficial `bomber.png` (17x17 px originals escalats a 32x32).
+  - Animacions: `IDLE`, `STAND_LEFT/RIGHT`, `MOVE_LEFT/RIGHT`, `FALL`.
+  - Sistema de 3 vides, invulnerabilitat temporal de 2 segons amb parpelleig, i God Mode.
+  - Suport per a col·lisió i recolzament sobre bombes sòlides a l'aire.
+- [Door.h](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Door.h) / [Door.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Door.cpp):
+  - Entitat de la porta de sortida del nivell amb estats tancada i oberta.
+  - Detecció de col·lisió centrada amb Bomberman per passar al següent nivell.
+- [Bomb.h](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Bomb.h) / [Bomb.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Bomb.cpp):
+  - Col·locació alineada a la graella (tiles de 16x16 / 32x32).
+  - Animació de 4 frames amb `Bomb On (52x56).png`.
+  - Comportament de plataforma sòlida (`isSolidOnTop`) sense gravetat.
+- [Explosion.h](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Explosion.h) / [Explosion.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Explosion.cpp):
+  - Propagació en 4 direccions amb animació fluida de 6 frames (`Boooooom (52x56).png`).
+  - Detonació en cadena de bombes properes i dany al jugador.
+- [TileMap.h](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/TileMap.h) / [TileMap.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/TileMap.cpp):
+  - Càrrega dels fitxers de mapa i generació de geometria OpenGL (VBO/VAO).
+  - Mètodes de comprovació de col·lisions sòlides.
+- [BitmapText.h](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/BitmapText.h) / [BitmapText.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/BitmapText.cpp):
+  - Renderització de text retro pixel-art mitjançant textura dinàmica.
 
-### Recursos (`images/`, `shaders/`, `levels/`)
-- **`images/Menu/` (Nous Sprites Extrets i Processats amb Canal Alfa RGBA)**:
-  - `logo.png` (111x64): Logotip original oficial "Pocket Bomberman" amb l'explosió.
-  - `cursor.png` (46x56): Cap de Bomberman usat com a cursor de selecció al menú principal.
-  - `copyright.png` (159x15): Avís de copyright oficial Hudson Soft / Nintendo.
-  - `hudson.png` (147x144): Emblema/abella de Hudson Soft per als crèdits.
-  - `pause.png` (160x167): Bomberman dormint sota l'arbre de pomes amb el cartell "PAUSE".
-  - `game_over.png` (141x55): Tipografia arcade 3D de "GAME OVER".
-  - `time_over.png` (158x156): Bomberman marejat amb rellotges als ulls per fi de temps ("TIME OVER").
-  - `world_clear.png` (144x24): Rètol daurat de "WORLD CLEAR!!".
-  - `knights_celebrate.png` (176x44): Cavallers celebrant per a la pantalla de victòria.
-- **`images/Bomberman/`**:
-  - `Bomb On (52x56).png`: Spritesheet animat de la bomba activa.
-  - `Boooooom (52x56).png`: Spritesheet animat de la detonació/explosió.
-- **`images/Sprites/Original/`**: 
-  - Col·lecció completa de sprites extrets de la ROM de *Pocket Bomberman* (stages món 1-5, personatges, enemics, menús).
+### Recursos i Nivells
+- **`levels/`**: Fitxers [level01.txt](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/levels/level01.txt) fins a [level05.txt](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/levels/level05.txt).
+- **`images/Menu/`**: Sprites oficials transparents (RGBA): `logo.png`, `cursor.png`, `copyright.png`, `hudson.png`, `pause.png`, `game_over.png`, `time_over.png`, `world_clear.png`, `knights_celebrate.png`.
+- **`images/Sprites/Original/`**: Rips complets de la ROM original de Pocket Bomberman (tilesets de mons 1-5, personatges, enemics i bosses).
+- **`images/door.png`**: Sprite de la porta oberta i tancada.
 
 ---
 
-## 3. Fases del Pla d'Implementació i Progrés
+## 3. Resum Gràfic de Progrés Global
 
 ```
-[██████████████████░░] 45% Progrés Global Estimat
+[████████████░░░░░░░░] 60% Progrés Total del Projecte
 
- Fase 1: Arquitectura de Pantalles i Menús (100% - COMPLETAT)
- Fase 2: Nivells, Mapes i Blocs Destructibles (0%)
- Fase 3: Bomberman, Moviment, Salt i Vides (20%)
- Fase 4: Sistema de Bombes i Explosions (90%)
- Fase 5: Objectes i Millores (Power-ups) (0%)
- Fase 6: Enemics (3 Tipus) i Boss Final (0%)
- Fase 7: HUD, Temps i Tecles de Truc (50%)
- Fase 8: Polish (Àudio i Game Feeling) (30%)
+  Part Bàsica (6 punts):
+  - Pantalles del joc (Menú, Jugar, Inst., Crèdits) : 100% [██████████]
+  - Moviment, salt i càmera de Bomberman            : 100% [██████████]
+  - Bombes a l'aire i salt sobre bombes             : 100% [██████████]
+  - Temps límit de nivell (120s)                    : 100% [██████████]
+  - Sistema de 3 vides i Game Over                  :  95% [██████████]
+  - Cinc nivells i porta de sortida                 :  60% [██████░░░░]
+  - HUD bàsic (Vides, Temps, Nivell, God Mode)      :  60% [██████░░░░]
+  - Tecles de truc / Cheats (G, K, 1-5)             :  85% [████████░░]
+  - Blocs destructibles als mapes                   :   0% [░░░░░░░░░░]
+  - 4 Objectes (Bomb Up, Fire Up, Cor, Extra)       :  15% [██░░░░░░░░]
+  - 3 Enemics amb IA diferenciada                   :   0% [░░░░░░░░░░]
+  - Boss final al nivell 5                          :   0% [░░░░░░░░░░]
+
+  Polish (4 punts):
+  - Interactivitat i animacions d'entitats / menús   :  50% [█████░░░░░]
+  - Game Feeling i fidelitat a Pocket Bomberman      :  50% [█████░░░░░]
+  - So (Música BGM i Efectes SFX)                   :   0% [░░░░░░░░░░]
 ```
 
 ---
 
-## 4. Pròxims Passos Immediats a Decidir
+## 4. Pla d'Acció Immediat per Completar els Requeriments
 
-1. **Blocs Destructibles al `TileMap` (Fase 2)**:
-   - Adaptar `TileMap` per identificar blocs destructibles (rajoles que es poden trencar).
-   - Quan una explosió toca una rajola destructible, canviar-la a buida (aire) i regenerar el VBO de la capa de tiles.
-2. **Power-ups i Objectes (Fase 5)**:
-   - *Bomb Up*: augmenta el nombre màxim de bombes simultànies.
-   - *Fire Up*: augmenta l'abast de les flames de la bomba.
-   - *Cor / Vida*: vida extra o immunitat temporal.
-   - *Porta de sortida*: apareix o s'obre en complir les condicions del nivell.
-3. **Enemics (Fase 6)**:
-   - Crear classe base `Enemy` i 3 classes derivades amb diferents comportaments (patrulla simple, caçador/volador, enemic ràpid).
+Per assolir la màxima qualificació (10/10), les tasques prioritàries a desenvolupar a `2DGame` són:
 
----
+1. **Blocs Destructibles i Drops (`TileMap`)**:
+   - Assignar identificador de tile destructible (ex: arbust de GBC).
+   - En impactar una explosió, canviar el tile a buit i reconstruir el VBO.
+   - Probabilitat d'instanciar un dels 4 power-ups a la posició del bloc trencat.
 
-## 5. Guia Ràpida de Compilació i Execució (Linux)
+2. **Els 4 Power-ups / Objectes**:
+   - `Bomb Up`: incrementa `player->maxBombs`.
+   - `Fire Up`: incrementa el radi de les explosions de les bombes.
+   - `Cor`: absorbeix un cop sense perdre vida o atorga una vida extra.
+   - `Quart objecte`: velocitat de moviment (patins) o bonificació de punts/temps.
 
-Des del directori del projecte:
-```bash
-# Compilar tot el projecte
-make
+3. **Els 3 Enemics amb IA Diferent**:
+   - Classe base `Enemy` amb mètodes d'actualització, renderitzat i col·lisió.
+   - Enemic 1: Patrulla terrestre horitzontal (canvia de sentit en tocar paret o buit).
+   - Enemic 2: Enemic volador o caçador que es mou cap a la posició de Bomberman.
+   - Enemic 3: Enemic ràpid o amb patrons de salt impredictibles.
+   - En eliminar tots els enemics del nivell, la `Door` passa a estat obert (`door->setOpen(true)`).
+   - Completar la tecla `K` perquè buidi la llista d'enemics a més d'obrir la porta.
 
-# Compilar i executar immediatament
-make run
+4. **Boss Final al Nivell 5**:
+   - Sprite de gran mida, barra de vida o múltiples cops requerits per derrotar-lo, i patró d'atac especial (llançament de projectils o càrregues).
 
-# Netejar fitxers de compilació
-make clean
-```
-O directament des de `2DGame/02-Bubble`:
-```bash
-cd 2DGame/02-Bubble
-make
-./bomberman
-```
+5. **Completar els elements pendents del HUD**:
+   - Afegir al HUD: nombre d'enemics restants, bombes màximes simultànies i potència d'explosió.
+
+6. **Àudio (Polish)**:
+   - Integrar reproducció de música chiptune retro per a menús i nivells, així com SFX d'explosió, salt, col·locació de bomba i recollida d'objectes.
+
+7. **Preparació del Paquet de Lliurament**:
+   - Crear `info.txt`, organitzar la carpeta `Binari/` amb l'executable compilat i gravar la demo `demo.avi` d'1 minut.
