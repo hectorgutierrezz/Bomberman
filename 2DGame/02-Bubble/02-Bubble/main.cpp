@@ -27,6 +27,11 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 		Game::instance().mouseRelease(button);
 }
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
+}
+
 
 int main(void)
 {
@@ -38,7 +43,7 @@ int main(void)
 		return -1;
 
 	/* Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Hello World", NULL, NULL);
+	window = glfwCreateWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Bomberman", NULL, NULL);
 	if (!window)
 	{
 		glfwTerminate();
@@ -54,10 +59,16 @@ int main(void)
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetCursorPosCallback(window, cursor_position_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
 	/* Init glew to have access to GL extensions */
 	glewExperimental = GL_TRUE;
 	glewInit();
+
+	/* Match viewport to framebuffer (handles HiDPI / initial size) */
+	int fbWidth, fbHeight;
+	glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+	glViewport(0, 0, fbWidth, fbHeight);
 
 	/* Init step of the game loop */
 	Game::instance().init();
