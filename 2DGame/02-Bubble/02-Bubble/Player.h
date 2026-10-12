@@ -40,15 +40,22 @@ public:
 	void resetPowerUps();
 	void respawn(const glm::vec2 &pos);
 
-	bool isInvulnerable() const { return godMode || invulnerableTime > 0; }
+	bool isInvulnerable() const { return godMode || invulnerableTime > 0 || bDying || bDead; }
 	void toggleGodMode() { godMode = !godMode; }
 	bool isGodMode() const { return godMode; }
+
+	bool isDying() const { return bDying; }
+	bool isDead() const { return bDead; }
+	void startDying();
 
 	// Retorna true si el comptador intern arriba a 0 (mort), false si sobreviu
 	bool hit();
 	
 private:
 	bool bJumping;
+	bool bDying;
+	bool bDead;
+	int dyingTime;
 	bool godMode;
 	int facingDirection;
 	glm::ivec2 tileMapDispl, posPlayer;

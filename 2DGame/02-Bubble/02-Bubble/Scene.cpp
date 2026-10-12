@@ -75,6 +75,7 @@ Scene::Scene() {
   menuOption = 0;
   bTimeOver = false;
   lifeIcon = NULL;
+  heartIcon = NULL;
   timerSprite = NULL;
   levelHUDSprite = NULL;
   godModeOnSprite = NULL;
@@ -85,8 +86,6 @@ Scene::Scene() {
   lastDisplayedSeconds = -1;
   lastDisplayedLevel = -1;
   externalLives = 3;
-  shieldSprite = NULL;
-  lastDisplayedInternalHp = -1;
   gameState = MAIN_MENU;
   for (int i = 0; i <= GLFW_KEY_LAST; ++i)
     keyLastState[i] = false;
@@ -103,8 +102,8 @@ Scene::~Scene() {
   freeMenuScreens();
   if (lifeIcon != NULL)
     delete lifeIcon;
-  if (shieldSprite != NULL)
-    delete shieldSprite;
+  if (heartIcon != NULL)
+    delete heartIcon;
   if (timerSprite != NULL)
     delete timerSprite;
   if (levelHUDSprite != NULL)
@@ -231,10 +230,22 @@ void Scene::onPlayerDeath() {
   externalLives--;
   if (externalLives <= 0) {
     externalLives = 0;
-    bTimeOver = false;
+    if (levelTimeLeft > 0)
+      bTimeOver = false;
+    // Netejar bombes i explosions actives
+    for (size_t i = 0; i < bombs.size(); ++i) {
+      if (bombs[i] != NULL)
+        delete bombs[i];
+    }
+    bombs.clear();
+    for (size_t i = 0; i < explosions.size(); ++i) {
+      if (explosions[i] != NULL)
+        delete explosions[i];
+    }
+    explosions.clear();
     gameState = GAME_OVER;
   } else {
-    // Encara queden re-runs: es reinicia la pantalla mantenint els power-ups
+    // Encara queden vides generals: es reinicia la pantalla mantenint els power-ups
     startLevel(currentLevel, true);
   }
 }
@@ -297,7 +308,6 @@ void Scene::freeMenuScreens() {
   pauseResumeLabel.free();
   pauseMenuLabel.free();
 
-  gameOverRetryLabel.free();
   gameOverMenuLabel.free();
   timeOverMsgLabel.free();
 
@@ -387,7 +397,7 @@ void Scene::initMenuScreens() {
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
   addInst("  - K  : OPEN EXIT DOOR IMMEDIATELY", 2, 40.f, 344.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - H: ADD ONE LIFE", 2, 40.f, 364.f,
+  addInst("  - H: ADD LEVEL LIFE / HEART (+1 HP)", 2, 40.f, 364.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
   addInst("  - B: ADD ONE BOMB UP", 2, 40.f, 384.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
@@ -459,13 +469,11 @@ void Scene::initMenuScreens() {
     timeOverSprite->setPosition(
         glm::vec2((float(SCREEN_WIDTH) - 205.f) * 0.5f, 45.f));
   }
-  timeOverMsgLabel.init("TIME OVER!", 3, glm::vec2(225.f, 265.f),
+  timeOverMsgLabel.init("TIME OVER!", 3, glm::vec2(225.f, 275.f),
                         glm::vec4(1.f, 0.3f, 0.2f, 1.f), &texProgram);
-  gameOverRetryLabel.init("PRESS ENTER: RETRY WITHOUT POWERUPS", 2,
-                          glm::vec2(110.f, 320.f),
-                          glm::vec4(1.f, 0.9f, 0.2f, 1.f), &texProgram);
-  gameOverMenuLabel.init("PRESS M OR ESC TO MAIN MENU", 2,
-                         glm::vec2(155.f, 360.f), glm::vec4(1.f), &texProgram);
+  gameOverMenuLabel.init("PRESS ENTER OR ESC FOR MAIN MENU", 2,
+                         glm::vec2(120.f, 350.f),
+                         glm::vec4(1.f, 0.9f, 0.2f, 1.f), &texProgram);
 
   // 6. Victòria (Win)
   if (worldClearTex.loadFromFile("images/Menu/world_clear.png",
@@ -507,11 +515,10 @@ void Scene::init() {
     delete levelHUDSprite;
     levelHUDSprite = NULL;
   }
-  if (shieldSprite != NULL) {
-    delete shieldSprite;
-    shieldSprite = NULL;
+  if (heartIcon != NULL) {
+    delete heartIcon;
+    heartIcon = NULL;
   }
-  lastDisplayedInternalHp = -1;
   if (godModeOnSprite != NULL) {
     delete godModeOnSprite;
     godModeOnSprite = NULL;
@@ -537,6 +544,9 @@ void Scene::init() {
   lifeIcon->setAnimationSpeed(0, 8);
   lifeIcon->addKeyframe(0, glm::vec2(0.f, 0.f));
   lifeIcon->changeAnimation(0);
+
+  // Inicialitzar textura i sprite de cor pixel-art per a les vides de nivell
+  initHeartTexture();
 
   BitmapText::createTexture(godModeOnTex, "GOD MODE ON");
   godModeOnSprite = Sprite::createSprite(
@@ -609,13 +619,13 @@ void Scene::update(int deltaTime) {
     if (isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_P)) {
       gameState = PAUSED;
     } else {
-      // Descomptar el temps del nivell
-      levelTimeLeft -= deltaTime;
-      if (levelTimeLeft <= 0) {
-        levelTimeLeft = 0;
-        bTimeOver = true;
-        gameState = GAME_OVER;
-        break;
+      // Descomptar el temps del nivell només si el jugador no està morint
+      if (!player->isDying() && !player->isDead()) {
+        levelTimeLeft -= deltaTime;
+        if (levelTimeLeft <= 0) {
+          levelTimeLeft = 0;
+          player->startDying();
+        }
       }
 
       // Tecles de drecera / debug per provar canvi de nivells
@@ -669,7 +679,7 @@ void Scene::update(int deltaTime) {
       }
 
       // Actualitzar porta i comprovar col·lisió per passar de nivell
-      if (door != NULL) {
+      if (door != NULL && !player->isDying() && !player->isDead()) {
         door->update(deltaTime);
         if (door->isOpen() &&
             door->checkCollision(player->getPosition(), glm::ivec2(32, 32))) {
@@ -720,7 +730,7 @@ void Scene::update(int deltaTime) {
           if (explosions[i]->checkCollision(player->getPosition(),
                                             glm::ivec2(32, 32))) {
             if (player->hit()) {
-              onPlayerDeath();
+              // Ha iniciat l'animació de mort (startDying)
               break;
             }
           }
@@ -731,6 +741,9 @@ void Scene::update(int deltaTime) {
           }
         }
       }
+      if (gameState != PLAYING)
+        break;
+
       for (auto it = explosions.begin(); it != explosions.end();) {
         if (*it == NULL)
           it = explosions.erase(it);
@@ -739,6 +752,14 @@ void Scene::update(int deltaTime) {
       }
 
       player->update(deltaTime);
+
+      // Comprovar si l'animació de mort ha finalitzat per descomptar la vida general i reiniciar / Game Over
+      if (player->isDead()) {
+        if (levelTimeLeft <= 0)
+          bTimeOver = (externalLives <= 1);
+        onPlayerDeath();
+        break;
+      }
 
       // --- Actualitzar la càmera per seguir el jugador ---
       {
@@ -778,12 +799,10 @@ void Scene::update(int deltaTime) {
     break;
 
   case GAME_OVER:
-    if (isKeyJustPressed(GLFW_KEY_ENTER)) {
-      externalLives = 3;
-      startLevel(currentLevel, false); // Reiniciar la pantalla sense power-ups
-      gameState = PLAYING;
-    } else if (isKeyJustPressed(GLFW_KEY_ESCAPE) ||
-               isKeyJustPressed(GLFW_KEY_M)) {
+    if (isKeyJustPressed(GLFW_KEY_ENTER) ||
+        isKeyJustPressed(GLFW_KEY_SPACE) ||
+        isKeyJustPressed(GLFW_KEY_ESCAPE) ||
+        isKeyJustPressed(GLFW_KEY_M)) {
       gameState = MAIN_MENU;
     }
     break;
@@ -971,7 +990,6 @@ void Scene::renderGameOver() {
       gameOverSprite->render();
   }
 
-  gameOverRetryLabel.render(texProgram);
   gameOverMenuLabel.render(texProgram);
 }
 
@@ -1071,41 +1089,30 @@ void Scene::renderHUD() {
 
   const float hudY = camY + 8.f;
   const float hudPad = 8.f;
-  const float livesRight = hudPad + float(externalLives) * 18.f;
 
-  // 1. Contador extern: nombre de re-runs fins al Game Over
+  // 1. Contador extern: nombre de vides generals (cares de Bomberman)
   for (int i = 0; i < externalLives; ++i) {
     float x = camX + hudPad + float(i) * 18.f;
     lifeIcon->setPosition(glm::vec2(x, hudY));
     lifeIcon->render();
   }
 
-  // 2. Si té vida interna extra (> 1 per power-ups), mostrar indicador
-  float extraHpOffset = 0.f;
-  if (player->getInternalLives() > 1) {
-    if (shieldSprite == NULL ||
-        lastDisplayedInternalHp != player->getInternalLives()) {
-      lastDisplayedInternalHp = player->getInternalLives();
-      if (shieldSprite != NULL)
-        delete shieldSprite;
-      char buf[16];
-      snprintf(buf, sizeof(buf), "+%d HP", player->getInternalLives() - 1);
-      if (BitmapText::createTexture(shieldTex, buf, 1)) {
-        shieldSprite = Sprite::createSprite(
-            glm::vec2(float(shieldTex.width()), float(shieldTex.height())),
-            glm::vec2(1.f, 1.f), &shieldTex, &texProgram);
-      }
+  const float livesRight = hudPad + float(externalLives) * 18.f;
+
+  // 2. Vida de nivell: cors pixel-art (1 de base; augmenta amb power-ups com cors)
+  float heartsRight = livesRight;
+  if (heartIcon != NULL) {
+    int hp = player->getInternalLives();
+    for (int j = 0; j < hp; ++j) {
+      float hx = camX + livesRight + 6.f + float(j) * 14.f;
+      heartIcon->setPosition(glm::vec2(hx, hudY + 2.f));
+      heartIcon->render();
     }
-    if (shieldSprite != NULL) {
-      extraHpOffset = float(shieldTex.width()) + 6.f;
-      shieldSprite->setPosition(glm::vec2(camX + livesRight + 2.f, hudY + 4.f));
-      texProgram.setUniform4f("color", 0.3f, 1.0f, 0.4f, 1.0f); // verd brillant
-      shieldSprite->render();
-      texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
-    }
+    if (hp > 0)
+      heartsRight = livesRight + 6.f + float(hp) * 14.f;
   }
 
-  // Timer a la dreta; el nivell es centra al forat lliure entre vides i timer
+  // 3. Temporitzador a la cantonada dreta
   updateTimerHUD();
   float timerLeft = camX + viewWidth - hudPad;
   if (timerSprite != NULL) {
@@ -1116,7 +1123,7 @@ void Scene::renderHUD() {
     int totalSecs = (levelTimeLeft + 999) / 1000;
     if (totalSecs <= 30)
       texProgram.setUniform4f("color", 1.0f, 0.2f, 0.2f,
-                              1.0f); // Vermell quan queden 30 segons o menys
+                              1.0f); // Vermell <= 30s
     else
       texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -1124,13 +1131,13 @@ void Scene::renderHUD() {
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
   }
 
+  // 4. Indicador de nivell centrat entre els cors i el temporitzador
   updateLevelHUD();
   if (levelHUDSprite != NULL) {
     float hudW = float(levelHUDTex.width());
-    float gapLeft = camX + livesRight + extraHpOffset + 4.f;
+    float gapLeft = camX + heartsRight + 4.f;
     float gapRight = timerLeft - 4.f;
     float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
-    // Si no hi ha espai al forat, queda just a la dreta de les vides
     if (x < gapLeft)
       x = gapLeft;
     levelHUDSprite->setPosition(glm::vec2(x, hudY));
@@ -1138,6 +1145,7 @@ void Scene::renderHUD() {
     levelHUDSprite->render();
   }
 
+  // 5. Missatge temporal de god mode si s'ha activat / desactivat
   if (godModeMsgTime > 0) {
     Sprite *msgSprite = godModeMsgActive ? godModeOnSprite : godModeOffSprite;
     if (msgSprite != NULL) {
@@ -1164,7 +1172,7 @@ void Scene::showGodModeMessage(bool enabled) {
 }
 
 void Scene::placeBomb() {
-  if (player == NULL || map == NULL)
+  if (player == NULL || map == NULL || player->isDying() || player->isDead())
     return;
 
   // Limitar bombes actives simultànies (1 de base; power-up Bomb Up
@@ -1198,4 +1206,62 @@ void Scene::placeBomb() {
   bomb->setPosition(glm::vec2(float(bombX), float(bombY)));
   bomb->updatePlayerOverlap(playerPos, glm::ivec2(32, 32));
   bombs.push_back(bomb);
+}
+
+void Scene::initHeartTexture() {
+  const int HW = 12;
+  const int HH = 12;
+  static const char *pattern[HH] = {
+    "..XX....XX..",
+    ".XRRX..XRRX.",
+    "XWRRRXXRRRRX",
+    "XWRRRRRRRRRX",
+    "XRRRRRRRRRRX",
+    ".XRRRRRRRRX.",
+    "..XRRRRRRX..",
+    "...XRRRRX...",
+    "....XRRX....",
+    ".....XX.....",
+    "............",
+    "............"
+  };
+
+  std::vector<unsigned char> pixels(HW * HH * 4, 0);
+  for (int y = 0; y < HH; ++y) {
+    for (int x = 0; x < HW; ++x) {
+      char c = pattern[y][x];
+      int idx = (y * HW + x) * 4;
+      if (c == 'X') {
+        pixels[idx + 0] = 50;
+        pixels[idx + 1] = 10;
+        pixels[idx + 2] = 20;
+        pixels[idx + 3] = 255;
+      } else if (c == 'R') {
+        pixels[idx + 0] = 235;
+        pixels[idx + 1] = 35;
+        pixels[idx + 2] = 50;
+        pixels[idx + 3] = 255;
+      } else if (c == 'W') {
+        pixels[idx + 0] = 255;
+        pixels[idx + 1] = 180;
+        pixels[idx + 2] = 190;
+        pixels[idx + 3] = 255;
+      }
+    }
+  }
+
+  heartTex.loadFromRGBABuffer(pixels.data(), HW, HH);
+  heartTex.setMinFilter(GL_NEAREST);
+  heartTex.setMagFilter(GL_NEAREST);
+  heartTex.setWrapS(GL_CLAMP_TO_EDGE);
+  heartTex.setWrapT(GL_CLAMP_TO_EDGE);
+
+  if (heartIcon != NULL)
+    delete heartIcon;
+  heartIcon = Sprite::createSprite(glm::ivec2(12, 12), glm::vec2(1.f, 1.f),
+                                   &heartTex, &texProgram);
+  heartIcon->setNumberAnimations(1);
+  heartIcon->setAnimationSpeed(0, 8);
+  heartIcon->addKeyframe(0, glm::vec2(0.f, 0.f));
+  heartIcon->changeAnimation(0);
 }

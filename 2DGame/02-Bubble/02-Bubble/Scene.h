@@ -79,6 +79,7 @@ private:
   void onPlayerDeath();
   void updateTimerHUD();
   void updateLevelHUD();
+  void initHeartTexture();
 
   TileMap *map;
   Player *player;
@@ -124,7 +125,6 @@ private:
   Texture timeOverTex;
   Sprite *timeOverSprite;
   bool bTimeOver;
-  TextLabel gameOverRetryLabel;
   TextLabel gameOverMenuLabel;
   TextLabel timeOverMsgLabel;
 
@@ -141,14 +141,13 @@ private:
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;
 
-  // HUD: icones de vides (sprites del personatge)
+  // HUD: icones de vides generals (sprites del personatge)
   Texture hudTex;
   Sprite *lifeIcon;
 
-  // HUD: indicador de vida interna extra (> 1 per power-ups)
-  Texture shieldTex;
-  Sprite *shieldSprite;
-  int lastDisplayedInternalHp;
+  // HUD: indicador de vida de nivell (cors pixel-art)
+  Texture heartTex;
+  Sprite *heartIcon;
 
   // HUD: comptador enrere de temps
   int levelTimeLeft;
