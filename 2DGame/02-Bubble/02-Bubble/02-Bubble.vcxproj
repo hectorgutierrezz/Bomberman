@@ -15,6 +15,7 @@
     <ClInclude Include="BitmapText.h" />
     <ClInclude Include="Bomb.h" />
     <ClInclude Include="Door.h" />
+    <ClInclude Include="Enemy.h" />
     <ClInclude Include="Explosion.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Player.h" />
@@ -29,6 +30,7 @@
     <ClCompile Include="BitmapText.cpp" />
     <ClCompile Include="Bomb.cpp" />
     <ClCompile Include="Door.cpp" />
+    <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="Explosion.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="main.cpp" />

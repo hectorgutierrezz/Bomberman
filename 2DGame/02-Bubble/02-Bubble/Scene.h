@@ -3,6 +3,7 @@
 
 #include "Bomb.h"
 #include "Door.h"
+#include "Enemy.h"
 #include "Explosion.h"
 #include "Player.h"
 #include "ShaderProgram.h"
@@ -79,11 +80,18 @@ private:
   void onPlayerDeath();
   void updateTimerHUD();
   void updateLevelHUD();
+  void updateEnemiesHUD();
   void initHeartTexture();
+  void clearEnemies();
+  void spawnEnemies();
+  void updateEnemies(int deltaTime);
+  int countAliveEnemies() const;
+  void updateDoorFromEnemies();
 
   TileMap *map;
   Player *player;
   Door *door;
+  std::vector<Enemy *> enemies;
   int currentLevel;
   int externalLives; // Contador extern (re-runs fins al Game Over)
 
@@ -160,6 +168,11 @@ private:
   Sprite *levelHUDSprite;
   int lastDisplayedLevel;
 
+  // HUD: enemics vius del nivell
+  Texture enemiesHUDTex;
+  Sprite *enemiesHUDSprite;
+  int lastDisplayedEnemies;
+
   // Missatge temporal de god mode
   Texture godModeOnTex;
   Texture godModeOffTex;
@@ -174,4 +187,3 @@ private:
 };
 
 #endif // _SCENE_INCLUDE
-
