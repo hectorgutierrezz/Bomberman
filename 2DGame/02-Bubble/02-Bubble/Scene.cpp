@@ -56,6 +56,7 @@ void TextLabel::free() {
     delete sprite;
     sprite = NULL;
   }
+  tex.free();
 }
 
 Scene::Scene() {
