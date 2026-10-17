@@ -6,10 +6,10 @@
 
 
 #define JUMP_ANGLE_STEP 4
-#define JUMP_HEIGHT 96
+#define JUMP_HEIGHT 44
 #define FALL_STEP 4
-#define GRAVITY 0.4f
-#define MAX_FALL_SPEED 8.0f
+#define GRAVITY 0.22f
+#define MAX_FALL_SPEED 3.5f
 
 
 enum PlayerAnims
@@ -27,10 +27,11 @@ Player::Player()
 	internalLives = 1;
 	maxBombs = 1;
 	bombRadius = 1;
-	moveSpeed = 2.0f;
+	moveSpeed = 1.35f;
 	moveAccumX = 0.0f;
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
+	dropDownTimer = 0;
 	godMode = false;
 	bDying = false;
 	bDead = false;
@@ -52,10 +53,11 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	internalLives = 1;
 	maxBombs = 1;
 	bombRadius = 1;
-	moveSpeed = 2.0f;
+	moveSpeed = 1.35f;
 	moveAccumX = 0.0f;
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
+	dropDownTimer = 0;
 	godMode = false;
 	if(sprite != NULL)
 	{
@@ -66,7 +68,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	
 	glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f); // 17x17 pixels normalitzats
 	
-	sprite = Sprite::createSprite(glm::ivec2(32, 32), sizeInUV, &spritesheet, &shaderProgram);
+	sprite = Sprite::createSprite(glm::ivec2(PLAYER_WIDTH, PLAYER_HEIGHT), sizeInUV, &spritesheet, &shaderProgram);
 	sprite->setNumberAnimations(8); // Mateix nombre d'animacions que a l'enum
 
 	auto uv = [](int col, int row) {
@@ -134,14 +136,47 @@ void Player::startDying()
 		sprite->changeAnimation(DIE);
 }
 
+bool Player::isOnJumpThroughPlatform() const
+{
+	if(map == NULL)
+		return false;
+	int tileSize = map->getTileSize();
+	int footY = posPlayer.y + PLAYER_HEIGHT;
+	int tileY = footY / tileSize;
+	int x0 = (posPlayer.x + 1) / tileSize;
+	int x1 = (posPlayer.x + PLAYER_WIDTH - 2) / tileSize;
+
+	bool hasJumpThrough = false;
+	for(int x = x0; x <= x1; ++x)
+	{
+		if(map->isTileSolid(x, tileY))
+		{
+			if(map->isTileJumpThrough(x, tileY))
+				hasJumpThrough = true;
+			else
+				return false; // Bloc de roca sòlid a sota, no es pot baixar
+		}
+	}
+	return hasJumpThrough;
+}
+
 bool Player::stepFall(int step)
 {
 	bool onGround = false;
+	bool ignoreJT = (dropDownTimer > 0) ||
+	                Game::instance().getKey(GLFW_KEY_DOWN) ||
+	                Game::instance().getKey(GLFW_KEY_S);
+	glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+	glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
+
 	for(int s = 0; s < step; ++s)
 	{
 		posPlayer.y += 1;
-		if(map != NULL && map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+		colPos.y = posPlayer.y;
+		int correctedY = colPos.y;
+		if(map != NULL && map->collisionMoveDown(colPos, colSize, &correctedY, ignoreJT))
 		{
+			posPlayer.y = correctedY;
 			onGround = true;
 			break;
 		}
@@ -151,7 +186,7 @@ bool Player::stepFall(int step)
 			{
 				if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 				{
-					if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+					if((*bombs)[i]->collisionDown(colPos, colSize, &posPlayer.y))
 					{
 						onGround = true;
 						break;
@@ -213,8 +248,23 @@ void Player::update(int deltaTime)
 		for(size_t i = 0; i < bombs->size(); ++i)
 		{
 			if((*bombs)[i] != NULL && (*bombs)[i]->isActive())
-				(*bombs)[i]->updatePlayerOverlap(posPlayer, glm::ivec2(32, 32));
+				(*bombs)[i]->updatePlayerOverlap(posPlayer, glm::ivec2(PLAYER_WIDTH, PLAYER_HEIGHT));
 		}
+	}
+
+	if(dropDownTimer > 0)
+	{
+		dropDownTimer -= deltaTime;
+		if(dropDownTimer < 0)
+			dropDownTimer = 0;
+	}
+
+	// Baixar de les plataformes jump-through quan el jugador clica cap a baix (Fletxa avall o S)
+	if(!bJumping && isOnJumpThroughPlatform() && (Game::instance().getKey(GLFW_KEY_DOWN) || Game::instance().getKey(GLFW_KEY_S)))
+	{
+		dropDownTimer = 250;
+		posPlayer.y += 2;
+		fallSpeed = 2.0f;
 	}
 
 	if(Game::instance().getKey(GLFW_KEY_LEFT) || Game::instance().getKey(GLFW_KEY_A))
@@ -232,13 +282,15 @@ void Player::update(int deltaTime)
 		{
 			posPlayer.x -= 1;
 			bool hitBomb = false;
+			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
 			if(bombs != NULL)
 			{
 				for(size_t i = 0; i < bombs->size(); ++i)
 				{
 					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 					{
-						if((*bombs)[i]->collisionLeft(posPlayer, glm::ivec2(32, 32)))
+						if((*bombs)[i]->collisionLeft(colPos, colSize))
 						{
 							hitBomb = true;
 							break;
@@ -247,7 +299,7 @@ void Player::update(int deltaTime)
 				}
 			}
 
-			if(map->collisionMoveLeft(posPlayer, glm::ivec2(32, 32)) || hitBomb)
+			if(map->collisionMoveLeft(colPos, colSize) || hitBomb)
 			{
 				posPlayer.x += 1;
 				sprite->changeAnimation(STAND_LEFT);
@@ -270,13 +322,15 @@ void Player::update(int deltaTime)
 		{
 			posPlayer.x += 1;
 			bool hitBomb = false;
+			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
 			if(bombs != NULL)
 			{
 				for(size_t i = 0; i < bombs->size(); ++i)
 				{
 					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 					{
-						if((*bombs)[i]->collisionRight(posPlayer, glm::ivec2(32, 32)))
+						if((*bombs)[i]->collisionRight(colPos, colSize))
 						{
 							hitBomb = true;
 							break;
@@ -285,7 +339,7 @@ void Player::update(int deltaTime)
 				}
 			}
 
-			if(map->collisionMoveRight(posPlayer, glm::ivec2(32, 32)) || hitBomb)
+			if(map->collisionMoveRight(colPos, colSize) || hitBomb)
 			{
 				posPlayer.x -= 1;
 				sprite->changeAnimation(STAND_RIGHT);
@@ -311,18 +365,26 @@ void Player::update(int deltaTime)
 	if(bJumping)
 	{
 		jumpAngle += JUMP_ANGLE_STEP;
-		if(jumpAngle == 180)
+		if(jumpAngle >= 180)
 		{
 			bJumping = false;
 			posPlayer.y = startY;
-			bool onGround = (map != NULL && map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y));
+			bool ignoreJT = (dropDownTimer > 0) ||
+			                Game::instance().getKey(GLFW_KEY_DOWN) ||
+			                Game::instance().getKey(GLFW_KEY_S);
+			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
+			int correctedY = colPos.y;
+			bool onGround = (map != NULL && map->collisionMoveDown(colPos, colSize, &correctedY, ignoreJT));
+			if(onGround)
+				posPlayer.y = correctedY;
 			if(!onGround && bombs != NULL)
 			{
 				for(size_t i = 0; i < bombs->size(); ++i)
 				{
 					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 					{
-						if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+						if((*bombs)[i]->collisionDown(colPos, colSize, &posPlayer.y))
 						{
 							onGround = true;
 							break;
@@ -333,29 +395,39 @@ void Player::update(int deltaTime)
 			if(onGround)
 				fallSpeed = 0.0f;
 			else
-				fallSpeed = 6.0f; // Continuïtat suau de la caiguda si s'acaba el salt en l'aire
+				fallSpeed = 2.0f; // Continuïtat suau de la caiguda si s'acaba el salt en l'aire
 		}
 		else
 		{
-			posPlayer.y = int(startY - 96 * sin(3.14159f * jumpAngle / 180.f));
+			posPlayer.y = int(startY - JUMP_HEIGHT * sin(3.14159f * jumpAngle / 180.f));
+			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
 			if(jumpAngle < 90)
 			{
-				if(map->collisionMoveUp(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+				int correctedY = colPos.y;
+				if(map->collisionMoveUp(colPos, colSize, &correctedY))
 				{
+					posPlayer.y = correctedY;
 					bJumping = false;
 					fallSpeed = 0.0f;
 				}
 			}
 			else if(jumpAngle > 90)
 			{
-				bool hitGround = map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y);
+				bool ignoreJT = (dropDownTimer > 0) ||
+				                Game::instance().getKey(GLFW_KEY_DOWN) ||
+				                Game::instance().getKey(GLFW_KEY_S);
+				int correctedY = colPos.y;
+				bool hitGround = map->collisionMoveDown(colPos, colSize, &correctedY, ignoreJT);
+				if(hitGround)
+					posPlayer.y = correctedY;
 				if(!hitGround && bombs != NULL)
 				{
 					for(size_t i = 0; i < bombs->size(); ++i)
 					{
 						if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 						{
-							if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+							if((*bombs)[i]->collisionDown(colPos, colSize, &posPlayer.y))
 							{
 								hitGround = true;
 								break;
@@ -423,7 +495,7 @@ void Player::resetPowerUps()
 	maxBombs = 1;
 	bombRadius = 1;
 	internalLives = 1;
-	moveSpeed = 2.0f;
+	moveSpeed = 1.35f;
 	moveAccumX = 0.0f;
 }
 
@@ -436,6 +508,7 @@ void Player::respawn(const glm::vec2 &pos)
 	invulnerableTime = 0;
 	internalLives = 1;
 	fallSpeed = 0.0f;
+	dropDownTimer = 0;
 	moveAccumX = 0.0f;
 	setPosition(pos);
 	if(sprite != NULL)

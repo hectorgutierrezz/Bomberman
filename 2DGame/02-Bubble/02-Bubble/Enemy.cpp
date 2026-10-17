@@ -57,7 +57,7 @@ void Enemy::init(EnemyType enemyType, const glm::ivec2 &tileMapPos,
 	}
 
 	const glm::vec2 frameSize(17.f / 253.f, 17.f / 632.f);
-	sprite = Sprite::createSprite(glm::vec2(32.f, 32.f), frameSize,
+	sprite = Sprite::createSprite(glm::vec2(16.f, 16.f), frameSize,
 	                              &spritesheet, &shaderProgram);
 	sprite->setNumberAnimations(2);
 
@@ -158,14 +158,14 @@ bool Enemy::checkCollision(const glm::ivec2 &targetPos,
 	if (!isAlive())
 		return false;
 
-	const int left = posEnemy.x + 5;
-	const int right = posEnemy.x + 27;
-	const int top = posEnemy.y + 5;
-	const int bottom = posEnemy.y + 27;
-	const int targetLeft = targetPos.x + 4;
-	const int targetRight = targetPos.x + targetSize.x - 4;
-	const int targetTop = targetPos.y + 4;
-	const int targetBottom = targetPos.y + targetSize.y - 4;
+	const int left = posEnemy.x + 2;
+	const int right = posEnemy.x + 14;
+	const int top = posEnemy.y + 2;
+	const int bottom = posEnemy.y + 14;
+	const int targetLeft = targetPos.x + 1;
+	const int targetRight = targetPos.x + targetSize.x - 1;
+	const int targetTop = targetPos.y + 1;
+	const int targetBottom = targetPos.y + targetSize.y - 1;
 
 	return targetRight > left && targetLeft < right &&
 	       targetBottom > top && targetTop < bottom;
@@ -182,10 +182,10 @@ bool Enemy::overlapsBomb(const glm::ivec2 &position) const
 			continue;
 
 		const glm::vec2 &bombPos = bomb->getPosition();
-		if (position.x + 28 > int(bombPos.x) + 4 &&
-		    position.x + 4 < int(bombPos.x) + 28 &&
-		    position.y + 28 > int(bombPos.y) + 4 &&
-		    position.y + 4 < int(bombPos.y) + 28)
+		if (position.x + 14 > int(bombPos.x) + 2 &&
+		    position.x + 2 < int(bombPos.x) + 14 &&
+		    position.y + 14 > int(bombPos.y) + 2 &&
+		    position.y + 2 < int(bombPos.y) + 14)
 			return true;
 	}
 	return false;
@@ -195,8 +195,8 @@ bool Enemy::wouldFall(int nextX) const
 {
 	if (map == NULL)
 		return false;
-	const int footY = posEnemy.y + 33;
-	const int probeX = moveDir > 0 ? nextX + 28 : nextX + 4;
+	const int footY = posEnemy.y + 17;
+	const int probeX = moveDir > 0 ? nextX + 14 : nextX + 2;
 	return !map->isSolidTile(glm::ivec2(probeX, footY));
 }
 
@@ -208,23 +208,23 @@ void Enemy::updateHorizontal(int deltaTime)
 	posEnemy.y += 2;
 	int correctedY = posEnemy.y;
 	const bool onGround =
-	    map->collisionMoveDown(posEnemy, glm::ivec2(32, 32), &correctedY);
+	    map->collisionMoveDown(posEnemy, glm::ivec2(16, 16), &correctedY);
 	if (onGround)
 		posEnemy.y = correctedY;
 
-	moveAccum += 35.f * float(deltaTime) / 1000.f;
+	moveAccum += 22.f * float(deltaTime) / 1000.f;
 	int step = int(moveAccum);
 	if (step == 0)
 		return;
-	if (step > 4)
-		step = 4;
+	if (step > 3)
+		step = 3;
 	moveAccum -= float(step);
 
 	glm::ivec2 nextPos = posEnemy;
 	nextPos.x += moveDir * step;
 	const bool hitWall =
-	    moveDir < 0 ? map->collisionMoveLeft(nextPos, glm::ivec2(32, 32))
-	                : map->collisionMoveRight(nextPos, glm::ivec2(32, 32));
+	    moveDir < 0 ? map->collisionMoveLeft(nextPos, glm::ivec2(16, 16))
+	                : map->collisionMoveRight(nextPos, glm::ivec2(16, 16));
 	const bool dropLedge = onGround && wouldFall(nextPos.x);
 	if (hitWall || overlapsBomb(nextPos) || dropLedge) {
 		moveDir = -moveDir;
@@ -237,12 +237,12 @@ void Enemy::updateHorizontal(int deltaTime)
 
 void Enemy::updateVertical(int deltaTime)
 {
-	moveAccum += 30.f * float(deltaTime) / 1000.f;
+	moveAccum += 18.f * float(deltaTime) / 1000.f;
 	int step = int(moveAccum);
 	if (step == 0)
 		return;
-	if (step > 4)
-		step = 4;
+	if (step > 3)
+		step = 3;
 	moveAccum -= float(step);
 
 	const int maxPatrolDistance = 56;
@@ -253,8 +253,8 @@ void Enemy::updateVertical(int deltaTime)
 	if (map != NULL) {
 		int correctedY = nextPos.y;
 		hit = moveDir < 0
-		          ? map->collisionMoveUp(nextPos, glm::ivec2(32, 32), &correctedY)
-		          : map->collisionMoveDown(nextPos, glm::ivec2(32, 32), &correctedY);
+		          ? map->collisionMoveUp(nextPos, glm::ivec2(16, 16), &correctedY)
+		          : map->collisionMoveDown(nextPos, glm::ivec2(16, 16), &correctedY);
 		if (hit)
 			nextPos.y = correctedY;
 	}
@@ -283,7 +283,7 @@ void Enemy::updateStatic(int deltaTime, const glm::ivec2 &playerPos)
 	if (map != NULL) {
 		posEnemy.y += 2;
 		int probeY = posEnemy.y;
-		if (map->collisionMoveDown(posEnemy, glm::ivec2(32, 32), &probeY)) {
+		if (map->collisionMoveDown(posEnemy, glm::ivec2(16, 16), &probeY)) {
 			posEnemy.y = probeY;
 			spawnOriginY = probeY;
 		}

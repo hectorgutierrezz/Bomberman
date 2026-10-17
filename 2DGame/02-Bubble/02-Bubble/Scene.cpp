@@ -12,10 +12,9 @@
 // Y se calcula en startLevel según la altura del mapa (2 tiles por encima del
 // suelo)
 
-// Mida de la finestra de càmera en world pixels (zoom ~2.5x respecte 640x480)
-// 256 unitats horitz. → 640/256 = 2.5x, 224 unitats vert. → 480/224 ≈ 2.14x
-#define CAM_VIEW_W 256.f
-#define CAM_VIEW_H 224.f
+// Mida de la finestra de càmera en world pixels (zoom ~3.1x uniforme respecte 640x480)
+#define CAM_VIEW_W 208.f
+#define CAM_VIEW_H 156.f
 
 #define GOD_MODE_MSG_DURATION 2000
 
@@ -93,6 +92,8 @@ Scene::Scene() {
   externalLives = 3;
   tryAgainTimer = 0;
   tryAgainBomberSprite = NULL;
+  stageIntroTimer = 0;
+  stageIntroBomberSprite = NULL;
   gameState = MAIN_MENU;
   for (int i = 0; i <= GLFW_KEY_LAST; ++i)
     keyLastState[i] = false;
@@ -107,6 +108,8 @@ Scene::~Scene() {
   if (door != NULL)
     delete door;
   freeMenuScreens();
+  freeTryAgainScreen();
+  freeStageIntroScreen();
   if (lifeIcon != NULL)
     delete lifeIcon;
   if (heartIcon != NULL)
@@ -175,7 +178,7 @@ void Scene::updatePowerUps(int deltaTime) {
     if (powerUps[i] != NULL && powerUps[i]->isActive()) {
       powerUps[i]->update(deltaTime);
       if (player != NULL && !player->isDying() && !player->isDead()) {
-        if (powerUps[i]->checkCollision(player->getPosition(), glm::ivec2(32, 32))) {
+        if (powerUps[i]->checkCollision(player->getPosition(), player->getSize())) {
           powerUps[i]->applyEffect(player);
         }
       }
@@ -217,36 +220,44 @@ void Scene::spawnEnemies() {
     int tileY;
   };
 
-  SpawnSpec specs[3];
+  std::vector<SpawnSpec> specs;
   switch (currentLevel) {
   case 1:
-    specs[0] = {ENEMY_HORIZONTAL, 14, 20}; // Patrulla plataforma fila 22
-    specs[1] = {ENEMY_VERTICAL, 29, 18};   // Volador eix vertical dret
-    specs[2] = {ENEMY_STATIC, 24, 25};     // Guardià sobre el terra
+    // Nivell 1: 2 enemics terrestres (nivell introductori, sense voladors ni explosius)
+    specs.push_back({ENEMY_HORIZONTAL, 11, 25});  // Patrulla sobre el terra
+    specs.push_back({ENEMY_HORIZONTAL, 22, 17});  // Patrulla plataforma fila 18
     break;
   case 2:
-    specs[0] = {ENEMY_HORIZONTAL, 8, 16};  // Patrulla plataforma fila 18
-    specs[1] = {ENEMY_VERTICAL, 20, 12};   // Volador obertura central
-    specs[2] = {ENEMY_STATIC, 26, 25};     // Guardià sobre el terra
+    // Nivell 2: 3 enemics (1 caminant i 2 voladors en corredors verticals)
+    specs.push_back({ENEMY_HORIZONTAL, 15, 21});  // Patrulla plataforma fila 22
+    specs.push_back({ENEMY_VERTICAL, 5, 14});      // Volador columna esquerra
+    specs.push_back({ENEMY_VERTICAL, 29, 14});     // Volador columna dreta
     break;
   case 3:
-    specs[0] = {ENEMY_HORIZONTAL, 14, 25}; // Patrulla plataforma fila 27
-    specs[1] = {ENEMY_VERTICAL, 28, 20};   // Volador corredor vertical
-    specs[2] = {ENEMY_STATIC, 18, 20};     // Guardià plataforma central fila 22
+    // Nivell 3: 4 enemics (2 caminants, 1 volador i 1 globus estàtic)
+    specs.push_back({ENEMY_HORIZONTAL, 8, 25});   // Patrulla sobre el terra
+    specs.push_back({ENEMY_HORIZONTAL, 23, 21});  // Patrulla plataforma fila 22
+    specs.push_back({ENEMY_VERTICAL, 28, 14});    // Volador eix dret
+    specs.push_back({ENEMY_STATIC, 17, 11});      // Guardià estàtic al santuari superior
     break;
   case 4:
-    specs[0] = {ENEMY_HORIZONTAL, 16, 25}; // Patrulla plataforma fila 27
-    specs[1] = {ENEMY_VERTICAL, 5, 20};    // Volador eix esquerre
-    specs[2] = {ENEMY_STATIC, 18, 20};     // Guardià plataforma central fila 22
+    // Nivell 4: 4 enemics (voladors agressius i enemics terrestres)
+    specs.push_back({ENEMY_HORIZONTAL, 16, 21});  // Patrulla plataforma central
+    specs.push_back({ENEMY_VERTICAL, 6, 14});     // Volador eix esquerre
+    specs.push_back({ENEMY_VERTICAL, 29, 14});    // Volador eix dret
+    specs.push_back({ENEMY_STATIC, 24, 25});      // Guardià sobre el terra
     break;
   default: // nivell 5
-    specs[0] = {ENEMY_HORIZONTAL, 16, 25}; // Patrulla plataforma fila 27
-    specs[1] = {ENEMY_VERTICAL, 29, 18};   // Volador eix dret
-    specs[2] = {ENEMY_STATIC, 18, 15};     // Guardià plataforma superior fila 17
+    // Nivell 5: 5 enemics (màxim desafiament a la fortalesa final)
+    specs.push_back({ENEMY_HORIZONTAL, 6, 25});   // Caminant al terra
+    specs.push_back({ENEMY_HORIZONTAL, 22, 21});  // Caminant plataforma fila 22
+    specs.push_back({ENEMY_VERTICAL, 8, 12});     // Volador torre esquerra
+    specs.push_back({ENEMY_VERTICAL, 28, 12});    // Volador torre dreta
+    specs.push_back({ENEMY_STATIC, 17, 6});       // Guardià estàtic davant la porta final a dalt
     break;
   }
 
-  for (int i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < specs.size(); ++i) {
     Enemy *e = new Enemy();
     e->init(specs[i].type, glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
     e->setTileMap(map);
@@ -344,14 +355,20 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   map = TileMap::createTileMap(levelPath, glm::vec2(SCREEN_X, SCREEN_Y),
                                texProgram);
 
-  // Spawn i porta a 2 tiles per damunt del terra (última fila del mapa)
+  // Spawn i porta alineats exactament sobre el terra (fila 26 de tiles)
   int tileSize = map->getTileSize();
   int mapTilesY = map->getMapHeight() / tileSize;
-  int spawnTileY = mapTilesY - 3;
+  int spawnTileY = mapTilesY - 3; // 28 - 3 = 25: entitat de 16px descansa sobre la fila 26 (25*16 + 16 = 416)
   if (spawnTileY < 1)
     spawnTileY = 1;
+
+  // Configuració de la porta segons el nivell (Nivells 1, 3 i 5 a dalt; 2 i 4 a baix)
   int doorTileX = 30;
-  int doorTileY = spawnTileY;
+  int doorTileY = 24; // Per defecte al terra (fila 24 per a porta de 32px: 24*16 + 32 = 416)
+  if (currentLevel == 1 || currentLevel == 3 || currentLevel == 5) {
+    doorTileX = 17;
+    doorTileY = 5; // Sobre la plataforma superior de la fila 7 (5*16 + 32 = 112 = 7*16)
+  }
 
   glm::vec2 spawnPos(INIT_PLAYER_X_TILES * tileSize, spawnTileY * tileSize);
 
@@ -402,8 +419,8 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   viewWidth = CAM_VIEW_W;
   viewHeight = CAM_VIEW_H;
   glm::ivec2 initPos = player->getPosition();
-  camX = float(SCREEN_X + initPos.x) + 16.f - viewWidth * 0.5f;
-  camY = float(SCREEN_Y + initPos.y) + 16.f - viewHeight * 0.5f;
+  camX = float(SCREEN_X + initPos.x) + 8.f - viewWidth * 0.5f;
+  camY = float(SCREEN_Y + initPos.y) + 8.f - viewHeight * 0.5f;
 
   float mapRight = float(SCREEN_X) + float(map->getMapWidth()) - viewWidth;
   float mapBottom = float(SCREEN_Y) + float(map->getMapHeight()) - viewHeight;
@@ -417,6 +434,10 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
     camY = mapBottom;
 
   projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
+
+  initStageIntroScreen();
+  stageIntroTimer = 0;
+  gameState = STAGE_INTRO;
 }
 
 void Scene::nextLevel() {
@@ -597,6 +618,70 @@ void Scene::initTryAgainScreen() {
   centerLabel(tryAgainEncourageLabel, "NO ET RENDEIXIS!", 2, 320.f, glm::vec4(0.9f, 0.9f, 1.f, 1.f));
   centerLabel(tryAgainPromptLabel, "PREM ENTER O ESPAI PER CONTINUAR", 2, 380.f, glm::vec4(1.f, 0.9f, 0.2f, 1.f));
   centerLabel(tryAgainMenuLabel, "PREM ESC O M PER AL MENU PRINCIPAL", 2, 420.f, glm::vec4(0.6f, 0.6f, 0.7f, 1.f));
+}
+
+void Scene::initStageIntroScreen() {
+  freeStageIntroScreen();
+
+  auto centerLabel = [&](TextLabel &lbl, const std::string &txt, int scale, float y, const glm::vec4 &col) {
+    Texture t;
+    if (BitmapText::createTexture(t, txt, scale)) {
+      float x = (float(SCREEN_WIDTH) - float(t.width())) * 0.5f;
+      lbl.init(txt, scale, glm::vec2(x, y), col, &texProgram);
+    }
+  };
+
+  char stageBuf[32];
+  snprintf(stageBuf, sizeof(stageBuf), "NIVELL 1-%d", currentLevel);
+  centerLabel(stageIntroTitleLabel, stageBuf, 4, 150.f, glm::vec4(1.f, 0.9f, 0.15f, 1.f));
+
+  centerLabel(stageIntroReadyLabel, "PREPARAT!", 3, 230.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+
+  if (stageIntroBomberTex.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA)) {
+    glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f);
+    stageIntroBomberSprite = Sprite::createSprite(
+        glm::vec2(34.f, 34.f), sizeInUV, &stageIntroBomberTex, &texProgram);
+    stageIntroBomberSprite->setNumberAnimations(1);
+    stageIntroBomberSprite->setAnimationSpeed(0, 8);
+    stageIntroBomberSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+    stageIntroBomberSprite->changeAnimation(0);
+    stageIntroBomberSprite->setPosition(glm::vec2(275.f, 305.f));
+  }
+
+  char livesBuf[32];
+  snprintf(livesBuf, sizeof(livesBuf), "x %d", externalLives);
+  stageIntroLivesLabel.init(livesBuf, 3, glm::vec2(322.f, 312.f), glm::vec4(1.f, 1.f, 1.f, 1.f), &texProgram);
+
+  centerLabel(stageIntroPromptLabel, "PREM ENTER O ESPAI", 2, 400.f, glm::vec4(0.75f, 0.75f, 0.75f, 1.f));
+}
+
+void Scene::freeStageIntroScreen() {
+  if (stageIntroBomberSprite != NULL) {
+    delete stageIntroBomberSprite;
+    stageIntroBomberSprite = NULL;
+  }
+  stageIntroBomberTex.free();
+  stageIntroTitleLabel.free();
+  stageIntroReadyLabel.free();
+  stageIntroLivesLabel.free();
+  stageIntroPromptLabel.free();
+}
+
+void Scene::renderStageIntro() {
+  glm::mat4 modelview = glm::mat4(1.0f);
+  texProgram.setUniformMatrix4f("modelview", modelview);
+  texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+  stageIntroTitleLabel.render(texProgram);
+  stageIntroReadyLabel.render(texProgram);
+  if (stageIntroBomberSprite != NULL)
+    stageIntroBomberSprite->render();
+  stageIntroLivesLabel.render(texProgram);
+
+  // Parpelleig suau de la indicació
+  if ((stageIntroTimer / 300) % 2 == 0) {
+    stageIntroPromptLabel.render(texProgram);
+  }
 }
 
 void Scene::initMenuScreens() {
@@ -863,6 +948,7 @@ void Scene::init() {
 
   externalLives = 3;
   startLevel(1, false);
+  gameState = MAIN_MENU;
   currentTime = 0.0f;
 
   // Icona de vida per al HUD (mateix spritesheet del jugador)
@@ -919,7 +1005,6 @@ void Scene::update(int deltaTime) {
       if (menuOption == 0) {
         externalLives = 3;
         startLevel(1, false);
-        gameState = PLAYING;
       } else if (menuOption == 1) {
         gameState = INSTRUCTIONS;
       } else if (menuOption == 2) {
@@ -932,7 +1017,6 @@ void Scene::update(int deltaTime) {
     } else if (isKeyJustPressed(GLFW_KEY_1)) {
       externalLives = 3;
       startLevel(1, false);
-      gameState = PLAYING;
     } else if (isKeyJustPressed(GLFW_KEY_2)) {
       gameState = INSTRUCTIONS;
     } else if (isKeyJustPressed(GLFW_KEY_3)) {
@@ -1047,7 +1131,7 @@ void Scene::update(int deltaTime) {
       if (door != NULL && !player->isDying() && !player->isDead()) {
         door->update(deltaTime);
         if (door->isOpen() &&
-            door->checkCollision(player->getPosition(), glm::ivec2(32, 32))) {
+            door->checkCollision(player->getPosition(), player->getSize())) {
           nextLevel();
           break;
         }
@@ -1085,7 +1169,7 @@ void Scene::update(int deltaTime) {
             if (bombs[b] != NULL && bombs[b]->isActive()) {
               if (explosions[i]->checkCollision(
                       glm::ivec2(bombs[b]->getPosition()),
-                      glm::ivec2(32, 32))) {
+                      glm::ivec2(16, 16))) {
                 bombs[b]->explode();
               }
             }
@@ -1093,7 +1177,7 @@ void Scene::update(int deltaTime) {
 
           // Col·lisió amb el jugador: l'explosió fa dany
           if (explosions[i]->checkCollision(player->getPosition(),
-                                            glm::ivec2(32, 32))) {
+                                            player->getSize())) {
             if (player->hit()) {
               // Ha iniciat l'animació de mort (startDying)
               break;
@@ -1134,7 +1218,7 @@ void Scene::update(int deltaTime) {
         for (size_t e = 0; e < enemies.size(); ++e) {
           if (enemies[e] != NULL && enemies[e]->isAlive() &&
               enemies[e]->checkCollision(player->getPosition(),
-                                         glm::ivec2(32, 32))) {
+                                         player->getSize())) {
             player->hit();
             break;
           }
@@ -1157,10 +1241,10 @@ void Scene::update(int deltaTime) {
       // --- Actualitzar la càmera per seguir el jugador ---
       {
         glm::ivec2 pPos = player->getPosition();
-        float targetX = float(SCREEN_X + pPos.x) + 16.f - viewWidth * 0.5f;
-        float targetY = float(SCREEN_Y + pPos.y) + 16.f - viewHeight * 0.5f;
+        float targetX = float(SCREEN_X + pPos.x) + 8.f - viewWidth * 0.5f;
+        float targetY = float(SCREEN_Y + pPos.y) + 8.f - viewHeight * 0.5f;
 
-        float lerpSpeed = 0.12f;
+        float lerpSpeed = 0.08f;
         camX += (targetX - camX) * lerpSpeed;
         camY += (targetY - camY) * lerpSpeed;
 
@@ -1215,10 +1299,21 @@ void Scene::update(int deltaTime) {
         isKeyJustPressed(GLFW_KEY_Z) ||
         Game::instance().getAndResetMouseClick()) {
       startLevel(currentLevel, true);
-      gameState = PLAYING;
     } else if (isKeyJustPressed(GLFW_KEY_ESCAPE) ||
                isKeyJustPressed(GLFW_KEY_M)) {
       gameState = MAIN_MENU;
+    }
+    break;
+
+  case STAGE_INTRO:
+    stageIntroTimer += deltaTime;
+    if (stageIntroTimer >= 1800 ||
+        isKeyJustPressed(GLFW_KEY_ENTER) ||
+        isKeyJustPressed(GLFW_KEY_SPACE) ||
+        isKeyJustPressed(GLFW_KEY_X) ||
+        isKeyJustPressed(GLFW_KEY_Z) ||
+        Game::instance().getAndResetMouseClick()) {
+      gameState = PLAYING;
     }
     break;
   }
@@ -1288,6 +1383,10 @@ void Scene::render() {
   case TRY_AGAIN:
     texProgram.setUniformMatrix4f("projection", screenProjection);
     renderTryAgain();
+    break;
+  case STAGE_INTRO:
+    texProgram.setUniformMatrix4f("projection", screenProjection);
+    renderStageIntro();
     break;
   }
 }
@@ -1516,7 +1615,7 @@ void Scene::updateTimerHUD() {
       timerSprite = NULL;
     }
 
-    if (BitmapText::createTexture(timerTex, buf, 2)) {
+    if (BitmapText::createTexture(timerTex, buf, 1)) {
       timerSprite = Sprite::createSprite(
           glm::vec2(float(timerTex.width()), float(timerTex.height())),
           glm::vec2(1.f, 1.f), &timerTex, &texProgram);
@@ -1535,7 +1634,7 @@ void Scene::updateLevelHUD() {
       levelHUDSprite = NULL;
     }
 
-    if (BitmapText::createTexture(levelHUDTex, buf, 2)) {
+    if (BitmapText::createTexture(levelHUDTex, buf, 1)) {
       levelHUDSprite = Sprite::createSprite(
           glm::vec2(float(levelHUDTex.width()), float(levelHUDTex.height())),
           glm::vec2(1.f, 1.f), &levelHUDTex, &texProgram);
@@ -1558,7 +1657,7 @@ void Scene::updateEnemiesHUD() {
   if (count > 0) {
     char buf[32];
     snprintf(buf, sizeof(buf), "E:%d", count);
-    if (BitmapText::createTexture(enemiesHUDTex, buf, 2)) {
+    if (BitmapText::createTexture(enemiesHUDTex, buf, 1)) {
       enemiesHUDSprite = Sprite::createSprite(
           glm::vec2(float(enemiesHUDTex.width()), float(enemiesHUDTex.height())),
           glm::vec2(1.f, 1.f), &enemiesHUDTex, &texProgram);
@@ -1570,29 +1669,29 @@ void Scene::renderHUD() {
   if (player == NULL || lifeIcon == NULL)
     return;
 
-  const float hudY = camY + 8.f;
-  const float hudPad = 8.f;
+  const float hudY = camY + 4.f;
+  const float hudPad = 6.f;
 
-  // 1. Contador extern: nombre de vides generals (cares de Bomberman)
+  // 1. Contador extern: nombre de vides generals (cares de Bomberman de 16x16)
   for (int i = 0; i < externalLives; ++i) {
-    float x = camX + hudPad + float(i) * 18.f;
+    float x = camX + hudPad + float(i) * 16.f;
     lifeIcon->setPosition(glm::vec2(x, hudY));
     lifeIcon->render();
   }
 
-  const float livesRight = hudPad + float(externalLives) * 18.f;
+  const float livesRight = hudPad + float(externalLives) * 16.f;
 
   // 2. Vida de nivell: cors pixel-art (1 de base; augmenta amb power-ups com cors)
   float heartsRight = livesRight;
   if (heartIcon != NULL) {
     int hp = player->getInternalLives();
     for (int j = 0; j < hp; ++j) {
-      float hx = camX + livesRight + 6.f + float(j) * 14.f;
+      float hx = camX + livesRight + 4.f + float(j) * 13.f;
       heartIcon->setPosition(glm::vec2(hx, hudY + 2.f));
       heartIcon->render();
     }
     if (hp > 0)
-      heartsRight = livesRight + 6.f + float(hp) * 14.f;
+      heartsRight = livesRight + 4.f + float(hp) * 13.f;
   }
 
   // 3. Temporitzador a la cantonada dreta
@@ -1601,7 +1700,7 @@ void Scene::renderHUD() {
   if (timerSprite != NULL) {
     float timerW = float(timerTex.width());
     timerLeft = camX + viewWidth - timerW - hudPad;
-    timerSprite->setPosition(glm::vec2(timerLeft, hudY));
+    timerSprite->setPosition(glm::vec2(timerLeft, hudY + 4.f));
 
     int totalSecs = (levelTimeLeft + 999) / 1000;
     if (totalSecs <= 30)
@@ -1619,8 +1718,8 @@ void Scene::renderHUD() {
   float enemyHudLeft = timerLeft;
   if (enemiesHUDSprite != NULL) {
     const float enemyHudWidth = float(enemiesHUDTex.width());
-    enemyHudLeft = timerLeft - enemyHudWidth - 10.f;
-    enemiesHUDSprite->setPosition(glm::vec2(enemyHudLeft, hudY));
+    enemyHudLeft = timerLeft - enemyHudWidth - 8.f;
+    enemiesHUDSprite->setPosition(glm::vec2(enemyHudLeft, hudY + 4.f));
     texProgram.setUniform4f("color", 1.0f, 0.85f, 0.2f, 1.0f); // Groc daurat
     enemiesHUDSprite->render();
     texProgram.setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
@@ -1630,12 +1729,12 @@ void Scene::renderHUD() {
   updateLevelHUD();
   if (levelHUDSprite != NULL) {
     float hudW = float(levelHUDTex.width());
-    float gapLeft = camX + heartsRight + 6.f;
-    float gapRight = enemyHudLeft - 6.f;
+    float gapLeft = camX + heartsRight + 4.f;
+    float gapRight = enemyHudLeft - 4.f;
     float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
     if (x < gapLeft)
       x = gapLeft;
-    levelHUDSprite->setPosition(glm::vec2(x, hudY));
+    levelHUDSprite->setPosition(glm::vec2(x, hudY + 4.f));
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
     levelHUDSprite->render();
   }
@@ -1721,7 +1820,7 @@ void Scene::placeBomb() {
   bomb->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
   bomb->setPosition(glm::vec2(float(bombX), float(bombY)));
   bomb->setRadius(player->getBombRadius());
-  bomb->updatePlayerOverlap(playerPos, glm::ivec2(32, 32));
+  bomb->updatePlayerOverlap(playerPos, player->getSize());
   bombs.push_back(bomb);
 }
 

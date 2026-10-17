@@ -26,7 +26,8 @@ enum GameState {
   PAUSED,
   GAME_OVER,
   WIN,
-  TRY_AGAIN
+  TRY_AGAIN,
+  STAGE_INTRO
 };
 
 struct TextLabel {
@@ -81,6 +82,9 @@ private:
   void renderTryAgain();
   void initTryAgainScreen();
   void freeTryAgainScreen();
+  void renderStageIntro();
+  void initStageIntroScreen();
+  void freeStageIntroScreen();
   void renderEnemies();
   void renderBombs();
   void renderExplosions();
@@ -175,6 +179,15 @@ private:
   TextLabel tryAgainEncourageLabel;
   TextLabel tryAgainPromptLabel;
   TextLabel tryAgainMenuLabel;
+
+  // Mini pantalla d'inici de nivell (Stage Intro)
+  int stageIntroTimer;
+  Texture stageIntroBomberTex;
+  Sprite *stageIntroBomberSprite;
+  TextLabel stageIntroTitleLabel;
+  TextLabel stageIntroReadyLabel;
+  TextLabel stageIntroLivesLabel;
+  TextLabel stageIntroPromptLabel;
 
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;

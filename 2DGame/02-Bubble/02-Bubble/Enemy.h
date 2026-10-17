@@ -28,7 +28,7 @@ public:
 	void setBombs(const std::vector<Bomb*> *bombsList);
 	void setPosition(const glm::vec2 &pos);
 	glm::ivec2 getPosition() const { return posEnemy; }
-	glm::ivec2 getSize() const { return glm::ivec2(32, 32); }
+	glm::ivec2 getSize() const { return glm::ivec2(16, 16); }
 
 	EnemyType getType() const { return type; }
 	bool isAlive() const { return alive && !bDying; }
