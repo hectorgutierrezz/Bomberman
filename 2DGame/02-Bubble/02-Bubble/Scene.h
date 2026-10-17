@@ -24,7 +24,8 @@ enum GameState {
   PLAYING,
   PAUSED,
   GAME_OVER,
-  WIN
+  WIN,
+  TRY_AGAIN
 };
 
 struct TextLabel {
@@ -75,6 +76,9 @@ private:
   void renderPauseOverlay();
   void renderGameOver();
   void renderWin();
+  void renderTryAgain();
+  void initTryAgainScreen();
+  void freeTryAgainScreen();
   void renderEnemies();
   void renderBombs();
   void renderExplosions();
@@ -153,6 +157,18 @@ private:
   TextLabel winSubLabel;
   TextLabel winPeaceLabel;
   TextLabel winPromptLabel;
+
+  // Pantalla intermèdia en perdre una vida (Try Again)
+  int tryAgainTimer;
+  Texture tryAgainBomberTex;
+  Sprite *tryAgainBomberSprite;
+  TextLabel tryAgainStageLabel;
+  TextLabel tryAgainTitleLabel;
+  TextLabel tryAgainLivesLabel;
+  TextLabel tryAgainChanceLabel;
+  TextLabel tryAgainEncourageLabel;
+  TextLabel tryAgainPromptLabel;
+  TextLabel tryAgainMenuLabel;
 
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;

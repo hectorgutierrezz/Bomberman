@@ -39,10 +39,16 @@ public:
 	void mouseRelease(int button);
 
 	bool getKey(int key) const;
+	bool getAndResetMouseClick() {
+		bool c = bMouseClick;
+		bMouseClick = false;
+		return c;
+	}
 	void exit() { bPlay = false; }
 
 private:
 	bool bPlay; // Continue to play game?
+	bool bMouseClick;
 	bool keys[GLFW_KEY_LAST+1]; // Store key states so that 
 							    // we can have access at any time
 	Scene scene;

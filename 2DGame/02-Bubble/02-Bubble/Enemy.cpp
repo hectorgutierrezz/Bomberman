@@ -22,7 +22,8 @@ Enemy::Enemy()
 
 Enemy::~Enemy()
 {
-	delete sprite;
+	if (sprite != NULL)
+		delete sprite;
 }
 
 void Enemy::init(EnemyType enemyType, const glm::ivec2 &tileMapPos,
@@ -40,8 +41,10 @@ void Enemy::init(EnemyType enemyType, const glm::ivec2 &tileMapPos,
 	triggerExplosion = false;
 	exploded = false;
 
-	delete sprite;
-	sprite = NULL;
+	if (sprite != NULL) {
+		delete sprite;
+		sprite = NULL;
+	}
 
 	if (!textureLoaded) {
 		if (!spritesheet.loadFromFile(
@@ -276,6 +279,15 @@ void Enemy::updateVertical(int deltaTime)
 
 void Enemy::updateStatic(int deltaTime, const glm::ivec2 &playerPos)
 {
+	// Assegurar contacte amb terra/plataforma en caiguda si ha aparegut a l'aire
+	if (map != NULL) {
+		posEnemy.y += 2;
+		int probeY = posEnemy.y;
+		if (map->collisionMoveDown(posEnemy, glm::ivec2(32, 32), &probeY)) {
+			posEnemy.y = probeY;
+			spawnOriginY = probeY;
+		}
+	}
 	bobTimer += deltaTime;
 	const int bobOffset = int(round(1.5f * sin(float(bobTimer) / 250.f)));
 	posEnemy.y = spawnOriginY + bobOffset;

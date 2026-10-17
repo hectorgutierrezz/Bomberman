@@ -89,6 +89,8 @@ Scene::Scene() {
   lastDisplayedSeconds = -1;
   lastDisplayedLevel = -1;
   externalLives = 3;
+  tryAgainTimer = 0;
+  tryAgainBomberSprite = NULL;
   gameState = MAIN_MENU;
   for (int i = 0; i <= GLFW_KEY_LAST; ++i)
     keyLastState[i] = false;
@@ -410,8 +412,6 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
 }
 
-
-
 void Scene::nextLevel() {
   if (currentLevel < 5) {
     startLevel(currentLevel + 1, true);
@@ -440,8 +440,23 @@ void Scene::onPlayerDeath() {
     clearEnemies();
     gameState = GAME_OVER;
   } else {
-    // Encara queden vides generals: es reinicia la pantalla mantenint els power-ups
-    startLevel(currentLevel, true);
+    // Netejar bombes, explosions i enemics
+    for (size_t i = 0; i < bombs.size(); ++i) {
+      if (bombs[i] != NULL)
+        delete bombs[i];
+    }
+    bombs.clear();
+    for (size_t i = 0; i < explosions.size(); ++i) {
+      if (explosions[i] != NULL)
+        delete explosions[i];
+    }
+    explosions.clear();
+    clearEnemies();
+
+    // Mostrar la pantalla intermèdia "TRY AGAIN" abans de reaparèixer
+    initTryAgainScreen();
+    tryAgainTimer = 0;
+    gameState = TRY_AGAIN;
   }
 }
 
@@ -510,6 +525,65 @@ void Scene::freeMenuScreens() {
   winSubLabel.free();
   winPeaceLabel.free();
   winPromptLabel.free();
+
+  freeTryAgainScreen();
+}
+
+void Scene::freeTryAgainScreen() {
+  if (tryAgainBomberSprite != NULL) {
+    delete tryAgainBomberSprite;
+    tryAgainBomberSprite = NULL;
+  }
+  tryAgainStageLabel.free();
+  tryAgainTitleLabel.free();
+  tryAgainLivesLabel.free();
+  tryAgainChanceLabel.free();
+  tryAgainEncourageLabel.free();
+  tryAgainPromptLabel.free();
+  tryAgainMenuLabel.free();
+}
+
+void Scene::initTryAgainScreen() {
+  freeTryAgainScreen();
+
+  char stageBuf[32];
+  snprintf(stageBuf, sizeof(stageBuf), "NIVELL 1-%d", currentLevel);
+
+  auto centerLabel = [&](TextLabel &lbl, const std::string &txt, int scale, float y, const glm::vec4 &col) {
+    Texture t;
+    if (BitmapText::createTexture(t, txt, scale)) {
+      float x = (float(SCREEN_WIDTH) - float(t.width())) * 0.5f;
+      lbl.init(txt, scale, glm::vec2(x, y), col, &texProgram);
+    }
+  };
+
+  centerLabel(tryAgainStageLabel, stageBuf, 3, 75.f, glm::vec4(1.f, 0.9f, 0.1f, 1.f));
+  centerLabel(tryAgainTitleLabel, "TORNA-HO A PROVAR!", 3, 125.f, glm::vec4(1.f, 0.35f, 0.2f, 1.f));
+
+  // Sprite autèntic de la cara de Bomberman per representar les vides restants
+  if (tryAgainBomberTex.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA)) {
+    glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f);
+    tryAgainBomberSprite = Sprite::createSprite(
+        glm::vec2(34.f, 34.f), sizeInUV, &tryAgainBomberTex, &texProgram);
+    tryAgainBomberSprite->setNumberAnimations(1);
+    tryAgainBomberSprite->setAnimationSpeed(0, 8);
+    tryAgainBomberSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+    tryAgainBomberSprite->changeAnimation(0);
+    tryAgainBomberSprite->setPosition(glm::vec2(270.f, 195.f));
+  }
+
+  char livesBuf[32];
+  snprintf(livesBuf, sizeof(livesBuf), "x %d", externalLives);
+  tryAgainLivesLabel.init(livesBuf, 3, glm::vec2(318.f, 202.f), glm::vec4(1.f, 1.f, 1.f, 1.f), &texProgram);
+
+  if (levelTimeLeft <= 0)
+    centerLabel(tryAgainChanceLabel, "S'HA ACABAT EL TEMPS! AFANYA'T AQUEST COP!", 2, 285.f, glm::vec4(1.f, 0.6f, 0.2f, 1.f));
+  else
+    centerLabel(tryAgainChanceLabel, "TENS UNA ALTRA OPORTUNITAT!", 2, 285.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+
+  centerLabel(tryAgainEncourageLabel, "NO ET RENDEIXIS!", 2, 320.f, glm::vec4(0.9f, 0.9f, 1.f, 1.f));
+  centerLabel(tryAgainPromptLabel, "PREM ENTER O ESPAI PER CONTINUAR", 2, 380.f, glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+  centerLabel(tryAgainMenuLabel, "PREM ESC O M PER AL MENU PRINCIPAL", 2, 420.f, glm::vec4(0.6f, 0.6f, 0.7f, 1.f));
 }
 
 void Scene::initMenuScreens() {
@@ -632,7 +706,7 @@ void Scene::initMenuScreens() {
           glm::vec4(0.8f, 0.8f, 0.8f, 1.f));
   addCred("AGRAIMENTS ALS PROFESSORS DE VIDEOJOCS", 2, 95.f, 375.f,
           glm::vec4(0.7f, 0.8f, 1.f, 1.f));
-  addCred("[ PRESS ENTER OR ESC TO RETURN TO MENU ]", 2, 85.f, 442.f,
+  addCred("[ PREM ENTER O ESC PER TORNAR AL MENU ]", 2, 85.f, 442.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
 
   // 4. Pausa
@@ -643,13 +717,25 @@ void Scene::initMenuScreens() {
     pauseSprite->setPosition(
         glm::vec2((float(SCREEN_WIDTH) - 208.f) * 0.5f, 45.f));
   }
-  pauseTitleLabel.init("GAME PAUSED", 3, glm::vec2(210.f, 280.f),
-                       glm::vec4(1.f, 0.9f, 0.1f, 1.f), &texProgram);
-  pauseResumeLabel.init("PRESS P OR ESC TO RESUME", 2, glm::vec2(165.f, 335.f),
-                        glm::vec4(1.f), &texProgram);
-  pauseMenuLabel.init("PRESS M TO RETURN TO MAIN MENU", 2,
-                      glm::vec2(130.f, 370.f), glm::vec4(0.4f, 0.9f, 1.f, 1.f),
-                      &texProgram);
+  {
+    Texture tPause;
+    if (BitmapText::createTexture(tPause, "JOC EN PAUSA", 3)) {
+      float x = (float(SCREEN_WIDTH) - float(tPause.width())) * 0.5f;
+      pauseTitleLabel.init("JOC EN PAUSA", 3, glm::vec2(x, 280.f),
+                           glm::vec4(1.f, 0.9f, 0.1f, 1.f), &texProgram);
+    }
+    if (BitmapText::createTexture(tPause, "PREM P O ESC PER REPRENDRE", 2)) {
+      float x = (float(SCREEN_WIDTH) - float(tPause.width())) * 0.5f;
+      pauseResumeLabel.init("PREM P O ESC PER REPRENDRE", 2, glm::vec2(x, 335.f),
+                            glm::vec4(1.f), &texProgram);
+    }
+    if (BitmapText::createTexture(tPause, "PREM M PER TORNAR AL MENU PRINCIPAL", 2)) {
+      float x = (float(SCREEN_WIDTH) - float(tPause.width())) * 0.5f;
+      pauseMenuLabel.init("PREM M PER TORNAR AL MENU PRINCIPAL", 2,
+                          glm::vec2(x, 370.f), glm::vec4(0.4f, 0.9f, 1.f, 1.f),
+                          &texProgram);
+    }
+  }
 
   // 5. Game Over / Time Over
   if (gameOverTex.loadFromFile("images/Menu/game_over.png",
@@ -668,11 +754,19 @@ void Scene::initMenuScreens() {
     timeOverSprite->setPosition(
         glm::vec2((float(SCREEN_WIDTH) - 205.f) * 0.5f, 45.f));
   }
-  timeOverMsgLabel.init("TIME OVER!", 3, glm::vec2(225.f, 275.f),
-                        glm::vec4(1.f, 0.3f, 0.2f, 1.f), &texProgram);
-  gameOverMenuLabel.init("PRESS ENTER OR ESC FOR MAIN MENU", 2,
-                         glm::vec2(120.f, 350.f),
-                         glm::vec4(1.f, 0.9f, 0.2f, 1.f), &texProgram);
+  Texture tTimeOver;
+  if (BitmapText::createTexture(tTimeOver, "S'HA ACABAT EL TEMPS!", 3)) {
+    float x = (float(SCREEN_WIDTH) - float(tTimeOver.width())) * 0.5f;
+    timeOverMsgLabel.init("S'HA ACABAT EL TEMPS!", 3, glm::vec2(x, 275.f),
+                          glm::vec4(1.f, 0.3f, 0.2f, 1.f), &texProgram);
+  }
+  Texture tGameOverMenu;
+  if (BitmapText::createTexture(tGameOverMenu, "PREM ENTER O ESC PER AL MENU PRINCIPAL", 2)) {
+    float x = (float(SCREEN_WIDTH) - float(tGameOverMenu.width())) * 0.5f;
+    gameOverMenuLabel.init("PREM ENTER O ESC PER AL MENU PRINCIPAL", 2,
+                           glm::vec2(x, 350.f),
+                           glm::vec4(1.f, 0.9f, 0.2f, 1.f), &texProgram);
+  }
 
   // 6. Victòria (Win)
   if (worldClearTex.loadFromFile("images/Menu/world_clear.png",
@@ -1056,6 +1150,21 @@ void Scene::update(int deltaTime) {
       gameState = MAIN_MENU;
     }
     break;
+
+  case TRY_AGAIN:
+    tryAgainTimer += deltaTime;
+    if (isKeyJustPressed(GLFW_KEY_ENTER) ||
+        isKeyJustPressed(GLFW_KEY_SPACE) ||
+        isKeyJustPressed(GLFW_KEY_X) ||
+        isKeyJustPressed(GLFW_KEY_Z) ||
+        Game::instance().getAndResetMouseClick()) {
+      startLevel(currentLevel, true);
+      gameState = PLAYING;
+    } else if (isKeyJustPressed(GLFW_KEY_ESCAPE) ||
+               isKeyJustPressed(GLFW_KEY_M)) {
+      gameState = MAIN_MENU;
+    }
+    break;
   }
 }
 
@@ -1115,6 +1224,10 @@ void Scene::render() {
   case WIN:
     texProgram.setUniformMatrix4f("projection", screenProjection);
     renderWin();
+    break;
+  case TRY_AGAIN:
+    texProgram.setUniformMatrix4f("projection", screenProjection);
+    renderTryAgain();
     break;
   }
 }
@@ -1256,10 +1369,35 @@ void Scene::renderWin() {
   winPromptLabel.render(texProgram);
 }
 
+void Scene::renderTryAgain() {
+  glm::mat4 modelview = glm::mat4(1.0f);
+  texProgram.setUniformMatrix4f("modelview", modelview);
+  texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+  if (tryAgainBomberSprite != NULL)
+    tryAgainBomberSprite->render();
+
+  tryAgainStageLabel.render(texProgram);
+  tryAgainTitleLabel.render(texProgram);
+  tryAgainLivesLabel.render(texProgram);
+  tryAgainChanceLabel.render(texProgram);
+  tryAgainEncourageLabel.render(texProgram);
+
+  // Efecte de parpelleig suau del text de reprendre per destacar la interacció
+  if ((tryAgainTimer / 300) % 2 == 0)
+    tryAgainPromptLabel.render(texProgram);
+  else
+    tryAgainPromptLabel.renderWithColor(texProgram, glm::vec4(1.f, 0.9f, 0.2f, 0.4f));
+
+  tryAgainMenuLabel.render(texProgram);
+}
+
 bool Scene::isKeyJustPressed(int key)
 // aquesta funció la utilitzarem per a que detecti que ha sigut presionada un
 // unic cop fins que la deixes de presionar
 {
+  if (key < 0 || key > GLFW_KEY_LAST)
+    return false;
   bool pressed = Game::instance().getKey(key);
   if (pressed && !keyLastState[key]) {
     keyLastState[key] = true;
