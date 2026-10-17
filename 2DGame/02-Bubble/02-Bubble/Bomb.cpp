@@ -10,6 +10,7 @@ Bomb::Bomb()
 	bExploded = false;
 	playerInside = true;
 	fuseTime = 2200.f;
+	explosionRadius = 1;
 	position = glm::vec2(0.f);
 	tileMapDispl = glm::ivec2(0);
 }

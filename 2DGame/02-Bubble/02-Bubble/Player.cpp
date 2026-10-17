@@ -26,6 +26,9 @@ Player::Player()
 	facingDirection = 1;
 	internalLives = 1;
 	maxBombs = 1;
+	bombRadius = 1;
+	moveSpeed = 2.0f;
+	moveAccumX = 0.0f;
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
 	godMode = false;
@@ -48,6 +51,9 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	dyingTime = 0;
 	internalLives = 1;
 	maxBombs = 1;
+	bombRadius = 1;
+	moveSpeed = 2.0f;
+	moveAccumX = 0.0f;
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
 	godMode = false;
@@ -211,68 +217,85 @@ void Player::update(int deltaTime)
 		}
 	}
 
-	if(Game::instance().getKey(GLFW_KEY_LEFT))
+	if(Game::instance().getKey(GLFW_KEY_LEFT) || Game::instance().getKey(GLFW_KEY_A))
 	{
 		facingDirection = -1;
 		if(sprite->animation() != MOVE_LEFT)
 			sprite->changeAnimation(MOVE_LEFT);
 		sprite->setFlippedHorizontally(false);
-		posPlayer.x -= 2;
 
-		bool hitBomb = false;
-		if(bombs != NULL)
+		moveAccumX += moveSpeed;
+		int step = int(moveAccumX);
+		moveAccumX -= float(step);
+
+		for(int s = 0; s < step; ++s)
 		{
-			for(size_t i = 0; i < bombs->size(); ++i)
+			posPlayer.x -= 1;
+			bool hitBomb = false;
+			if(bombs != NULL)
 			{
-				if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
+				for(size_t i = 0; i < bombs->size(); ++i)
 				{
-					if((*bombs)[i]->collisionLeft(posPlayer, glm::ivec2(32, 32)))
+					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 					{
-						hitBomb = true;
-						break;
+						if((*bombs)[i]->collisionLeft(posPlayer, glm::ivec2(32, 32)))
+						{
+							hitBomb = true;
+							break;
+						}
 					}
 				}
 			}
-		}
 
-		if(map->collisionMoveLeft(posPlayer, glm::ivec2(32, 32)) || hitBomb)
-		{
-			posPlayer.x += 2;
-			sprite->changeAnimation(STAND_LEFT);
+			if(map->collisionMoveLeft(posPlayer, glm::ivec2(32, 32)) || hitBomb)
+			{
+				posPlayer.x += 1;
+				sprite->changeAnimation(STAND_LEFT);
+				break;
+			}
 		}
 	}
-	else if(Game::instance().getKey(GLFW_KEY_RIGHT))
+	else if(Game::instance().getKey(GLFW_KEY_RIGHT) || Game::instance().getKey(GLFW_KEY_D))
 	{
 		facingDirection = 1;
 		if(sprite->animation() != MOVE_RIGHT)
 			sprite->changeAnimation(MOVE_RIGHT);
 		sprite->setFlippedHorizontally(true);
-		posPlayer.x += 2;
 
-		bool hitBomb = false;
-		if(bombs != NULL)
+		moveAccumX += moveSpeed;
+		int step = int(moveAccumX);
+		moveAccumX -= float(step);
+
+		for(int s = 0; s < step; ++s)
 		{
-			for(size_t i = 0; i < bombs->size(); ++i)
+			posPlayer.x += 1;
+			bool hitBomb = false;
+			if(bombs != NULL)
 			{
-				if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
+				for(size_t i = 0; i < bombs->size(); ++i)
 				{
-					if((*bombs)[i]->collisionRight(posPlayer, glm::ivec2(32, 32)))
+					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 					{
-						hitBomb = true;
-						break;
+						if((*bombs)[i]->collisionRight(posPlayer, glm::ivec2(32, 32)))
+						{
+							hitBomb = true;
+							break;
+						}
 					}
 				}
 			}
-		}
 
-		if(map->collisionMoveRight(posPlayer, glm::ivec2(32, 32)) || hitBomb)
-		{
-			posPlayer.x -= 2;
-			sprite->changeAnimation(STAND_RIGHT);
+			if(map->collisionMoveRight(posPlayer, glm::ivec2(32, 32)) || hitBomb)
+			{
+				posPlayer.x -= 1;
+				sprite->changeAnimation(STAND_RIGHT);
+				break;
+			}
 		}
 	}
 	else
 	{
+		moveAccumX = 0.0f;
 		if(sprite->animation() == MOVE_LEFT)
 		{
 			sprite->changeAnimation(STAND_LEFT);
@@ -398,7 +421,10 @@ void Player::setBombs(const std::vector<Bomb*> *bombsList)
 void Player::resetPowerUps()
 {
 	maxBombs = 1;
+	bombRadius = 1;
 	internalLives = 1;
+	moveSpeed = 2.0f;
+	moveAccumX = 0.0f;
 }
 
 void Player::respawn(const glm::vec2 &pos)
@@ -410,6 +436,7 @@ void Player::respawn(const glm::vec2 &pos)
 	invulnerableTime = 0;
 	internalLives = 1;
 	fallSpeed = 0.0f;
+	moveAccumX = 0.0f;
 	setPosition(pos);
 	if(sprite != NULL)
 		sprite->changeAnimation(IDLE);

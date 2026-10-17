@@ -88,8 +88,6 @@ Scene::Scene() {
   levelTimeLeft = 120000;
   lastDisplayedSeconds = -1;
   lastDisplayedLevel = -1;
-  enemiesHUDSprite = NULL;
-  lastDisplayedEnemies = -1;
   externalLives = 3;
   gameState = MAIN_MENU;
   for (int i = 0; i <= GLFW_KEY_LAST; ++i)
@@ -130,6 +128,7 @@ Scene::~Scene() {
   }
   explosions.clear();
   clearEnemies();
+  clearPowerUps();
   if (enemiesHUDSprite != NULL) {
     delete enemiesHUDSprite;
     enemiesHUDSprite = NULL;
@@ -142,6 +141,58 @@ void Scene::clearEnemies() {
       delete enemies[i];
   }
   enemies.clear();
+}
+
+void Scene::clearPowerUps() {
+  for (size_t i = 0; i < powerUps.size(); ++i) {
+    if (powerUps[i] != NULL)
+      delete powerUps[i];
+  }
+  powerUps.clear();
+}
+
+PowerUp *Scene::spawnPowerUp(PowerUpType type, const glm::vec2 &pos) {
+  PowerUp *p = new PowerUp(type, pos);
+  p->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+  powerUps.push_back(p);
+  return p;
+}
+
+PowerUp *Scene::tryDropPowerUp(const glm::vec2 &pos, float probability) {
+  float roll = float(rand()) / float(RAND_MAX);
+  if (roll >= probability)
+    return NULL;
+  int pick = rand() % 4;
+  return spawnPowerUp(PowerUpType(pick), pos);
+}
+
+void Scene::updatePowerUps(int deltaTime) {
+  for (size_t i = 0; i < powerUps.size(); ++i) {
+    if (powerUps[i] != NULL && powerUps[i]->isActive()) {
+      powerUps[i]->update(deltaTime);
+      if (player != NULL && !player->isDying() && !player->isDead()) {
+        if (powerUps[i]->checkCollision(player->getPosition(), glm::ivec2(32, 32))) {
+          powerUps[i]->applyEffect(player);
+        }
+      }
+    }
+  }
+
+  for (auto it = powerUps.begin(); it != powerUps.end();) {
+    if (*it != NULL && !(*it)->isActive()) {
+      delete *it;
+      it = powerUps.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void Scene::renderPowerUps() {
+  for (size_t i = 0; i < powerUps.size(); ++i) {
+    if (powerUps[i] != NULL && powerUps[i]->isActive())
+      powerUps[i]->render();
+  }
 }
 
 void Scene::spawnEnemies() {
@@ -326,10 +377,15 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
       delete explosions[i];
   }
   explosions.clear();
-  spawnEnemies();
-  updateDoorFromEnemies();
+  clearPowerUps();
 
-  // Spawnear els 3 enemics del nivell; la porta resta tancada fins a eliminar-los
+  // Deixar els 4 power-ups al terra del mapa per provar-los de forma immediata
+  int pY = spawnTileY * tileSize;
+  spawnPowerUp(POWERUP_BOMB_UP, glm::vec2(6 * tileSize, pY));
+  spawnPowerUp(POWERUP_FIRE_UP, glm::vec2(9 * tileSize, pY));
+  spawnPowerUp(POWERUP_HEART,   glm::vec2(12 * tileSize, pY));
+  spawnPowerUp(POWERUP_SKATES,  glm::vec2(15 * tileSize, pY));
+
   spawnEnemies();
   updateDoorFromEnemies();
 
@@ -354,108 +410,7 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
 }
 
-void Scene::clearEnemies() {
-  for (size_t i = 0; i < enemies.size(); ++i)
-    delete enemies[i];
-  enemies.clear();
-}
 
-void Scene::spawnEnemies() {
-  if (map == NULL)
-    return;
-
-  struct SpawnSpec {
-    EnemyType type;
-    int tileX;
-    int tileY;
-  };
-
-  SpawnSpec specs[3];
-  switch (currentLevel) {
-  case 1:
-    specs[0] = {ENEMY_HORIZONTAL, 14, 20};
-    specs[1] = {ENEMY_VERTICAL, 29, 18};
-    specs[2] = {ENEMY_STATIC, 24, 25};
-    break;
-  case 2:
-    specs[0] = {ENEMY_HORIZONTAL, 8, 16};
-    specs[1] = {ENEMY_VERTICAL, 20, 12};
-    specs[2] = {ENEMY_STATIC, 26, 25};
-    break;
-  case 3:
-    specs[0] = {ENEMY_HORIZONTAL, 14, 25};
-    specs[1] = {ENEMY_VERTICAL, 28, 20};
-    specs[2] = {ENEMY_STATIC, 18, 20};
-    break;
-  case 4:
-    specs[0] = {ENEMY_HORIZONTAL, 16, 25};
-    specs[1] = {ENEMY_VERTICAL, 5, 20};
-    specs[2] = {ENEMY_STATIC, 18, 20};
-    break;
-  default:
-    specs[0] = {ENEMY_HORIZONTAL, 16, 25};
-    specs[1] = {ENEMY_VERTICAL, 29, 18};
-    specs[2] = {ENEMY_STATIC, 18, 15};
-    break;
-  }
-
-  const int tileSize = map->getTileSize();
-  for (size_t i = 0; i < 3; ++i) {
-    Enemy *enemy = new Enemy();
-    enemy->init(specs[i].type, glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
-    enemy->setTileMap(map);
-    enemy->setBombs(&bombs);
-    enemy->setPosition(glm::vec2(float(specs[i].tileX * tileSize),
-                                 float(specs[i].tileY * tileSize)));
-    enemies.push_back(enemy);
-  }
-}
-
-int Scene::countAliveEnemies() const {
-  int count = 0;
-  for (size_t i = 0; i < enemies.size(); ++i) {
-    if (enemies[i] != NULL && enemies[i]->isAlive())
-      ++count;
-  }
-  return count;
-}
-
-void Scene::updateDoorFromEnemies() {
-  if (door != NULL)
-    door->setOpen(countAliveEnemies() == 0);
-}
-
-void Scene::updateEnemies(int deltaTime) {
-  const glm::ivec2 playerPos =
-      player != NULL ? player->getPosition() : glm::ivec2(0);
-  for (size_t i = 0; i < enemies.size(); ++i) {
-    if (enemies[i] != NULL)
-      enemies[i]->update(deltaTime, playerPos);
-  }
-
-  for (size_t i = 0; i < enemies.size(); ++i) {
-    if (enemies[i] == NULL || !enemies[i]->shouldSpawnExplosion())
-      continue;
-
-    Explosion *explosion = new Explosion();
-    explosion->init(glm::vec2(enemies[i]->getPosition()),
-                    glm::ivec2(SCREEN_X, SCREEN_Y), 1, map, texProgram);
-    explosions.push_back(explosion);
-    enemies[i]->clearExplosionTrigger();
-  }
-
-  for (std::vector<Enemy*>::iterator it = enemies.begin();
-       it != enemies.end();) {
-    if (*it != NULL && (*it)->isFinished()) {
-      delete *it;
-      it = enemies.erase(it);
-    } else {
-      ++it;
-    }
-  }
-
-  updateDoorFromEnemies();
-}
 
 void Scene::nextLevel() {
   if (currentLevel < 5) {
@@ -639,11 +594,15 @@ void Scene::initMenuScreens() {
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
   addInst("  - H: ADD LEVEL LIFE / HEART (+1 HP)", 2, 40.f, 364.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - B: ADD ONE BOMB UP", 2, 40.f, 384.f,
+  addInst("  - B: ADD ONE BOMB UP (+1 BOMB)", 2, 40.f, 384.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - N: GO TO THE NEXT LEVEL", 2, 40.f, 404.f,
+  addInst("  - F: ADD FIRE UP (+1 BLAST RADIUS)", 2, 40.f, 404.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - 1-5: DIRECT LEVEL WARP (STAGES 1 TO 5)", 2, 40.f, 424.f,
+  addInst("  - S: ADD SKATES (+SPEED)", 2, 40.f, 424.f,
+          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+  addInst("  - N: GO TO THE NEXT LEVEL", 2, 40.f, 444.f,
+          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+  addInst("  - 1-5: DIRECT LEVEL WARP (STAGES 1 TO 5)", 2, 40.f, 464.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
 
   addInst("[ PRESS ENTER OR ESC TO RETURN TO MENU ]", 2, 85.f, 452.f,
@@ -924,6 +883,12 @@ void Scene::update(int deltaTime) {
       if (isKeyJustPressed(GLFW_KEY_B)) {
         player->addMaxBomb(); // Incrementa bombes simultànies
       }
+      if (isKeyJustPressed(GLFW_KEY_F)) {
+        player->addBombRadius(); // Incrementa radi d'explosió (Fire Up)
+      }
+      if (isKeyJustPressed(GLFW_KEY_S)) {
+        player->addSpeed(); // Incrementa velocitat de moviment (Patins)
+      }
       if (isKeyJustPressed(GLFW_KEY_SPACE) || isKeyJustPressed(GLFW_KEY_X)) {
         placeBomb();
       }
@@ -945,7 +910,7 @@ void Scene::update(int deltaTime) {
           if (bombs[i]->shouldExplode()) {
             Explosion *exp = new Explosion();
             exp->init(bombs[i]->getPosition(), glm::ivec2(SCREEN_X, SCREEN_Y),
-                      1, map, texProgram);
+                      bombs[i]->getRadius(), map, texProgram);
             explosions.push_back(exp);
 
             delete bombs[i];
@@ -985,12 +950,6 @@ void Scene::update(int deltaTime) {
             }
           }
 
-          // Les explosions també poden eliminar enemics.
-          for (size_t e = 0; e < enemies.size(); ++e) {
-            if (enemies[e] != NULL && enemies[e]->isAlive() &&
-                explosions[i]->checkCollision(enemies[e]->getPosition(),
-                                              enemies[e]->getSize())) {
-              enemies[e]->kill();
           // Col·lisió amb enemics: l'explosió els mata
           for (size_t e = 0; e < enemies.size(); ++e) {
             if (enemies[e] != NULL && enemies[e]->isAlive()) {
@@ -1017,12 +976,6 @@ void Scene::update(int deltaTime) {
           ++it;
       }
 
-      // 3. Actualitzar enemics i la porta de sortida.
-      updateEnemies(deltaTime);
-
-      // El contacte amb un enemic viu fa mal al jugador.
-      if (!player->isDying() && !player->isDead() &&
-          !player->isInvulnerable()) {
       // 3. Actualitzar enemics i estat de la porta
       updateEnemies(deltaTime);
 
@@ -1037,6 +990,9 @@ void Scene::update(int deltaTime) {
           }
         }
       }
+
+      // 5. Actualitzar power-ups (animació de flotació i recol·lecció pel jugador)
+      updatePowerUps(deltaTime);
 
       player->update(deltaTime);
 
@@ -1135,6 +1091,7 @@ void Scene::render() {
       door->render();
     renderBombs();
     renderExplosions();
+    renderPowerUps();
     renderEnemies();
     player->render();
     renderHUD();
@@ -1145,6 +1102,7 @@ void Scene::render() {
       door->render();
     renderBombs();
     renderExplosions();
+    renderPowerUps();
     renderEnemies();
     player->render();
     texProgram.setUniformMatrix4f("projection", screenProjection);
@@ -1377,41 +1335,27 @@ void Scene::updateLevelHUD() {
 }
 
 void Scene::updateEnemiesHUD() {
-  const int aliveCount = countAliveEnemies();
-  if (aliveCount == lastDisplayedEnemies)
+  int count = countAliveEnemies();
+  if (count == lastDisplayedEnemies && enemiesHUDSprite != NULL)
     return;
 
-  lastDisplayedEnemies = aliveCount;
-  char text[16];
-  snprintf(text, sizeof(text), "E:%d", aliveCount);
+  lastDisplayedEnemies = count;
+  char buf[32];
+  if (count > 0)
+    snprintf(buf, sizeof(buf), "E:%d", count);
+  else
+    snprintf(buf, sizeof(buf), "OPEN!");
 
-  delete enemiesHUDSprite;
-  enemiesHUDSprite = NULL;
+  if (enemiesHUDSprite != NULL) {
+    delete enemiesHUDSprite;
+    enemiesHUDSprite = NULL;
+  }
   enemiesHUDTex.free();
-  if (BitmapText::createTexture(enemiesHUDTex, text, 2)) {
+
+  if (BitmapText::createTexture(enemiesHUDTex, buf, 2)) {
     enemiesHUDSprite = Sprite::createSprite(
-        glm::vec2(float(enemiesHUDTex.width()),
-                  float(enemiesHUDTex.height())),
+        glm::vec2(float(enemiesHUDTex.width()), float(enemiesHUDTex.height())),
         glm::vec2(1.f, 1.f), &enemiesHUDTex, &texProgram);
-  int count = countAliveEnemies();
-  if (count != lastDisplayedEnemies) {
-    lastDisplayedEnemies = count;
-    char buf[32];
-    if (count > 0)
-      snprintf(buf, sizeof(buf), "E:%d", count);
-    else
-      snprintf(buf, sizeof(buf), "OPEN!");
-
-    if (enemiesHUDSprite != NULL) {
-      delete enemiesHUDSprite;
-      enemiesHUDSprite = NULL;
-    }
-
-    if (BitmapText::createTexture(enemiesHUDTex, buf, 2)) {
-      enemiesHUDSprite = Sprite::createSprite(
-          glm::vec2(float(enemiesHUDTex.width()), float(enemiesHUDTex.height())),
-          glm::vec2(1.f, 1.f), &enemiesHUDTex, &texProgram);
-    }
   }
 }
 
@@ -1463,52 +1407,33 @@ void Scene::renderHUD() {
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
   }
 
-  // 4. Comptador d'enemics restants al costat del temporitzador.
+  // 4. Comptador d'enemics restants / porta oberta al costat del temporitzador
   updateEnemiesHUD();
   float enemyHudLeft = timerLeft;
   if (enemiesHUDSprite != NULL) {
     const float enemyHudWidth = float(enemiesHUDTex.width());
     enemyHudLeft = timerLeft - enemyHudWidth - 10.f;
     enemiesHUDSprite->setPosition(glm::vec2(enemyHudLeft, hudY));
-    texProgram.setUniform4f("color", 1.f, 0.75f, 0.25f, 1.f);
-    enemiesHUDSprite->render();
-    texProgram.setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
-  }
-
-  // 5. Indicador de nivell centrat entre les vides i els comptadors drets.
-  updateLevelHUD();
-  float levelRight = heartsRight;
-  if (levelHUDSprite != NULL) {
-    float hudW = float(levelHUDTex.width());
-    float gapLeft = camX + heartsRight + 4.f;
-    float gapRight = enemyHudLeft - 4.f;
-    float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
-    float gapRight = timerLeft - 4.f;
-    float x = gapLeft + (gapRight - gapLeft - hudW) * 0.35f;
-    if (x < gapLeft)
-      x = gapLeft;
-    levelHUDSprite->setPosition(glm::vec2(x, hudY));
-    texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
-    levelHUDSprite->render();
-    levelRight = x - camX + hudW;
-  }
-
-  // 5. Indicador d'enemics restants / porta oberta
-  updateEnemiesHUD();
-  if (enemiesHUDSprite != NULL) {
-    float eW = float(enemiesHUDTex.width());
-    float gapLeft = camX + levelRight + 8.f;
-    float gapRight = timerLeft - 6.f;
-    float x = gapLeft + (gapRight - gapLeft - eW) * 0.5f;
-    if (x < gapLeft)
-      x = gapLeft;
-    enemiesHUDSprite->setPosition(glm::vec2(x, hudY));
     if (lastDisplayedEnemies == 0)
       texProgram.setUniform4f("color", 0.2f, 1.0f, 0.3f, 1.0f); // Verd quan la porta s'obre
     else
       texProgram.setUniform4f("color", 1.0f, 0.85f, 0.2f, 1.0f); // Groc daurat
     enemiesHUDSprite->render();
+    texProgram.setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
+  }
+
+  // 5. Indicador de nivell centrat entre les vides i els comptadors drets
+  updateLevelHUD();
+  if (levelHUDSprite != NULL) {
+    float hudW = float(levelHUDTex.width());
+    float gapLeft = camX + heartsRight + 6.f;
+    float gapRight = enemyHudLeft - 6.f;
+    float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
+    if (x < gapLeft)
+      x = gapLeft;
+    levelHUDSprite->setPosition(glm::vec2(x, hudY));
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+    levelHUDSprite->render();
   }
 
   // 6. Missatge temporal de god mode si s'ha activat / desactivat
@@ -1570,6 +1495,7 @@ void Scene::placeBomb() {
   Bomb *bomb = new Bomb();
   bomb->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
   bomb->setPosition(glm::vec2(float(bombX), float(bombY)));
+  bomb->setRadius(player->getBombRadius());
   bomb->updatePlayerOverlap(playerPos, glm::ivec2(32, 32));
   bombs.push_back(bomb);
 }
