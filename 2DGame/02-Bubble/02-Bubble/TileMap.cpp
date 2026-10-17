@@ -204,7 +204,7 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	{
 		if(isTileSolid(x, y))
 		{
-			if(*posY - tileSize * y + size.y <= 4)
+			if(*posY - tileSize * y + size.y <= 10)
 			{
 				*posY = tileSize * y - size.y;
 				return true;
