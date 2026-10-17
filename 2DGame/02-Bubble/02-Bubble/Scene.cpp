@@ -56,6 +56,7 @@ void TextLabel::free() {
     delete sprite;
     sprite = NULL;
   }
+  tex.free();
 }
 
 Scene::Scene() {
@@ -78,6 +79,8 @@ Scene::Scene() {
   heartIcon = NULL;
   timerSprite = NULL;
   levelHUDSprite = NULL;
+  enemiesHUDSprite = NULL;
+  lastDisplayedEnemies = -1;
   godModeOnSprite = NULL;
   godModeOffSprite = NULL;
   godModeMsgTime = 0;
@@ -110,6 +113,8 @@ Scene::~Scene() {
     delete timerSprite;
   if (levelHUDSprite != NULL)
     delete levelHUDSprite;
+  if (enemiesHUDSprite != NULL)
+    delete enemiesHUDSprite;
   if (godModeOnSprite != NULL)
     delete godModeOnSprite;
   if (godModeOffSprite != NULL)
@@ -244,6 +249,7 @@ void Scene::updateEnemies(int deltaTime) {
 }
 
 void Scene::startLevel(int levelNum, bool keepPowerUps) {
+  clearEnemies();
   currentLevel = levelNum;
   if (currentLevel < 1)
     currentLevel = 1;
@@ -253,6 +259,7 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   levelTimeLeft = 120000; // 2 minuts (120 segons) per nivell
   lastDisplayedSeconds = -1;
   lastDisplayedLevel = -1;
+  lastDisplayedEnemies = -1;
 
   if (timerSprite != NULL) {
     delete timerSprite;
@@ -319,6 +326,8 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
       delete explosions[i];
   }
   explosions.clear();
+  spawnEnemies();
+  updateDoorFromEnemies();
 
   // Spawnear els 3 enemics del nivell; la porta resta tancada fins a eliminar-los
   spawnEnemies();
@@ -343,6 +352,109 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
     camY = mapBottom;
 
   projection = glm::ortho(camX, camX + viewWidth, camY + viewHeight, camY);
+}
+
+void Scene::clearEnemies() {
+  for (size_t i = 0; i < enemies.size(); ++i)
+    delete enemies[i];
+  enemies.clear();
+}
+
+void Scene::spawnEnemies() {
+  if (map == NULL)
+    return;
+
+  struct SpawnSpec {
+    EnemyType type;
+    int tileX;
+    int tileY;
+  };
+
+  SpawnSpec specs[3];
+  switch (currentLevel) {
+  case 1:
+    specs[0] = {ENEMY_HORIZONTAL, 14, 20};
+    specs[1] = {ENEMY_VERTICAL, 29, 18};
+    specs[2] = {ENEMY_STATIC, 24, 25};
+    break;
+  case 2:
+    specs[0] = {ENEMY_HORIZONTAL, 8, 16};
+    specs[1] = {ENEMY_VERTICAL, 20, 12};
+    specs[2] = {ENEMY_STATIC, 26, 25};
+    break;
+  case 3:
+    specs[0] = {ENEMY_HORIZONTAL, 14, 25};
+    specs[1] = {ENEMY_VERTICAL, 28, 20};
+    specs[2] = {ENEMY_STATIC, 18, 20};
+    break;
+  case 4:
+    specs[0] = {ENEMY_HORIZONTAL, 16, 25};
+    specs[1] = {ENEMY_VERTICAL, 5, 20};
+    specs[2] = {ENEMY_STATIC, 18, 20};
+    break;
+  default:
+    specs[0] = {ENEMY_HORIZONTAL, 16, 25};
+    specs[1] = {ENEMY_VERTICAL, 29, 18};
+    specs[2] = {ENEMY_STATIC, 18, 15};
+    break;
+  }
+
+  const int tileSize = map->getTileSize();
+  for (size_t i = 0; i < 3; ++i) {
+    Enemy *enemy = new Enemy();
+    enemy->init(specs[i].type, glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+    enemy->setTileMap(map);
+    enemy->setBombs(&bombs);
+    enemy->setPosition(glm::vec2(float(specs[i].tileX * tileSize),
+                                 float(specs[i].tileY * tileSize)));
+    enemies.push_back(enemy);
+  }
+}
+
+int Scene::countAliveEnemies() const {
+  int count = 0;
+  for (size_t i = 0; i < enemies.size(); ++i) {
+    if (enemies[i] != NULL && enemies[i]->isAlive())
+      ++count;
+  }
+  return count;
+}
+
+void Scene::updateDoorFromEnemies() {
+  if (door != NULL)
+    door->setOpen(countAliveEnemies() == 0);
+}
+
+void Scene::updateEnemies(int deltaTime) {
+  const glm::ivec2 playerPos =
+      player != NULL ? player->getPosition() : glm::ivec2(0);
+  for (size_t i = 0; i < enemies.size(); ++i) {
+    if (enemies[i] != NULL)
+      enemies[i]->update(deltaTime, playerPos);
+  }
+
+  for (size_t i = 0; i < enemies.size(); ++i) {
+    if (enemies[i] == NULL || !enemies[i]->shouldSpawnExplosion())
+      continue;
+
+    Explosion *explosion = new Explosion();
+    explosion->init(glm::vec2(enemies[i]->getPosition()),
+                    glm::ivec2(SCREEN_X, SCREEN_Y), 1, map, texProgram);
+    explosions.push_back(explosion);
+    enemies[i]->clearExplosionTrigger();
+  }
+
+  for (std::vector<Enemy*>::iterator it = enemies.begin();
+       it != enemies.end();) {
+    if (*it != NULL && (*it)->isFinished()) {
+      delete *it;
+      it = enemies.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  updateDoorFromEnemies();
 }
 
 void Scene::nextLevel() {
@@ -873,6 +985,12 @@ void Scene::update(int deltaTime) {
             }
           }
 
+          // Les explosions també poden eliminar enemics.
+          for (size_t e = 0; e < enemies.size(); ++e) {
+            if (enemies[e] != NULL && enemies[e]->isAlive() &&
+                explosions[i]->checkCollision(enemies[e]->getPosition(),
+                                              enemies[e]->getSize())) {
+              enemies[e]->kill();
           // Col·lisió amb enemics: l'explosió els mata
           for (size_t e = 0; e < enemies.size(); ++e) {
             if (enemies[e] != NULL && enemies[e]->isAlive()) {
@@ -899,6 +1017,12 @@ void Scene::update(int deltaTime) {
           ++it;
       }
 
+      // 3. Actualitzar enemics i la porta de sortida.
+      updateEnemies(deltaTime);
+
+      // El contacte amb un enemic viu fa mal al jugador.
+      if (!player->isDying() && !player->isDead() &&
+          !player->isInvulnerable()) {
       // 3. Actualitzar enemics i estat de la porta
       updateEnemies(deltaTime);
 
@@ -1253,6 +1377,22 @@ void Scene::updateLevelHUD() {
 }
 
 void Scene::updateEnemiesHUD() {
+  const int aliveCount = countAliveEnemies();
+  if (aliveCount == lastDisplayedEnemies)
+    return;
+
+  lastDisplayedEnemies = aliveCount;
+  char text[16];
+  snprintf(text, sizeof(text), "E:%d", aliveCount);
+
+  delete enemiesHUDSprite;
+  enemiesHUDSprite = NULL;
+  enemiesHUDTex.free();
+  if (BitmapText::createTexture(enemiesHUDTex, text, 2)) {
+    enemiesHUDSprite = Sprite::createSprite(
+        glm::vec2(float(enemiesHUDTex.width()),
+                  float(enemiesHUDTex.height())),
+        glm::vec2(1.f, 1.f), &enemiesHUDTex, &texProgram);
   int count = countAliveEnemies();
   if (count != lastDisplayedEnemies) {
     lastDisplayedEnemies = count;
@@ -1323,12 +1463,26 @@ void Scene::renderHUD() {
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
   }
 
-  // 4. Indicador de nivell centrat entre els cors i el temporitzador
+  // 4. Comptador d'enemics restants al costat del temporitzador.
+  updateEnemiesHUD();
+  float enemyHudLeft = timerLeft;
+  if (enemiesHUDSprite != NULL) {
+    const float enemyHudWidth = float(enemiesHUDTex.width());
+    enemyHudLeft = timerLeft - enemyHudWidth - 10.f;
+    enemiesHUDSprite->setPosition(glm::vec2(enemyHudLeft, hudY));
+    texProgram.setUniform4f("color", 1.f, 0.75f, 0.25f, 1.f);
+    enemiesHUDSprite->render();
+    texProgram.setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
+  }
+
+  // 5. Indicador de nivell centrat entre les vides i els comptadors drets.
   updateLevelHUD();
   float levelRight = heartsRight;
   if (levelHUDSprite != NULL) {
     float hudW = float(levelHUDTex.width());
     float gapLeft = camX + heartsRight + 4.f;
+    float gapRight = enemyHudLeft - 4.f;
+    float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
     float gapRight = timerLeft - 4.f;
     float x = gapLeft + (gapRight - gapLeft - hudW) * 0.35f;
     if (x < gapLeft)
@@ -1357,7 +1511,7 @@ void Scene::renderHUD() {
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
   }
 
-  // 5. Missatge temporal de god mode si s'ha activat / desactivat
+  // 6. Missatge temporal de god mode si s'ha activat / desactivat
   if (godModeMsgTime > 0) {
     Sprite *msgSprite = godModeMsgActive ? godModeOnSprite : godModeOffSprite;
     if (msgSprite != NULL) {

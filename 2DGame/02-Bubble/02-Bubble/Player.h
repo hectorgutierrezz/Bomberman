@@ -63,11 +63,13 @@ private:
 	int internalLives; // 1 de base per pantalla; augmenta amb power-ups
 	int maxBombs;      // Es manté a través dels re-runs
 	int invulnerableTime;
+	float fallSpeed;
 	Texture spritesheet;
 	Sprite *sprite;
 	TileMap *map;
 	const std::vector<Bomb*> *bombs;
 
+	bool stepFall(int step);
 };
 
 

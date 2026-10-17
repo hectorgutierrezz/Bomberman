@@ -29,7 +29,7 @@ private:
 	float lifetime;
 	glm::ivec2 tileMapDispl;
 	std::vector<glm::vec2> cells;
-	std::vector<Sprite*> sprites;
+	Sprite *sprite;
 };
 
 #endif // _EXPLOSION_INCLUDE

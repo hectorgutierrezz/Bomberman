@@ -44,11 +44,13 @@ void ShaderProgram::link()
 	linked = (status == GL_TRUE);
 	glGetProgramInfoLog(programId, 512, NULL, buffer);
 	errorLog.assign(buffer);
+	uniformLocations.clear();
 }
 
 void ShaderProgram::free()
 {
 	glDeleteProgram(programId);
+	uniformLocations.clear();
 }
 
 void ShaderProgram::use()
@@ -66,9 +68,20 @@ const string &ShaderProgram::log() const
 	return errorLog;
 }
 
+GLint ShaderProgram::getUniformLocation(const string &uniformName)
+{
+	auto it = uniformLocations.find(uniformName);
+	if (it != uniformLocations.end())
+		return it->second;
+
+	GLint location = glGetUniformLocation(programId, uniformName.c_str());
+	uniformLocations[uniformName] = location;
+	return location;
+}
+
 void ShaderProgram::setUniform2f(const string &uniformName, float v0, float v1)
 {
-	GLint location = glGetUniformLocation(programId, uniformName.c_str());
+	GLint location = getUniformLocation(uniformName);
 
 	if(location != -1)
 		glUniform2f(location, v0, v1);
@@ -76,7 +89,7 @@ void ShaderProgram::setUniform2f(const string &uniformName, float v0, float v1)
 
 void ShaderProgram::setUniform3f(const string &uniformName, float v0, float v1, float v2)
 {
-	GLint location = glGetUniformLocation(programId, uniformName.c_str());
+	GLint location = getUniformLocation(uniformName);
 
 	if(location != -1)
 		glUniform3f(location, v0, v1, v2);
@@ -84,7 +97,7 @@ void ShaderProgram::setUniform3f(const string &uniformName, float v0, float v1, 
 
 void ShaderProgram::setUniform4f(const string &uniformName, float v0, float v1, float v2, float v3)
 {
-	GLint location = glGetUniformLocation(programId, uniformName.c_str());
+	GLint location = getUniformLocation(uniformName);
 
 	if(location != -1)
 		glUniform4f(location, v0, v1, v2, v3);
@@ -92,7 +105,7 @@ void ShaderProgram::setUniform4f(const string &uniformName, float v0, float v1, 
 
 void ShaderProgram::setUniformMatrix4f(const string &uniformName, glm::mat4 &mat)
 {
-	GLint location = glGetUniformLocation(programId, uniformName.c_str());
+	GLint location = getUniformLocation(uniformName);
 
 	if(location != -1)
 		glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(mat));

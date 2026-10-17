@@ -168,6 +168,7 @@ private:
   Sprite *levelHUDSprite;
   int lastDisplayedLevel;
 
+  // HUD: enemics vius del nivell
   // HUD: indicador d'enemics restants / estat de la porta
   Texture enemiesHUDTex;
   Sprite *enemiesHUDSprite;
@@ -187,4 +188,3 @@ private:
 };
 
 #endif // _SCENE_INCLUDE
-

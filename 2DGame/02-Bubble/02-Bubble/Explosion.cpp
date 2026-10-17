@@ -8,16 +8,16 @@ Explosion::Explosion()
 	active = false;
 	lifetime = 600.f;
 	tileMapDispl = glm::ivec2(0);
+	sprite = NULL;
 }
 
 Explosion::~Explosion()
 {
-	for(size_t i = 0; i < sprites.size(); ++i)
+	if(sprite != NULL)
 	{
-		if(sprites[i] != NULL)
-			delete sprites[i];
+		delete sprite;
+		sprite = NULL;
 	}
-	sprites.clear();
 	cells.clear();
 }
 
@@ -34,7 +34,6 @@ void Explosion::init(const glm::vec2 &centerPos, const glm::ivec2 &tileMapPos, i
 	}
 
 	cells.clear();
-	sprites.clear();
 
 	// 1. Casella central de la bomba
 	cells.push_back(centerPos);
@@ -62,26 +61,23 @@ void Explosion::init(const glm::vec2 &centerPos, const glm::ivec2 &tileMapPos, i
 		}
 	}
 
-	// 3. Crear els sprites per a cada casella de l'explosió
+	// 3. Crear un únic sprite reutilitzat per a totes les cel·les de l'explosió
 	glm::vec2 sizeInUV = glm::vec2(52.f / 312.f, 56.f / 56.f); // 6 frames = 1/6 ample UV
-	glm::vec2 quadOffset = glm::vec2(16.f - 26.f, 16.f - 28.f); // Centrar quad de 52x56 en cel·la de 32x32
 
-	for(size_t i = 0; i < cells.size(); ++i)
+	if(sprite != NULL)
 	{
-		Sprite *sp = Sprite::createSprite(glm::vec2(52.f, 56.f), sizeInUV, &explosionTexture, &shaderProgram);
-		sp->setNumberAnimations(1);
-		sp->setAnimationSpeed(0, 10); // 10 fps
-		for(int k = 0; k < 6; ++k)
-		{
-			sp->addKeyframe(0, glm::vec2(float(k) / 6.f, 0.f));
-		}
-		sp->changeAnimation(0);
-
-		glm::vec2 spPos = glm::vec2(float(tileMapDispl.x + cells[i].x + quadOffset.x),
-		                           float(tileMapDispl.y + cells[i].y + quadOffset.y));
-		sp->setPosition(spPos);
-		sprites.push_back(sp);
+		delete sprite;
+		sprite = NULL;
 	}
+
+	sprite = Sprite::createSprite(glm::vec2(52.f, 56.f), sizeInUV, &explosionTexture, &shaderProgram);
+	sprite->setNumberAnimations(1);
+	sprite->setAnimationSpeed(0, 10); // 10 fps
+	for(int k = 0; k < 6; ++k)
+	{
+		sprite->addKeyframe(0, glm::vec2(float(k) / 6.f, 0.f));
+	}
+	sprite->changeAnimation(0);
 }
 
 void Explosion::update(int deltaTime)
@@ -89,11 +85,8 @@ void Explosion::update(int deltaTime)
 	if(!active)
 		return;
 
-	for(size_t i = 0; i < sprites.size(); ++i)
-	{
-		if(sprites[i] != NULL)
-			sprites[i]->update(deltaTime);
-	}
+	if(sprite != NULL)
+		sprite->update(deltaTime);
 
 	lifetime -= float(deltaTime);
 	if(lifetime <= 0.f)
@@ -104,13 +97,16 @@ void Explosion::update(int deltaTime)
 
 void Explosion::render()
 {
-	if(!active)
+	if(!active || sprite == NULL)
 		return;
 
-	for(size_t i = 0; i < sprites.size(); ++i)
+	glm::vec2 quadOffset = glm::vec2(16.f - 26.f, 16.f - 28.f); // Centrar quad de 52x56 en cel·la de 32x32
+	for(size_t i = 0; i < cells.size(); ++i)
 	{
-		if(sprites[i] != NULL)
-			sprites[i]->render();
+		glm::vec2 spPos = glm::vec2(float(tileMapDispl.x + cells[i].x + quadOffset.x),
+		                           float(tileMapDispl.y + cells[i].y + quadOffset.y));
+		sprite->setPosition(spPos);
+		sprite->render();
 	}
 }
 

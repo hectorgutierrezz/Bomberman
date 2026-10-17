@@ -8,6 +8,8 @@
 #define JUMP_ANGLE_STEP 4
 #define JUMP_HEIGHT 96
 #define FALL_STEP 4
+#define GRAVITY 0.4f
+#define MAX_FALL_SPEED 8.0f
 
 
 enum PlayerAnims
@@ -25,6 +27,7 @@ Player::Player()
 	internalLives = 1;
 	maxBombs = 1;
 	invulnerableTime = 0;
+	fallSpeed = 0.0f;
 	godMode = false;
 	bDying = false;
 	bDead = false;
@@ -46,6 +49,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	internalLives = 1;
 	maxBombs = 1;
 	invulnerableTime = 0;
+	fallSpeed = 0.0f;
 	godMode = false;
 	if(sprite != NULL)
 	{
@@ -124,6 +128,37 @@ void Player::startDying()
 		sprite->changeAnimation(DIE);
 }
 
+bool Player::stepFall(int step)
+{
+	bool onGround = false;
+	for(int s = 0; s < step; ++s)
+	{
+		posPlayer.y += 1;
+		if(map != NULL && map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+		{
+			onGround = true;
+			break;
+		}
+		if(bombs != NULL)
+		{
+			for(size_t i = 0; i < bombs->size(); ++i)
+			{
+				if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
+				{
+					if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+					{
+						onGround = true;
+						break;
+					}
+				}
+			}
+			if(onGround)
+				break;
+		}
+	}
+	return onGround;
+}
+
 void Player::update(int deltaTime)
 {
 	sprite->update(deltaTime);
@@ -137,9 +172,11 @@ void Player::update(int deltaTime)
 			bDying = false;
 			bDead = true; // Senyalitza que l'animació de mort ha finalitzat
 		}
-		// Cau suaument si estava en l'aire
-		posPlayer.y += FALL_STEP;
-		map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y);
+		// Cau amb acceleració si estava en l'aire
+		fallSpeed = std::min(fallSpeed + GRAVITY, MAX_FALL_SPEED);
+		int step = std::max(1, int(fallSpeed));
+		if(stepFall(step))
+			fallSpeed = 0.0f;
 		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 		return;
 	}
@@ -156,8 +193,10 @@ void Player::update(int deltaTime)
 	{
 		if(sprite->animation() != HURT)
 			sprite->changeAnimation(HURT);
-		posPlayer.y += FALL_STEP;
-		map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y);
+		fallSpeed = std::min(fallSpeed + GRAVITY, MAX_FALL_SPEED);
+		int step = std::max(1, int(fallSpeed));
+		if(stepFall(step))
+			fallSpeed = 0.0f;
 		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 		return;
 	}
@@ -253,6 +292,25 @@ void Player::update(int deltaTime)
 		{
 			bJumping = false;
 			posPlayer.y = startY;
+			bool onGround = (map != NULL && map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y));
+			if(!onGround && bombs != NULL)
+			{
+				for(size_t i = 0; i < bombs->size(); ++i)
+				{
+					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
+					{
+						if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+						{
+							onGround = true;
+							break;
+						}
+					}
+				}
+			}
+			if(onGround)
+				fallSpeed = 0.0f;
+			else
+				fallSpeed = 6.0f; // Continuïtat suau de la caiguda si s'acaba el salt en l'aire
 		}
 		else
 		{
@@ -260,7 +318,10 @@ void Player::update(int deltaTime)
 			if(jumpAngle < 90)
 			{
 				if(map->collisionMoveUp(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+				{
 					bJumping = false;
+					fallSpeed = 0.0f;
+				}
 			}
 			else if(jumpAngle > 90)
 			{
@@ -280,36 +341,29 @@ void Player::update(int deltaTime)
 					}
 				}
 				if(hitGround)
+				{
 					bJumping = false;
+					fallSpeed = 0.0f;
+				}
 			}
 		}
 	}
 	else
 	{
-		posPlayer.y += FALL_STEP;
-		bool onGround = map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y);
-		if(!onGround && bombs != NULL)
-		{
-			for(size_t i = 0; i < bombs->size(); ++i)
-			{
-				if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
-				{
-					if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
-					{
-						onGround = true;
-						break;
-					}
-				}
-			}
-		}
+		// Caiguda amb acceleració realista de gravetat
+		fallSpeed = std::min(fallSpeed + GRAVITY, MAX_FALL_SPEED);
+		int step = std::max(1, int(fallSpeed));
+		bool onGround = stepFall(step);
 
 		if(onGround)
 		{
-			if(Game::instance().getKey(GLFW_KEY_UP))
+			fallSpeed = 0.0f;
+			if(Game::instance().getKey(GLFW_KEY_UP) || Game::instance().getKey(GLFW_KEY_W))
 			{
 				bJumping = true;
 				jumpAngle = 0;
 				startY = posPlayer.y;
+				fallSpeed = 0.0f;
 			}
 		}
 	}
@@ -355,6 +409,7 @@ void Player::respawn(const glm::vec2 &pos)
 	dyingTime = 0;
 	invulnerableTime = 0;
 	internalLives = 1;
+	fallSpeed = 0.0f;
 	setPosition(pos);
 	if(sprite != NULL)
 		sprite->changeAnimation(IDLE);

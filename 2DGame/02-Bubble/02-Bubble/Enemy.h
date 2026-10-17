@@ -3,6 +3,15 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include "Bomb.h"
+#include "Sprite.h"
+#include "Texture.h"
+#include "TileMap.h"
+
+enum EnemyType {
+	ENEMY_HORIZONTAL,
+	ENEMY_VERTICAL,
+	ENEMY_STATIC
 #include "Sprite.h"
 #include "TileMap.h"
 #include "Texture.h"
@@ -32,6 +41,7 @@ public:
 
 	EnemyType getType() const { return type; }
 	bool isAlive() const { return alive && !bDying; }
+	bool isFinished() const { return !alive; }
 	bool isFinished() const { return !alive; } // Ja es pot eliminar de la llista
 
 	void kill();
@@ -46,6 +56,8 @@ private:
 	void updateVertical(int deltaTime);
 	void updateStatic(int deltaTime, const glm::ivec2 &playerPos);
 	bool wouldFall(int nextX) const;
+	bool overlapsBomb(const glm::ivec2 &position) const;
+
 
 private:
 	static Texture spritesheet;
@@ -55,6 +67,15 @@ private:
 	bool alive;
 	bool bDying;
 	int dyingTime;
+	int moveDir;
+	int bobTimer;
+	int spawnOriginY;
+	float moveAccum;
+	bool triggerExplosion;
+	bool exploded;
+
+	glm::ivec2 tileMapDispl;
+	glm::ivec2 posEnemy;
 	int moveDir;        // +1 / -1
 	int bobTimer;       // Per al bobbing de l'enemic estàtic
 	int spawnOriginY;   // Posició vertical d'origen per a patrulla i bobbing

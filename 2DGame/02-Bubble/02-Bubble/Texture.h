@@ -27,6 +27,9 @@ public:
 	void loadFromGlyphBuffer(unsigned char *buffer, int width, int height);
 	void loadFromRGBABuffer(const unsigned char *buffer, int width, int height);
 
+	void free();
+	bool isLoaded() const { return texId != 0; }
+
 	void createEmptyTexture(int width, int height);
 	void loadSubtextureFromGlyphBuffer(unsigned char *buffer, int x, int y, int width, int height);
 	void generateMipmap();

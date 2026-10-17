@@ -7,6 +7,9 @@ using namespace std;
 
 Texture::Texture()
 {
+	texId = 0;
+	widthTex = 0;
+	heightTex = 0;
 	wrapS = GL_REPEAT;
 	wrapT = GL_REPEAT;
 	minFilter = GL_LINEAR_MIPMAP_LINEAR;
@@ -15,25 +18,41 @@ Texture::Texture()
 
 Texture::~Texture()
 {
-	glDeleteTextures(1, &texId);
+	free();
+}
+
+void Texture::free()
+{
+	if(texId != 0)
+	{
+		glDeleteTextures(1, &texId);
+		texId = 0;
+	}
+	widthTex = 0;
+	heightTex = 0;
 }
 
 
 bool Texture::loadFromFile(const string &filename, PixelFormat format)
 {
 	unsigned char *image = NULL;
+	int w = 0, h = 0;
 	
 	switch(format)
 	{
 	case TEXTURE_PIXEL_FORMAT_RGB:
-		image = SOIL_load_image(filename.c_str(), &widthTex, &heightTex, 0, SOIL_LOAD_RGB);
+		image = SOIL_load_image(filename.c_str(), &w, &h, 0, SOIL_LOAD_RGB);
 		break;
 	case TEXTURE_PIXEL_FORMAT_RGBA:
-		image = SOIL_load_image(filename.c_str(), &widthTex, &heightTex, 0, SOIL_LOAD_RGBA);
+		image = SOIL_load_image(filename.c_str(), &w, &h, 0, SOIL_LOAD_RGBA);
 		break;
 	}
 	if(image == NULL)
 		return false;
+
+	free();
+	widthTex = w;
+	heightTex = h;
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
 	switch(format)
@@ -53,6 +72,7 @@ bool Texture::loadFromFile(const string &filename, PixelFormat format)
 
 void Texture::loadFromGlyphBuffer(unsigned char *buffer, int width, int height)
 {
+	free();
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -63,6 +83,7 @@ void Texture::loadFromGlyphBuffer(unsigned char *buffer, int width, int height)
 
 void Texture::loadFromRGBABuffer(const unsigned char *buffer, int width, int height)
 {
+	free();
 	widthTex = width;
 	heightTex = height;
 	glGenTextures(1, &texId);
@@ -73,6 +94,7 @@ void Texture::loadFromRGBABuffer(const unsigned char *buffer, int width, int hei
 
 void Texture::createEmptyTexture(int width, int height)
 {
+	free();
 	glGenTextures(1, &texId);
 	glBindTexture(GL_TEXTURE_2D, texId);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

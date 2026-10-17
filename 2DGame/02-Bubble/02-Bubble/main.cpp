@@ -1,5 +1,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <chrono>
+#include <thread>
 #include "Game.h"
 
 
@@ -54,6 +56,8 @@ int main(void)
 	glfwSetWindowPos(window, 100, 100);
 	/* Make the window's context current */
 	glfwMakeContextCurrent(window);
+	/* Enable VSync to eliminate CPU spinning and screen tearing */
+	glfwSwapInterval(1);
 
 	/* Set callbacks */
 	glfwSetKeyCallback(window, key_callback);
@@ -88,6 +92,15 @@ int main(void)
 
 			/* Swap front and back buffers */
 			glfwSwapBuffers(window);
+		}
+		else
+		{
+			// Yield/sleep slightly if there is surplus time before the next frame
+			double remainingTime = timePerFrame - (currentTime - timePreviousFrame);
+			if (remainingTime > 0.002)
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
 		}
 
 		/* Poll for and process events */
