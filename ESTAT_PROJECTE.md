@@ -12,11 +12,11 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 
 | # | Requeriment de l'Enunciat (PDF) | Estat Actual | Progrés | Detall de la Implementació a `2DGame` |
 | :-: | :--- | :---: | :---: | :--- |
-| **1** | **Estructura bàsica de 4 pantalles**<br>*(Menú principal, jugar, instruccions, crèdits)* | **Completat** | 100% | Les 4 pantalles principals estan implementades ([`MAIN_MENU`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.h#L24), `PLAYING`, `INSTRUCTIONS`, `CREDITS`) més estats auxiliars (`PAUSED`, `GAME_OVER`, `WIN`). Navegació amb fletxes/WASD, selecció amb Enter/Espai, dreceres 1-4 i tecla `ESC` per pausar o tornar enrere. Menús maquetats amb sprites oficials de GBC (`images/Menu/`) i [BitmapText](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/BitmapText.h).<br>*(Pendent de millora: afegir **Choose Level Screen** al prémer Start Game).* |
-| **2** | **Cinc nivells amb eliminació d'enemics i porta de sortida** | **Completat** | 85% | - Creades les plantilles dels 5 nivells (`levels/level01.txt` a `level05.txt`).<br>- Entitat [Door](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Door.h) implementada amb sprite tancada i oberta.<br>- **Condició d'obertura activa:** La porta comença **tancada** a cada nivell i només s'obre quan s'han eliminat tots els enemics ([`countAliveEnemies() == 0`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.cpp#L208-L213)).<br>- En superar el nivell 5 s'arriba a la pantalla de victòria (`WIN`).<br>*(Pendents claus: **Redissenyar completament els 5 nivells**, aplicar el **tileset oficial de Game Boy Color** i afegir un **missatge a pantalla que avisi clarament que la porta ja està oberta**).* |
+| **1** | **Estructura bàsica de 4 pantalles**<br>*(Menú principal, jugar, instruccions, crèdits)* | **Completat** | 100% | Les 4 pantalles principals estan implementades ([`MAIN_MENU`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.h#L24), `PLAYING`, `INSTRUCTIONS`, `CREDITS`) més les pantalles auxiliars `CHEATS`, `PAUSED`, `GAME_OVER` i `WIN`. El menú, les instruccions, els controls i els missatges de joc estan en català. La font bitmap no admet diacrítics, de manera que els textos visibles s'escriuen sense accents. Navegació amb fletxes/WASD, selecció amb Enter/Espai i accés a les pantalles amb les opcions numerades 1-5. Menús maquetats amb sprites oficials de GBC (`images/Menu/`) i [BitmapText](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/BitmapText.h).<br>*(Pendent de millora: afegir **Choose Level Screen** en iniciar una partida).* |
+| **2** | **Cinc nivells amb eliminació d'enemics i porta de sortida** | **Completat** | 85% | - Creades les plantilles dels 5 nivells (`levels/level01.txt` a `level05.txt`).<br>- Entitat [Door](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Door.h) implementada amb sprite tancada i oberta.<br>- **Condició d'obertura activa:** La porta comença **tancada** a cada nivell i només s'obre quan s'han eliminat tots els enemics ([`countAliveEnemies() == 0`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.cpp#L208-L213)). Quan s'obre, es mostra durant 2,5 segons el missatge «PORTA OBERTA!».<br>- En superar el nivell 5 s'arriba a la pantalla de victòria (`WIN`).<br>*(Pendents claus: **Redissenyar completament els 5 nivells** i aplicar el **tileset oficial de Game Boy Color**).* |
 | **3** | **Moviment d'esquerra a dreta i salt de Bomberman** | **Completat** | 100% | Físiques de moviment horitzontal, gravetat amb acceleració realista ([`GRAVITY 0.4f`, `MAX_FALL_SPEED 8.0f`, `stepFall`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Player.cpp#L128-L160)) i salt parabòlic a [Player.cpp](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Player.cpp). Spritesheet oficial de GBC (`bomber.png`) amb animacions `IDLE`, `STAND_LEFT/RIGHT`, `MOVE_LEFT/RIGHT` i `FALL`. Càmera dinàmica suau (*lerp*) que segueix el personatge. |
 | **4** | **Tres enemics amb comportaments diferents**<br>*(Contacte resta vida si no té el «cor»)* | **Completat** | 100% | **Classe [Enemy](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Enemy.h) implementada amb 3 IA i sprites diferenciats:**<br>1. **`ENEMY_HORIZONTAL` (Caminant groc):** Patrulla sobre terra/plataformes; inverteix la marxa en topar amb parets, bombes o en detectar la vora d'una plataforma ([`wouldFall`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Enemy.cpp#L185-L193)).<br>2. **`ENEMY_VERTICAL` (Peix volador):** Patrulla amunt i avall de manera suau; inverteix marxa amb sostre, terra o en superar el radi límit.<br>3. **`ENEMY_STATIC` (Globus Valcom):** Vigilant estàtic amb lleugera levitació (*bobbing*); gira la mirada cap a Bomberman, accelera l'animació si s'apropa (<96px) i **detona una explosió en morir**.<br>- **Dany al jugador:** El contacte resta 1 vida interna/cor; si no té cors addicionals, inicia la seqüència de mort. |
-| **5** | **Perdre les 3 vides implica perdre la partida i tornar al menú** | **Completat** | 100% | **Sistema fidel a Pocket Bomberman amb dos nivells de vides:**<br>- **Cors de nivell (Vida interna):** 1 de base per pantalla (augmentable amb cors). En rebre dany amb >1 cor, reprodueix animació `HURT` durant 350ms i parpelleja invulnerable 2s.<br>- **Vides Generals (3 intents globals):** Si rep dany sense cors addicionals, s'executa l'animació oficial de mort de 7 frames (`DIE`, 1.2s) i es resta 1 vida general.<br>- **Pantalla intermèdia `TRY_AGAIN` IMPLEMENTADA:** En comptes de reiniciar sobtadament, s'activa la pantalla de transició estil GBC amb el sprite oficial de Bomberman, comptador de vides restants (`x 2`), avís de nova oportunitat (`YOU HAVE ANOTHER CHANCE!`), compte enrere de 3s o represa immediata amb Enter/Espai (o retorn al menú amb ESC/M).<br>- En perdre les 3 vides generals (0), salta el Game Over definitiu i qualsevol tecla retorna al menú principal. |
+| **5** | **Perdre les 3 vides implica perdre la partida i tornar al menú** | **Completat** | 100% | **Sistema fidel a Pocket Bomberman amb dos nivells de vides:**<br>- **Cors de nivell (Vida interna):** 1 de base per pantalla (augmentable amb cors). En rebre dany amb >1 cor, reprodueix animació `HURT` durant 350ms i parpelleja invulnerable 2s.<br>- **Vides Generals (3 intents globals):** Si rep dany sense cors addicionals, s'executa l'animació oficial de mort de 7 frames (`DIE`, 1.2s) i es resta 1 vida general.<br>- **Pantalla intermèdia `TRY_AGAIN` IMPLEMENTADA:** En comptes de reiniciar sobtadament, s'activa la pantalla de transició estil GBC amb textos en català, sprite oficial de la cara de Bomberman i comptador de vides restants (`x 2`). La pantalla espera indefinidament fins que es reprèn amb Enter/Espai/X/Z o un clic, o es torna al menú amb ESC/M.<br>- En perdre les 3 vides generals (0), salta el Game Over definitiu i qualsevol tecla retorna al menú principal. |
 | **6** | **Deixar anar bombes (alineades amb tiles) que maten enemics o Bomberman** | **Completat** | 98% | Bombes alineades a la graella (`round(pos/16)*16`). Classe [Bomb](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Bomb.h) amb metxa de 4 frames i detonació a 2.2s. Classe [Explosion](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Explosion.h) en creu (4 direccions) amb col·lisions contra parets, reaccions en cadena, dany a Bomberman i **eliminació d'enemics** ([`enemy->kill()`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.cpp#L876-L885)). *(Només pendent: destruir blocs destructibles).* |
 | **7** | **Saltar sobre les seves bombes per arribar a zones elevades** | **Completat** | 100% | Bombes estàtiques a l'aire fidels a *Pocket Bomberman*. Superfície superior sòlida (`isSolidForPlayer`), permetent recolzar-s'hi i usar-les com a plataformes o escales per assolir plataformes altes. |
 | **8** | **Tiles destructibles (arbustos/blocs) que poden deixar anar objectes** | **Pendent** | 0% | Falta afegir identificadors de rajoles destructibles a [TileMap](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/TileMap.h), trencar-los amb les explosions i generar objectes (*drops*). |
@@ -24,7 +24,7 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 | **10** | **Temps límit per passar-se cada nivell** | **Completat** | 100% | Temporitzador enrere de 120s (2 min) per nivell. Si s'esgota, pantalla de *Time Over* amb sprite autèntic de Bomberman marejat. |
 | **11** | **Boss final al nivell 5** | **Pendent** | 0% | El nivell 5 disposa d'spawn i enemics, però falta programar el cap final (múltiples punts de vida, sprite gran i patró d'atac). |
 | **12** | **Interfície gràfica (HUD) amb dades mínimes requerides** | **Completat** | 80% | - **Temps restant:** `TIME MM:SS` (vermell si <= 30s).<br>- **Vides generals:** Icones de la cara de Bomberman (3 intents globals).<br>- **Cors de nivell:** Cors pixel-art renderitzats proceduralment en vermell/blanc al costat de les vides.<br>- **Nivell actual:** Format `1-1`, `1-2`, ...<br>- **Comptador d'enemics:** Mostra `E:X` en groc i `OPEN!` en verd quan no en queden.<br>*(Pendent: **Redistribució de la interfície gràfica** per millorar alineació, espaiat i claredat visual).* |
-| **13** | **Tecles de truc (Cheats de correcció)** | **Completat** | 95% | - **`G`:** Activa / desactiva God Mode (invulnerabilitat total + indicador en pantalla).<br>- **`K`:** **Elimina enemics i obre la porta de sortida** (assegurar mort immediata i neteja instantània de tots els enemics actius).<br>- **`1`, `2`, `3`, `4`, `5`:** Salt directe a qualsevol dels 5 nivells.<br>- **`H`:** Afegeix +1 cor / vida de nivell (+1 HP).<br>- **`B`:** Afegeix +1 capacitat de bombes simultànies.<br>- **`N` / `P`:** Següent / anterior nivell. |
+| **13** | **Tecles de truc (Cheats de correcció)** | **Completat** | 95% | La pantalla **TRUCS**, separada de les instruccions i accessible des del menú principal, mostra els codis disponibles durant la partida: **`G`** activa/desactiva la invulnerabilitat; **`K`** elimina els enemics i obre la porta; **`H`** afegeix un cor; **`B`** augmenta la capacitat de bombes; **`F`** augmenta el radi de l'explosió; **`S`** augmenta la velocitat; **`N`** passa al nivell següent; **`1`–`5`** seleccionen directament un nivell. (`P` i `ESC` posen el joc en pausa.) |
 
 ---
 
@@ -60,7 +60,8 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
   - Condició d'obertura de porta dinàmica (`updateDoorFromEnemies()`) segons el nombre d'enemics vius.
   - HUD complet: vides generals (cares), cors de nivell (procedural), temps restant (amb alerta vermella), nivell i comptador d'enemics restants (`E:X` / `OPEN!`).
   - Càmera dinàmica 2D amb interpolació (*lerp*).
-  - Tecles de truc: `G` (God Mode), `K` (elimina enemics + obre porta), `H` (+1 cor), `B` (+1 bomb up), `1`..`5`, `N`/`P`.
+  - Textos del menú, les instruccions i els missatges de joc en català (sense diacrítics per les limitacions de la font bitmap).
+  - Tecles de truc: `G` (invulnerabilitat), `K` (elimina enemics i obre la porta), `H` (+1 cor), `B` (+bombes), `F` (+radi d'explosió), `S` (+velocitat), `1`..`5` (selecció de nivell) i `N` (nivell següent). `P` posa el joc en pausa.
 - [Enemy.h](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Enemy.h) / [Enemy.cpp](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Enemy.cpp):
   - Jerarquia d'enemics amb 3 variants: `ENEMY_HORIZONTAL`, `ENEMY_VERTICAL` i `ENEMY_STATIC`.
   - Físiques i comportaments: detecció de caiguda de plataformes (`wouldFall`), col·lisions amb parets i bombes, seguiment de mirada i explosió en morir per a l'enemic estàtic.
@@ -100,13 +101,13 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 [██████████████░░░░░░] 72% Progrés Total del Projecte
 
   Part Bàsica (6 punts):
-  - Pantalles del joc (Menú, Jugar, Inst., Crèdits) : 100% [██████████]
+  - Pantalles del joc (Menú, Jugar, Inst., Trucs, Crèdits): 100% [██████████]
   - Moviment, salt i càmera de Bomberman            : 100% [██████████]
   - Bombes a l'aire i salt sobre bombes             : 100% [██████████]
   - Temps límit de nivell (120s)                    : 100% [██████████]
   - 3 Enemics amb IA diferenciada                   : 100% [██████████]
   - Bombes i explosions eliminen enemics/jugador    :  98% [██████████]
-  - Tecles de truc / Cheats (G, K, 1-5, H, B)       :  95% [██████████]
+  - Tecles de truc / Cheats (G, K, 1-5, H, B, F, S, N): 95% [██████████]
   - Sistema de vides i animació oficial de mort     :  90% [█████████░]
   - Cinc nivells i porta condicionada a enemics     :  85% [█████████░]
   - HUD complet (Vides, Cors, Temps, Nivell, E:X)   :  80% [████████░░]
@@ -128,7 +129,7 @@ A continuació es detallen les tasques prioritàries pendents per completar el p
 
 ### 4.1. Noves Pantalles i Transicions de Joc
 1. **(COMPLETAT) Pantalla intermèdia quan es perd una vida del joc (`TRY_AGAIN`):**
-   - Fidel al model de *Pocket Bomberman*: en morir tenint vides generals restants, es neteja l'escenari i s'activa la pantalla intermèdia amb textos 100% en català (*«TORNA-HO A PROVAR!»*, *«TENS UNA ALTRA OPORTUNITAT!»*, *«PREM ENTER O ESPAI PER CONTINUAR»*), sprite oficial de la cara de Bomberman carregat des de `bomber.png` amb el comptador de vides restants (`x 2`), i **espera indefinida** fins que el jugador prem qualsevol tecla d'acció (Enter, Espai, X, Z) o fa clic de ratolí (amb opció d'anar al menú amb ESC o M).
+   - Fidel al model de *Pocket Bomberman*: en morir tenint vides generals restants, es neteja l'escenari i s'activa la pantalla intermèdia amb textos en català (*«TORNA-HO A PROVAR!»*, *«TENS UNA ALTRA OPORTUNITAT!»*, *«PREM ENTER O ESPAI PER CONTINUAR»*), sprite oficial de la cara de Bomberman carregat des de `bomber.png` amb el comptador de vides restants (`x 2`), i **espera indefinida** fins que el jugador prem qualsevol tecla d'acció (Enter, Espai, X, Z) o fa clic de ratolí (amb opció d'anar al menú amb ESC o M). La font bitmap no admet accents.
 2. **Pantalla de Selecció de Nivell (`CHOOSE LEVEL SCREEN`):**
    - En seleccionar *"1. START GAME"* al menú principal, navegar a una pantalla de selecció de nivell amb els 5 mons/fases (Nivell 1 a 5), permetent triar per quin nivell començar directament.
 
@@ -141,21 +142,16 @@ A continuació es detallen les tasques prioritàries pendents per completar el p
 ### 4.3. Millores d'Interfície (UI/UX) i Feedback
 5. **Redistribuir la interfície gràfica (HUD):**
    - Polir la distribució, marges i jerarquia visual del HUD superior: alinear ordenadament les vides generals, els cors de nivell, l'indicador del nivell actual, el comptador d'enemics i el temporitzador per evitar solapaments en qualsevol amplada de càmera.
-6. **Missatge a pantalla d'avís de porta oberta:**
-   - Quan es derroti l'últim enemic del nivell (`countAliveEnemies() == 0`), mostrar un missatge visual prominent a pantalla (estil banner groc/verd com el de *God Mode*, ex: `DOOR OPEN! / SORTIDA OBERTA!`) per donar un feedback immediat i clar al jugador que ja pot sortir.
-7. **Reforçar la tecla de truc `K` (Cheat):**
-   - Assegurar que en prémer la tecla `K`, a més d'obrir la porta, s'eliminin i netegin de forma immediata tots els enemics actius del nivell.
-
 ### 4.4. Mecàniques Fonamentals del Joc (Part Bàsica)
-8. **Blocs Destructibles als Mapes (`TileMap`):**
+6. **Blocs Destructibles als Mapes (`TileMap`):**
    - Assignar identificadors de tiles destructibles (arbustos/blocs tous) que es trenquin en impactar una explosió i regenerin la malla del mapa.
-9. **Entitats Col·leccionables dels 4 Power-ups:**
+7. **Entitats Col·leccionables dels 4 Power-ups:**
    - Probabilitat de *drop* en trencar un bloc: `Bomb Up` (+1 bomba), `Fire Up` (+radi explosió), `Cor` (+1 vida de nivell) i `Patins` (+velocitat de moviment).
-10. **Boss Final al Nivell 5:**
+8. **Boss Final al Nivell 5:**
     - Dissenyar el cap final del món al nivell 5: sprite de grans dimensions de Pocket Bomberman, barra de vida / múltiples impactes i patrons d'atac propis.
 
 ### 4.5. Polish i Lliurament Final
-11. **Motor d'Àudio (BGM i SFX):**
+9. **Motor d'Àudio (BGM i SFX):**
     - Integrar `miniaudio.h` per reproduir música chiptune retro a menús i nivells, juntament amb efectes de so per a bombes, explosions, salts, recollida d'objectes i mort.
-12. **Preparació del Paquet de Lliurament:**
+10. **Preparació del Paquet de Lliurament:**
     - Redacció d'`info.txt`, organització de la carpeta `Binari/` i enregistrament del vídeo `demo.avi` d'1 minut.

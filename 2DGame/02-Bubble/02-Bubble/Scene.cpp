@@ -85,6 +85,8 @@ Scene::Scene() {
   godModeOffSprite = NULL;
   godModeMsgTime = 0;
   godModeMsgActive = false;
+  doorOpenSprite = NULL;
+  doorOpenMsgTime = 0;
   levelTimeLeft = 120000;
   lastDisplayedSeconds = -1;
   lastDisplayedLevel = -1;
@@ -113,12 +115,16 @@ Scene::~Scene() {
     delete timerSprite;
   if (levelHUDSprite != NULL)
     delete levelHUDSprite;
-  if (enemiesHUDSprite != NULL)
+  if (enemiesHUDSprite != NULL) {
     delete enemiesHUDSprite;
+    enemiesHUDSprite = NULL;
+  }
   if (godModeOnSprite != NULL)
     delete godModeOnSprite;
   if (godModeOffSprite != NULL)
     delete godModeOffSprite;
+  if (doorOpenSprite != NULL)
+    delete doorOpenSprite;
   for (size_t i = 0; i < bombs.size(); ++i) {
     if (bombs[i] != NULL)
       delete bombs[i];
@@ -131,10 +137,6 @@ Scene::~Scene() {
   explosions.clear();
   clearEnemies();
   clearPowerUps();
-  if (enemiesHUDSprite != NULL) {
-    delete enemiesHUDSprite;
-    enemiesHUDSprite = NULL;
-  }
 }
 
 void Scene::clearEnemies() {
@@ -266,8 +268,12 @@ int Scene::countAliveEnemies() const {
 void Scene::updateDoorFromEnemies() {
   if (door == NULL)
     return;
-  // La porta només s'obre quan no queda cap enemic viu
-  door->setOpen(countAliveEnemies() == 0);
+  bool wasOpen = door->isOpen();
+  bool nowOpen = (countAliveEnemies() == 0);
+  door->setOpen(nowOpen);
+  if (!wasOpen && nowOpen) {
+    showDoorOpenMessage();
+  }
 }
 
 void Scene::updateEnemies(int deltaTime) {
@@ -368,6 +374,7 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   }
   door->setPosition(glm::vec2(doorTileX * tileSize, doorTileY * tileSize));
   door->setOpen(false);
+  doorOpenMsgTime = 0;
 
   for (size_t i = 0; i < bombs.size(); ++i) {
     if (bombs[i] != NULL)
@@ -498,7 +505,7 @@ void Scene::freeMenuScreens() {
     celebrateSprite = NULL;
   }
 
-  for (int i = 0; i < 4; ++i)
+  for (int i = 0; i < 5; ++i)
     menuLabels[i].free();
   menuFooterLabel.free();
 
@@ -507,6 +514,12 @@ void Scene::freeMenuScreens() {
       delete instructionsLabels[i];
   }
   instructionsLabels.clear();
+
+  for (size_t i = 0; i < cheatsLabels.size(); ++i) {
+    if (cheatsLabels[i] != NULL)
+      delete cheatsLabels[i];
+  }
+  cheatsLabels.clear();
 
   for (size_t i = 0; i < creditsLabels.size(); ++i) {
     if (creditsLabels[i] != NULL)
@@ -619,16 +632,18 @@ void Scene::initMenuScreens() {
         glm::vec2(24.f, 30.f), glm::vec2(1.f, 1.f), &cursorTex, &texProgram);
   }
 
-  menuLabels[0].init("1. START GAME", 3, glm::vec2(204.f, 220.f),
+  menuLabels[0].init("1. COMENCA EL JOC", 3, glm::vec2(168.f, 214.f),
                      glm::vec4(1.f), &texProgram);
-  menuLabels[1].init("2. INSTRUCTIONS", 3, glm::vec2(186.f, 265.f),
+  menuLabels[1].init("2. INSTRUCCIONS", 3, glm::vec2(186.f, 250.f),
                      glm::vec4(1.f), &texProgram);
-  menuLabels[2].init("3. CREDITS", 3, glm::vec2(231.f, 310.f), glm::vec4(1.f),
+  menuLabels[2].init("3. TRUCS", 3, glm::vec2(249.f, 286.f), glm::vec4(1.f),
                      &texProgram);
-  menuLabels[3].init("4. EXIT", 3, glm::vec2(258.f, 355.f), glm::vec4(1.f),
+  menuLabels[3].init("4. CREDITS", 3, glm::vec2(231.f, 322.f), glm::vec4(1.f),
                      &texProgram);
-  menuFooterLabel.init("UP/DOWN: SELECT   ENTER: OK   ESC: EXIT", 2,
-                       glm::vec2(90.f, 452.f), glm::vec4(0.8f, 0.8f, 0.9f, 1.f),
+  menuLabels[4].init("5. SURT", 3, glm::vec2(258.f, 358.f), glm::vec4(1.f),
+                     &texProgram);
+  menuFooterLabel.init("AMUNT/AVALL: TRIA  ENTER/ESPAI: OK  ESC: SURT", 2,
+                       glm::vec2(32.f, 452.f), glm::vec4(0.8f, 0.8f, 0.9f, 1.f),
                        &texProgram);
 
   // 2. Pantalla d'Instruccions
@@ -638,51 +653,65 @@ void Scene::initMenuScreens() {
     lbl->init(txt, scale, glm::vec2(x, y), col, &texProgram);
     instructionsLabels.push_back(lbl);
   };
-  addInst("INSTRUCTIONS & CONTROLS", 3, 100.f, 22.f,
+  addInst("INSTRUCCIONS I CONTROLS", 3, 100.f, 22.f,
           glm::vec4(1.f, 0.9f, 0.1f, 1.f));
-  addInst("CONTROLS:", 2, 40.f, 68.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
-  addInst("  MOVE LEFT / RIGHT : ARROWS (OR A / D)", 2, 40.f, 90.f,
+  addInst("CONTROLS:", 2, 40.f, 58.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+  addInst("  MOU-TE ESQUERRA/DRETA : FLETXES O A/D", 2, 40.f, 78.f,
           glm::vec4(1.f));
-  addInst("  JUMP              : UP ARROW (OR W)", 2, 40.f, 110.f,
+  addInst("  SALTA                  : FLETXA AMUNT O W", 2, 40.f, 96.f,
           glm::vec4(1.f));
-  addInst("  DROP BOMB         : SPACE / X KEY", 2, 40.f, 130.f,
+  addInst("  DEIXA UNA BOMBA         : ESPAI O X", 2, 40.f, 114.f,
           glm::vec4(1.f));
-  addInst("  PAUSE GAME        : P / ESC", 2, 40.f, 150.f, glm::vec4(1.f));
+  addInst("  PAUSA                  : P O ESC", 2, 40.f, 132.f,
+          glm::vec4(1.f));
 
-  addInst("GAMEPLAY OBJECTIVE:", 2, 40.f, 185.f,
+  addInst("OBJECTIU DEL JOC:", 2, 40.f, 160.f,
           glm::vec4(0.3f, 0.9f, 1.f, 1.f));
-  addInst("  - DROP BOMBS TO CLEAR ENEMIES AND OBSTACLES", 2, 40.f, 207.f,
+  addInst("  - POSA BOMBES PER ELIMINAR ELS ENEMICS", 2, 40.f, 180.f,
           glm::vec4(1.f));
-  addInst("  - JUMP ON TOP OF BOMBS AS SOLID PLATFORMS!", 2, 40.f, 227.f,
+  addInst("  - SALTA SOBRE LES BOMBES PER PUJAR MES AMUNT", 2, 40.f, 198.f,
           glm::vec4(1.f));
-  addInst("  - REACH THE EXIT DOOR TO COMPLETE THE LEVEL", 2, 40.f, 247.f,
+  addInst("  - ARRIBA A LA PORTA DE SORTIDA PER ACABAR", 2, 40.f, 216.f,
           glm::vec4(1.f));
-  addInst("  - BEAT THE CLOCK: YOU HAVE 2 MINUTES (120s)!", 2, 40.f, 267.f,
+  addInst("  - SUPERA EL NIVELL EN 2 MINUTS (120 S)", 2, 40.f, 234.f,
           glm::vec4(1.f));
 
-  addInst("CHEATS (TRUCS DE PROVA):", 2, 40.f, 302.f,
-          glm::vec4(0.3f, 0.9f, 1.f, 1.f));
-  addInst("  - G  : TOGGLE GOD MODE (INVINCIBILITY)", 2, 40.f, 324.f,
-          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - K  : OPEN EXIT DOOR IMMEDIATELY", 2, 40.f, 344.f,
-          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - H: ADD LEVEL LIFE / HEART (+1 HP)", 2, 40.f, 364.f,
-          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - B: ADD ONE BOMB UP (+1 BOMB)", 2, 40.f, 384.f,
-          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - F: ADD FIRE UP (+1 BLAST RADIUS)", 2, 40.f, 404.f,
-          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - S: ADD SKATES (+SPEED)", 2, 40.f, 424.f,
-          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - N: GO TO THE NEXT LEVEL", 2, 40.f, 444.f,
-          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
-  addInst("  - 1-5: DIRECT LEVEL WARP (STAGES 1 TO 5)", 2, 40.f, 464.f,
+  addInst("TOTS ELS TRUCS SON AL MENU PRINCIPAL", 2,
+          40.f, 274.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+
+  addInst("[ PREM ENTER O ESC PER TORNAR AL MENU ]", 2, 85.f, 452.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
 
-  addInst("[ PRESS ENTER OR ESC TO RETURN TO MENU ]", 2, 85.f, 452.f,
-          glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+  // 3. Pantalla de Trucs
+  auto addCheat = [&](const std::string &txt, int scale, float x, float y,
+                      const glm::vec4 &col) {
+    TextLabel *lbl = new TextLabel();
+    lbl->init(txt, scale, glm::vec2(x, y), col, &texProgram);
+    cheatsLabels.push_back(lbl);
+  };
+  addCheat("TRUCS DE PROVA", 3, 195.f, 35.f,
+           glm::vec4(1.f, 0.9f, 0.1f, 1.f));
+  addCheat("G: ACTIVA/DESACTIVA LA INVULNERABILITAT", 2, 50.f, 100.f,
+           glm::vec4(1.f));
+  addCheat("K: ELIMINA ELS ENEMICS I OBRE LA PORTA", 2, 50.f, 136.f,
+           glm::vec4(1.f));
+  addCheat("H: AFEGEIX UN COR", 2, 50.f, 172.f, glm::vec4(1.f));
+  addCheat("B: AUGMENTA EL NOMBRE DE BOMBES", 2, 50.f, 208.f,
+           glm::vec4(1.f));
+  addCheat("F: AUGMENTA EL RADI DE L'EXPLOSIO", 2, 50.f, 244.f,
+           glm::vec4(1.f));
+  addCheat("S: AUGMENTA LA VELOCITAT", 2, 50.f, 280.f,
+           glm::vec4(1.f));
+  addCheat("N: PASSA AL NIVELL SEGUENT", 2, 50.f, 316.f,
+           glm::vec4(1.f));
+  addCheat("1-5: CANVIA DIRECTAMENT AL NIVELL TRIAT", 2, 50.f, 352.f,
+           glm::vec4(1.f));
+  addCheat("ELS TRUCS FUNCIONEN DURANT LA PARTIDA", 2, 86.f, 394.f,
+           glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+  addCheat("[ PREM ENTER O ESC PER TORNAR AL MENU ]", 2, 85.f, 442.f,
+           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
 
-  // 3. Pantalla de Crèdits
+  // 4. Pantalla de Crèdits
   auto addCred = [&](const std::string &txt, int scale, float x, float y,
                      const glm::vec4 &col) {
     TextLabel *lbl = new TextLabel();
@@ -785,15 +814,15 @@ void Scene::initMenuScreens() {
     celebrateSprite->setPosition(
         glm::vec2((float(SCREEN_WIDTH) - 316.f) * 0.5f, 135.f));
   }
-  winCongratsLabel.init("CONGRATULATIONS!", 3, glm::vec2(165.f, 240.f),
+  winCongratsLabel.init("FELICITATS!", 3, glm::vec2(219.f, 240.f),
                         glm::vec4(1.f, 0.9f, 0.1f, 1.f), &texProgram);
-  winSubLabel.init("YOU HAVE CLEARED ALL 5 WORLDS!", 2, glm::vec2(135.f, 295.f),
+  winSubLabel.init("HAS SUPERAT ELS 5 MONS!", 2, glm::vec2(176.f, 295.f),
                    glm::vec4(1.f), &texProgram);
-  winPeaceLabel.init("PEACE HAS RETURNED TO BOMBER ISLAND!", 2,
-                     glm::vec2(95.f, 330.f), glm::vec4(0.4f, 0.9f, 1.f, 1.f),
+  winPeaceLabel.init("LA PAU HA TORNAT A BOMBER ISLAND!", 2,
+                     glm::vec2(110.f, 330.f), glm::vec4(0.4f, 0.9f, 1.f, 1.f),
                      &texProgram);
-  winPromptLabel.init("PRESS ENTER OR ESC FOR MAIN MENU", 2,
-                      glm::vec2(120.f, 390.f), glm::vec4(1.f, 0.9f, 0.2f, 1.f),
+  winPromptLabel.init("PREM ENTER O ESC PER TORNAR AL MENU", 2,
+                      glm::vec2(104.f, 390.f), glm::vec4(1.f, 0.9f, 0.2f, 1.f),
                       &texProgram);
 }
 
@@ -819,6 +848,10 @@ void Scene::init() {
   if (godModeOffSprite != NULL) {
     delete godModeOffSprite;
     godModeOffSprite = NULL;
+  }
+  if (doorOpenSprite != NULL) {
+    delete doorOpenSprite;
+    doorOpenSprite = NULL;
   }
   if (enemiesHUDSprite != NULL) {
     delete enemiesHUDSprite;
@@ -846,14 +879,18 @@ void Scene::init() {
   // Inicialitzar textura i sprite de cor pixel-art per a les vides de nivell
   initHeartTexture();
 
-  BitmapText::createTexture(godModeOnTex, "GOD MODE ON");
+  BitmapText::createTexture(godModeOnTex, "MODE DEU ACTIVAT");
   godModeOnSprite = Sprite::createSprite(
       glm::vec2(float(godModeOnTex.width()), float(godModeOnTex.height())),
       glm::vec2(1.f, 1.f), &godModeOnTex, &texProgram);
-  BitmapText::createTexture(godModeOffTex, "GOD MODE OFF");
+  BitmapText::createTexture(godModeOffTex, "MODE DEU DESACTIVAT");
   godModeOffSprite = Sprite::createSprite(
       glm::vec2(float(godModeOffTex.width()), float(godModeOffTex.height())),
       glm::vec2(1.f, 1.f), &godModeOffTex, &texProgram);
+  BitmapText::createTexture(doorOpenTex, "PORTA OBERTA!", 2);
+  doorOpenSprite = Sprite::createSprite(
+      glm::vec2(float(doorOpenTex.width()), float(doorOpenTex.height())),
+      glm::vec2(1.f, 1.f), &doorOpenTex, &texProgram);
 }
 
 void Scene::update(int deltaTime) {
@@ -864,14 +901,19 @@ void Scene::update(int deltaTime) {
     if (godModeMsgTime < 0)
       godModeMsgTime = 0;
   }
+  if (doorOpenMsgTime > 0) {
+    doorOpenMsgTime -= deltaTime;
+    if (doorOpenMsgTime < 0)
+      doorOpenMsgTime = 0;
+  }
 
   switch (gameState) {
   case MAIN_MENU:
     if (isKeyJustPressed(GLFW_KEY_UP) || isKeyJustPressed(GLFW_KEY_W)) {
-      menuOption = (menuOption + 3) % 4;
+      menuOption = (menuOption + 4) % 5;
     } else if (isKeyJustPressed(GLFW_KEY_DOWN) ||
                isKeyJustPressed(GLFW_KEY_S)) {
-      menuOption = (menuOption + 1) % 4;
+      menuOption = (menuOption + 1) % 5;
     } else if (isKeyJustPressed(GLFW_KEY_ENTER) ||
                isKeyJustPressed(GLFW_KEY_SPACE)) {
       if (menuOption == 0) {
@@ -881,8 +923,10 @@ void Scene::update(int deltaTime) {
       } else if (menuOption == 1) {
         gameState = INSTRUCTIONS;
       } else if (menuOption == 2) {
-        gameState = CREDITS;
+        gameState = CHEATS;
       } else if (menuOption == 3) {
+        gameState = CREDITS;
+      } else if (menuOption == 4) {
         Game::instance().exit();
       }
     } else if (isKeyJustPressed(GLFW_KEY_1)) {
@@ -892,14 +936,23 @@ void Scene::update(int deltaTime) {
     } else if (isKeyJustPressed(GLFW_KEY_2)) {
       gameState = INSTRUCTIONS;
     } else if (isKeyJustPressed(GLFW_KEY_3)) {
+      gameState = CHEATS;
+    } else if (isKeyJustPressed(GLFW_KEY_4)) {
       gameState = CREDITS;
-    } else if (isKeyJustPressed(GLFW_KEY_4) ||
+    } else if (isKeyJustPressed(GLFW_KEY_5) ||
                isKeyJustPressed(GLFW_KEY_ESCAPE)) {
       Game::instance().exit();
     }
     break;
 
   case INSTRUCTIONS:
+    if (isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE) ||
+        isKeyJustPressed(GLFW_KEY_SPACE)) {
+      gameState = MAIN_MENU;
+    }
+    break;
+
+  case CHEATS:
     if (isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE) ||
         isKeyJustPressed(GLFW_KEY_SPACE)) {
       gameState = MAIN_MENU;
@@ -967,8 +1020,11 @@ void Scene::update(int deltaTime) {
           if (enemies[i] != NULL && enemies[i]->isAlive())
             enemies[i]->kill();
         }
-        if (door != NULL)
+        if (door != NULL) {
+          if (!door->isOpen())
+            showDoorOpenMessage();
           door->setOpen(true);
+        }
       }
       // Cheats de testeig per provar el sistema de power-ups i vides
       if (isKeyJustPressed(GLFW_KEY_H)) {
@@ -1190,6 +1246,10 @@ void Scene::render() {
     texProgram.setUniformMatrix4f("projection", screenProjection);
     renderInstructions();
     break;
+  case CHEATS:
+    texProgram.setUniformMatrix4f("projection", screenProjection);
+    renderCheats();
+    break;
   case CREDITS:
     texProgram.setUniformMatrix4f("projection", screenProjection);
     renderCredits();
@@ -1266,7 +1326,7 @@ void Scene::renderMainMenu() {
   if (logoSprite != NULL)
     logoSprite->render();
 
-  for (int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 5; ++i) {
     if (i == menuOption) {
       menuLabels[i].renderWithColor(texProgram,
                                     glm::vec4(1.0f, 0.95f, 0.15f, 1.0f));
@@ -1279,7 +1339,7 @@ void Scene::renderMainMenu() {
   if (cursorSprite != NULL) {
     float bob = sin(currentTime * 0.008f) * 4.0f;
     float cursorX = 142.f + bob;
-    float cursorY = 217.f + float(menuOption) * 45.f;
+    float cursorY = 211.f + float(menuOption) * 36.f;
     cursorSprite->setPosition(glm::vec2(cursorX, cursorY));
     cursorSprite->render();
   }
@@ -1301,6 +1361,17 @@ void Scene::renderInstructions() {
   for (size_t i = 0; i < instructionsLabels.size(); ++i) {
     if (instructionsLabels[i] != NULL)
       instructionsLabels[i]->render(texProgram);
+  }
+}
+
+void Scene::renderCheats() {
+  glm::mat4 modelview = glm::mat4(1.0f);
+  texProgram.setUniformMatrix4f("modelview", modelview);
+  texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+  for (size_t i = 0; i < cheatsLabels.size(); ++i) {
+    if (cheatsLabels[i] != NULL)
+      cheatsLabels[i]->render(texProgram);
   }
 }
 
@@ -1474,26 +1545,24 @@ void Scene::updateLevelHUD() {
 
 void Scene::updateEnemiesHUD() {
   int count = countAliveEnemies();
-  if (count == lastDisplayedEnemies && enemiesHUDSprite != NULL)
+  if (count == lastDisplayedEnemies && (count == 0 || enemiesHUDSprite != NULL))
     return;
 
   lastDisplayedEnemies = count;
-  char buf[32];
-  if (count > 0)
-    snprintf(buf, sizeof(buf), "E:%d", count);
-  else
-    snprintf(buf, sizeof(buf), "OPEN!");
-
   if (enemiesHUDSprite != NULL) {
     delete enemiesHUDSprite;
     enemiesHUDSprite = NULL;
   }
   enemiesHUDTex.free();
 
-  if (BitmapText::createTexture(enemiesHUDTex, buf, 2)) {
-    enemiesHUDSprite = Sprite::createSprite(
-        glm::vec2(float(enemiesHUDTex.width()), float(enemiesHUDTex.height())),
-        glm::vec2(1.f, 1.f), &enemiesHUDTex, &texProgram);
+  if (count > 0) {
+    char buf[32];
+    snprintf(buf, sizeof(buf), "E:%d", count);
+    if (BitmapText::createTexture(enemiesHUDTex, buf, 2)) {
+      enemiesHUDSprite = Sprite::createSprite(
+          glm::vec2(float(enemiesHUDTex.width()), float(enemiesHUDTex.height())),
+          glm::vec2(1.f, 1.f), &enemiesHUDTex, &texProgram);
+    }
   }
 }
 
@@ -1545,17 +1614,14 @@ void Scene::renderHUD() {
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
   }
 
-  // 4. Comptador d'enemics restants / porta oberta al costat del temporitzador
+  // 4. Comptador d'enemics restants al costat del temporitzador
   updateEnemiesHUD();
   float enemyHudLeft = timerLeft;
   if (enemiesHUDSprite != NULL) {
     const float enemyHudWidth = float(enemiesHUDTex.width());
     enemyHudLeft = timerLeft - enemyHudWidth - 10.f;
     enemiesHUDSprite->setPosition(glm::vec2(enemyHudLeft, hudY));
-    if (lastDisplayedEnemies == 0)
-      texProgram.setUniform4f("color", 0.2f, 1.0f, 0.3f, 1.0f); // Verd quan la porta s'obre
-    else
-      texProgram.setUniform4f("color", 1.0f, 0.85f, 0.2f, 1.0f); // Groc daurat
+    texProgram.setUniform4f("color", 1.0f, 0.85f, 0.2f, 1.0f); // Groc daurat
     enemiesHUDSprite->render();
     texProgram.setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
   }
@@ -1593,6 +1659,27 @@ void Scene::renderHUD() {
       texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
     }
   }
+
+  // 7. Missatge temporal d'avís de porta oberta quan moren tots els enemics
+  if (doorOpenMsgTime > 0 && doorOpenSprite != NULL) {
+    float msgW = float(doorOpenTex.width());
+    float x = camX + (viewWidth - msgW) * 0.5f;
+    float y = camY + (godModeMsgTime > 0 ? 46.f : 36.f);
+    doorOpenSprite->setPosition(glm::vec2(x, y));
+
+    // Parpelleig suau als últims 400ms abans de desaparèixer
+    if (doorOpenMsgTime < 400 && ((doorOpenMsgTime / 100) % 2 == 0)) {
+      // parpelleig transparent
+    } else {
+      texProgram.setUniform4f("color", 0.2f, 1.0f, 0.3f, 1.0f); // Verd brillant d'èxit
+      doorOpenSprite->render();
+      texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+    }
+  }
+}
+
+void Scene::showDoorOpenMessage() {
+  doorOpenMsgTime = 2500; // Visible durant 2.5 segons (entre 2 i 3 segons)
 }
 
 void Scene::showGodModeMessage(bool enabled) {

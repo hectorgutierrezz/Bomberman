@@ -20,6 +20,7 @@
 enum GameState {
   MAIN_MENU,
   INSTRUCTIONS,
+  CHEATS,
   CREDITS,
   PLAYING,
   PAUSED,
@@ -72,6 +73,7 @@ private:
 
   void renderMainMenu();
   void renderInstructions();
+  void renderCheats();
   void renderCredits();
   void renderPauseOverlay();
   void renderGameOver();
@@ -86,6 +88,7 @@ private:
   void renderHUD();
   void placeBomb();
   void showGodModeMessage(bool enabled);
+  void showDoorOpenMessage();
   void startLevel(int levelNum = 1, bool keepPowerUps = true);
   void nextLevel();
   void onPlayerDeath();
@@ -123,11 +126,14 @@ private:
   Texture cursorTex;
   Sprite *cursorSprite;
   int menuOption;
-  TextLabel menuLabels[4];
+  TextLabel menuLabels[5];
   TextLabel menuFooterLabel;
 
   // Instruccions
   std::vector<TextLabel*> instructionsLabels;
+
+  // Trucs
+  std::vector<TextLabel*> cheatsLabels;
 
   // Crèdits
   std::vector<TextLabel*> creditsLabels;
@@ -207,6 +213,11 @@ private:
   Sprite *godModeOffSprite;
   int godModeMsgTime;
   bool godModeMsgActive;
+
+  // Missatge temporal d'avís de porta oberta
+  Texture doorOpenTex;
+  Sprite *doorOpenSprite;
+  int doorOpenMsgTime;
 
   // Càmera dinàmica centrada al jugador
   float camX, camY;        // posició (cantonada superior-esquerra) de la càmera en world coords
