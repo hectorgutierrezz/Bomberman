@@ -6,6 +6,7 @@
 #include "Enemy.h"
 #include "Explosion.h"
 #include "Player.h"
+#include "PowerUp.h"
 #include "ShaderProgram.h"
 #include "TileMap.h"
 #include "Sprite.h"
@@ -56,6 +57,11 @@ public:
   GameState getGameState() const { return gameState; }
   void setGameState(GameState state) { gameState = state; }
 
+  // Power-ups API (accessible pel sistema de blocs destruïbles)
+  PowerUp *spawnPowerUp(PowerUpType type, const glm::vec2 &pos);
+  PowerUp *tryDropPowerUp(const glm::vec2 &pos, float probability = 0.40f);
+  void clearPowerUps();
+
 private:
   void initShaders();
   bool isKeyJustPressed(int key);
@@ -72,6 +78,7 @@ private:
   void renderEnemies();
   void renderBombs();
   void renderExplosions();
+  void renderPowerUps();
   void renderHUD();
   void placeBomb();
   void showGodModeMessage(bool enabled);
@@ -87,6 +94,7 @@ private:
   void updateEnemies(int deltaTime);
   int countAliveEnemies() const;
   void updateDoorFromEnemies();
+  void updatePowerUps(int deltaTime);
 
   TileMap *map;
   Player *player;
@@ -148,6 +156,7 @@ private:
 
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;
+  std::vector<PowerUp *> powerUps;
 
   // HUD: icones de vides generals (sprites del personatge)
   Texture hudTex;
@@ -156,6 +165,7 @@ private:
   // HUD: indicador de vida de nivell (cors pixel-art)
   Texture heartTex;
   Sprite *heartIcon;
+
 
   // HUD: comptador enrere de temps
   int levelTimeLeft;

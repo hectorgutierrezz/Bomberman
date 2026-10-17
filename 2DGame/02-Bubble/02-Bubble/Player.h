@@ -37,6 +37,14 @@ public:
 	void setMaxBombs(int b) { maxBombs = b; }
 	void addMaxBomb() { maxBombs++; }
 
+	int getBombRadius() const { return bombRadius; }
+	void setBombRadius(int r) { bombRadius = r; }
+	void addBombRadius() { bombRadius++; }
+
+	float getSpeed() const { return moveSpeed; }
+	void setSpeed(float s) { moveSpeed = s; }
+	void addSpeed() { moveSpeed = std::min(moveSpeed + 0.5f, 4.0f); }
+
 	void resetPowerUps();
 	void respawn(const glm::vec2 &pos);
 
@@ -62,6 +70,9 @@ private:
 	int jumpAngle, startY;
 	int internalLives; // 1 de base per pantalla; augmenta amb power-ups
 	int maxBombs;      // Es manté a través dels re-runs
+	int bombRadius;    // Radi de les explosions (augmenta amb Fire Up)
+	float moveSpeed;   // Velocitat horitzontal (augmenta amb Patins)
+	float moveAccumX;
 	int invulnerableTime;
 	float fallSpeed;
 	Texture spritesheet;

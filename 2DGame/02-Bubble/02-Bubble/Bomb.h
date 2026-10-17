@@ -20,6 +20,9 @@ public:
 	bool shouldExplode() const { return bExploded; }
 	void explode();
 
+	void setRadius(int r) { explosionRadius = r; }
+	int getRadius() const { return explosionRadius; }
+
 	// Gestió de solapament i solidesa amb el jugador
 	void updatePlayerOverlap(const glm::ivec2 &playerPos, const glm::ivec2 &playerSize);
 	bool isSolidForPlayer() const { return active && !playerInside; }
@@ -48,6 +51,7 @@ private:
 	bool active;
 	bool bExploded;
 	bool playerInside;
+	int explosionRadius;
 };
 
 #endif // _BOMB_INCLUDE
