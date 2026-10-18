@@ -652,7 +652,7 @@ void Scene::initStageIntroScreen() {
   snprintf(livesBuf, sizeof(livesBuf), "x %d", externalLives);
   stageIntroLivesLabel.init(livesBuf, 3, glm::vec2(322.f, 312.f), glm::vec4(1.f, 1.f, 1.f, 1.f), &texProgram);
 
-  centerLabel(stageIntroPromptLabel, "PREM ENTER O ESPAI", 2, 400.f, glm::vec4(0.75f, 0.75f, 0.75f, 1.f));
+  centerLabel(stageIntroPromptLabel, "PREM ENTER O ESC", 2, 400.f, glm::vec4(0.75f, 0.75f, 0.75f, 1.f));
 }
 
 void Scene::freeStageIntroScreen() {
@@ -965,11 +965,11 @@ void Scene::init() {
   // Inicialitzar textura i sprite de cor pixel-art per a les vides de nivell
   initHeartTexture();
 
-  BitmapText::createTexture(godModeOnTex, "MODE DEU ACTIVAT");
+  BitmapText::createTexture(godModeOnTex, "MODE DEU ON", 2);
   godModeOnSprite = Sprite::createSprite(
       glm::vec2(float(godModeOnTex.width()), float(godModeOnTex.height())),
       glm::vec2(1.f, 1.f), &godModeOnTex, &texProgram);
-  BitmapText::createTexture(godModeOffTex, "MODE DEU DESACTIVAT");
+  BitmapText::createTexture(godModeOffTex, "MODE DEU OFF", 2);
   godModeOffSprite = Sprite::createSprite(
       glm::vec2(float(godModeOffTex.width()), float(godModeOffTex.height())),
       glm::vec2(1.f, 1.f), &godModeOffTex, &texProgram);
@@ -1307,12 +1307,8 @@ void Scene::update(int deltaTime) {
 
   case STAGE_INTRO:
     stageIntroTimer += deltaTime;
-    if (stageIntroTimer >= 1800 ||
-        isKeyJustPressed(GLFW_KEY_ENTER) ||
-        isKeyJustPressed(GLFW_KEY_SPACE) ||
-        isKeyJustPressed(GLFW_KEY_X) ||
-        isKeyJustPressed(GLFW_KEY_Z) ||
-        Game::instance().getAndResetMouseClick()) {
+    if (isKeyJustPressed(GLFW_KEY_ENTER) ||
+        isKeyJustPressed(GLFW_KEY_ESCAPE)) {
       gameState = PLAYING;
     }
     break;
