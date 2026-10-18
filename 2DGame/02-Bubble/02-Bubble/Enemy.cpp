@@ -24,6 +24,7 @@ Enemy::~Enemy()
 {
 	if (sprite != NULL)
 		delete sprite;
+	delete sprite;
 }
 
 void Enemy::init(EnemyType enemyType, const glm::ivec2 &tileMapPos,
@@ -45,6 +46,8 @@ void Enemy::init(EnemyType enemyType, const glm::ivec2 &tileMapPos,
 		delete sprite;
 		sprite = NULL;
 	}
+	delete sprite;
+	sprite = NULL;
 
 	if (!textureLoaded) {
 		if (!spritesheet.loadFromFile(

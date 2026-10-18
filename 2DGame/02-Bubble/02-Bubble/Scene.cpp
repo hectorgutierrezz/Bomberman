@@ -1759,8 +1759,8 @@ void Scene::renderHUD() {
   updateLevelHUD();
   if (levelHUDSprite != NULL) {
     float hudW = float(levelHUDTex.width());
-    float gapLeft = camX + heartsRight + 4.f;
-    float gapRight = enemyHudLeft - 4.f;
+    float gapLeft = camX + heartsRight + 6.f;
+    float gapRight = enemyHudLeft - 6.f;
     float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
     if (x < gapLeft)
       x = gapLeft;

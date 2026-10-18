@@ -9,9 +9,9 @@
 #include "TileMap.h"
 
 enum EnemyType {
-	ENEMY_HORIZONTAL, // Patrulla esquerra/dreta sobre el terra o plataformes
-	ENEMY_VERTICAL,   // Patrulla amunt/avall en eix vertical (volador)
-	ENEMY_STATIC      // Guardià estàtic vigilant amb animació idle
+	ENEMY_HORIZONTAL,
+	ENEMY_VERTICAL,
+	ENEMY_STATIC
 };
 
 class Enemy
