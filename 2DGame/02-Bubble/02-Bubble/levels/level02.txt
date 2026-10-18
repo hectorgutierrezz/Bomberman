@@ -20,14 +20,14 @@ images/Map/world_tileset.png
 88      333333        333333      88
 88                                88
 88           AAAAAAAAAA           88
-88         B         B            88
+88                                88
 88       3333333  3333333         88
 88                                88
 88     AAAA             AAAA      88
-88           B         B          88
+88                                88
 88        33333333  333333        88
 88                                88
 88    AAAAA            AAAAA      88
-88      B           B             88
+88                                88
 333333333333333333333333333333333333
 JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ

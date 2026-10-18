@@ -17,10 +17,10 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 | **3** | **Moviment d'esquerra a dreta i salt de Bomberman** | **Completat** | 100% | Físiques de moviment horitzontal, gravetat amb acceleració realista ([`GRAVITY 0.4f`, `MAX_FALL_SPEED 8.0f`, `stepFall`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Player.cpp#L128-L160)) i salt parabòlic a [Player.cpp](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Player.cpp). Spritesheet oficial de GBC (`bomber.png`) amb animacions `IDLE`, `STAND_LEFT/RIGHT`, `MOVE_LEFT/RIGHT` i `FALL`. Càmera dinàmica suau (*lerp*) que segueix el personatge. |
 | **4** | **Tres enemics amb comportaments diferents**<br>*(Contacte resta vida si no té el «cor»)* | **Completat** | 100% | **Classe [Enemy](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Enemy.h) implementada amb 3 IA i sprites diferenciats:**<br>1. **`ENEMY_HORIZONTAL` (Caminant groc):** Patrulla sobre terra/plataformes; inverteix la marxa en topar amb parets, bombes o en detectar la vora d'una plataforma ([`wouldFall`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Enemy.cpp#L185-L193)).<br>2. **`ENEMY_VERTICAL` (Peix volador):** Patrulla amunt i avall de manera suau; inverteix marxa amb sostre, terra o en superar el radi límit.<br>3. **`ENEMY_STATIC` (Globus Valcom):** Vigilant estàtic amb lleugera levitació (*bobbing*); gira la mirada cap a Bomberman, accelera l'animació si s'apropa (<96px) i **detona una explosió en morir**.<br>- **Dany al jugador:** El contacte resta 1 vida interna/cor; si no té cors addicionals, inicia la seqüència de mort. |
 | **5** | **Perdre les 3 vides implica perdre la partida i tornar al menú** | **Completat** | 100% | **Sistema fidel a Pocket Bomberman amb dos nivells de vides:**<br>- **Cors de nivell (Vida interna):** 1 de base per pantalla (augmentable amb cors). En rebre dany amb >1 cor, reprodueix animació `HURT` durant 350ms i parpelleja invulnerable 2s.<br>- **Vides Generals (3 intents globals):** Si rep dany sense cors addicionals, s'executa l'animació oficial de mort de 7 frames (`DIE`, 1.2s) i es resta 1 vida general.<br>- **Pantalla intermèdia `TRY_AGAIN` IMPLEMENTADA:** En comptes de reiniciar sobtadament, s'activa la pantalla de transició estil GBC amb textos en català, sprite oficial de la cara de Bomberman i comptador de vides restants (`x 2`). La pantalla espera indefinidament fins que es reprèn amb Enter/Espai/X/Z o un clic, o es torna al menú amb ESC/M.<br>- En perdre les 3 vides generals (0), salta el Game Over definitiu i qualsevol tecla retorna al menú principal. |
-| **6** | **Deixar anar bombes (alineades amb tiles) que maten enemics o Bomberman** | **Completat** | 100% | Bombes alineades a la graella (`round(pos/16)*16`). Classe [Bomb](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Bomb.h) amb metxa de 4 frames i detonació a 2.2s. Classe [Explosion](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Explosion.h) en creu (4 direccions) amb col·lisions contra parets, reaccions en cadena, dany a Bomberman, eliminació d'enemics ([`enemy->kill()`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.cpp#L876-L885)) i destrucció de blocs tous. |
+| **6** | **Deixar anar bombes (alineades amb tiles) que maten enemics o Bomberman** | **Completat** | 98% | Bombes alineades a la graella (`round(pos/16)*16`). Classe [Bomb](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Bomb.h) amb metxa de 4 frames i detonació a 2.2s. Classe [Explosion](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Explosion.h) en creu (4 direccions) amb col·lisions contra parets, reaccions en cadena, dany a Bomberman i **eliminació d'enemics** ([`enemy->kill()`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Scene.cpp#L876-L885)). *(Només pendent: destruir blocs destructibles).* |
 | **7** | **Saltar sobre les seves bombes per arribar a zones elevades** | **Completat** | 100% | Bombes estàtiques a l'aire fidels a *Pocket Bomberman*. Superfície superior sòlida (`isSolidForPlayer`), permetent recolzar-s'hi i usar-les com a plataformes o escales per assolir plataformes altes. |
-| **8** | **Tiles destructibles (arbustos/blocs) que poden deixar anar objectes** | **Completat** | 100% | Bloc destructible dissenyat fidel a l'entorn GBC (paleta de terra/maó amb textura clivellada diferenciable). Identificador `TILE_DESTRUCTIBLE = 56` (`'B'`) a [TileMap](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/TileMap.h), destrucció dinàmica en rebre l'impacte de les flames d'una explosió, regeneració de la malla OpenGL i alliberament automàtic de power-ups. |
-| **9** | **Quatre objectes (com a mínim ‘Bomb Up’ i ‘Fire Up’)** | **Completat** | 100% | Els 4 objectes oficials (`Bomb Up`, `Fire Up`, `Cor` i `Patins`) integrats a l'interior dels blocs destructibles als 5 nivells del joc, amb efecte de flotació (*bobbing*), col·lisió amb Bomberman i aplicació immediata d'atributs. |
+| **8** | **Tiles destructibles (arbustos/blocs) que poden deixar anar objectes** | **Pendent** | 0% | Falta afegir identificadors de rajoles destructibles a [TileMap](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/TileMap.h), trencar-los amb les explosions i generar objectes (*drops*). |
+| **9** | **Quatre objectes (com a mínim ‘Bomb Up’ i ‘Fire Up’)** | **Pendent** | 20% | Lògica interna preparada a [Player](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/Player.h) (`maxBombs`, `internalLives`, mètodes `addMaxBomb()`, `addInternalLife()`). Pendent crear les entitats i sprites col·leccionables al mapa: `Bomb Up`, `Fire Up`, `Cor` i `Velocitat`. |
 | **10** | **Temps límit per passar-se cada nivell** | **Completat** | 100% | Temporitzador enrere de 120s (2 min) per nivell. Si s'esgota, pantalla de *Time Over* amb sprite autèntic de Bomberman marejat. |
 | **11** | **Boss final al nivell 5** | **Pendent** | 0% | El nivell 5 disposa d'spawn i enemics, però falta programar el cap final (múltiples punts de vida, sprite gran i patró d'atac). |
 | **12** | **Interfície gràfica (HUD) amb dades mínimes requerides** | **Completat** | 80% | - **Temps restant:** `TIME MM:SS` (vermell si <= 30s).<br>- **Vides generals:** Icones de la cara de Bomberman (3 intents globals).<br>- **Cors de nivell:** Cors pixel-art renderitzats proceduralment en vermell/blanc al costat de les vides.<br>- **Nivell actual:** Format `1-1`, `1-2`, ...<br>- **Comptador d'enemics:** Mostra `E:X` en groc i `OPEN!` en verd quan no en queden.<br>*(Pendent: **Redistribució de la interfície gràfica** per millorar alineació, espaiat i claredat visual).* |
@@ -98,7 +98,7 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 ## 3. Resum Gràfic de Progrés Global
 
 ```
-[█████████████████░░░] 88% Progrés Total del Projecte
+[███████████████░░░░░] 78% Progrés Total del Projecte
 
   Part Bàsica (6 punts):
   - Pantalles del joc (Menú, Jugar, Inst., Trucs, Crèdits): 100% [██████████]
@@ -110,8 +110,8 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
   - Sistema de vides i pantalla TRY_AGAIN           : 100% [██████████]
   - Cinc nivells i porta condicionada a enemics     : 100% [██████████]
   - HUD complet (Vides, Cors, Temps, Nivell, E:X)   :  80% [████████░░]
-  - 4 Objectes (Bomb Up, Fire Up, Cor, Patins)      : 100% [██████████]
-  - Blocs destructibles als mapes                   : 100% [██████████]
+  - 4 Objectes (Bomb Up, Fire Up, Cor, Extra)       :  20% [██░░░░░░░░]
+  - Blocs destructibles als mapes                   :   0% [░░░░░░░░░░]
   - Boss final al nivell 5                          :   0% [░░░░░░░░░░]
 
   Polish (4 punts):
@@ -161,11 +161,10 @@ A continuació es detallen les tasques prioritàries pendents per completar el p
 9. **(COMPLETAT) Redistribució de la interfície gràfica (HUD):**
    - Adaptat el text de la font bitmap a escala 1 (8x8 px) per a la càmera de 208px: distribució neta a la barra superior amb les 3 vides generals (16x16), cors de nivell, indicador de fase central `1-X`, comptador d'enemics `E:X` i temporitzador `02:00` sense cap solapament.
 ### 4.4. Mecàniques Fonamentals del Joc (Part Bàsica)
-6. **(COMPLETAT) Blocs Destructibles als Mapes (`TileMap`):**
-   - Creat el bloc destructible fidel a l'entorn de Pocket Bomberman (`TILE_DESTRUCTIBLE = 56`, caràcter `'B'`), amb textura clivellada que s'integra de forma harmònica amb el terra però clarament distingible com a trencable.
-   - Les explosions en creu trenquen el bloc, n'aturen la propagació de flama en aquella direcció, actualitzen dinàmicament la malla del `TileMap` i n'alliberen l'objecte amagat.
-7. **(COMPLETAT) Entitats Col·leccionables dels 4 Power-ups:**
-   - Desplaçats els power-ups de la seva posició inicial al terra cap a l'interior dels blocs destructibles als 5 nivells del joc (`Bomb Up`, `Fire Up`, `Cor` i `Patins`). En destruir el bloc, el power-up spawneja a la mateixa cel·la amb la seva animació i efecte de flotació.
+6. **Blocs Destructibles als Mapes (`TileMap`):**
+   - Assignar identificadors de tiles destructibles (arbustos/blocs tous) que es trenquin en impactar una explosió i regenerin la malla del mapa.
+7. **Entitats Col·leccionables dels 4 Power-ups:**
+   - Probabilitat de *drop* en trencar un bloc: `Bomb Up` (+1 bomba), `Fire Up` (+radi explosió), `Cor` (+1 vida de nivell) i `Patins` (+velocitat de moviment).
 8. **Boss Final al Nivell 5:**
     - Dissenyar el cap final del món al nivell 5: sprite de grans dimensions de Pocket Bomberman, barra de vida / múltiples impactes i patrons d'atac propis.
 

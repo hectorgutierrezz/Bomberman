@@ -173,24 +173,6 @@ PowerUp *Scene::tryDropPowerUp(const glm::vec2 &pos, float probability) {
   return spawnPowerUp(PowerUpType(pick), pos);
 }
 
-void Scene::onBlockDestroyed(const glm::vec2 &blockPos) {
-  int tileX = int((blockPos.x + 8.f) / 16.f);
-  int tileY = int((blockPos.y + 8.f) / 16.f);
-  glm::vec2 spawnPos = glm::vec2(float(tileX * 16), float(tileY * 16));
-
-  PowerUpType typeToSpawn;
-  auto it = blockPowerUpMap.find(std::make_pair(tileX, tileY));
-  if (it != blockPowerUpMap.end()) {
-    typeToSpawn = it->second;
-    blockPowerUpMap.erase(it);
-  } else {
-    typeToSpawn = PowerUpType(powerUpCycle % 4);
-    powerUpCycle++;
-  }
-
-  spawnPowerUp(typeToSpawn, spawnPos);
-}
-
 void Scene::updatePowerUps(int deltaTime) {
   for (size_t i = 0; i < powerUps.size(); ++i) {
     if (powerUps[i] != NULL && powerUps[i]->isActive()) {
@@ -318,10 +300,6 @@ void Scene::updateEnemies(int deltaTime) {
       Explosion *exp = new Explosion();
       exp->init(glm::vec2(enemies[i]->getPosition()),
                 glm::ivec2(SCREEN_X, SCREEN_Y), 1, map, texProgram);
-      const std::vector<glm::vec2> &destroyed = exp->getDestroyedBlocks();
-      for (size_t d = 0; d < destroyed.size(); ++d) {
-        onBlockDestroyed(destroyed[d]);
-      }
       explosions.push_back(exp);
       enemies[i]->clearExplosionTrigger();
     }
@@ -426,21 +404,13 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   }
   explosions.clear();
   clearPowerUps();
-  powerUpCycle = 0;
-  blockPowerUpMap.clear();
 
-  // Assignar els power-ups a l'interior dels blocs destructibles trobats al nivell
-  std::vector<std::pair<int, int>> destBlocks;
-  for (int y = 0; y < map->getMapHeightTiles(); ++y) {
-    for (int x = 0; x < map->getMapWidthTiles(); ++x) {
-      if (map->isTileDestructible(x, y)) {
-        destBlocks.push_back(std::make_pair(x, y));
-      }
-    }
-  }
-  for (size_t i = 0; i < destBlocks.size(); ++i) {
-    blockPowerUpMap[destBlocks[i]] = PowerUpType(i % 4);
-  }
+  // Deixar els 4 power-ups al terra del mapa per provar-los de forma immediata
+  int pY = spawnTileY * tileSize;
+  spawnPowerUp(POWERUP_BOMB_UP, glm::vec2(6 * tileSize, pY));
+  spawnPowerUp(POWERUP_FIRE_UP, glm::vec2(9 * tileSize, pY));
+  spawnPowerUp(POWERUP_HEART,   glm::vec2(12 * tileSize, pY));
+  spawnPowerUp(POWERUP_SKATES,  glm::vec2(15 * tileSize, pY));
 
   spawnEnemies();
   updateDoorFromEnemies();
@@ -995,11 +965,11 @@ void Scene::init() {
   // Inicialitzar textura i sprite de cor pixel-art per a les vides de nivell
   initHeartTexture();
 
-  BitmapText::createTexture(godModeOnTex, "MODE DEU ACTIU", 2);
+  BitmapText::createTexture(godModeOnTex, "MODE DEU ACTIVAT");
   godModeOnSprite = Sprite::createSprite(
       glm::vec2(float(godModeOnTex.width()), float(godModeOnTex.height())),
       glm::vec2(1.f, 1.f), &godModeOnTex, &texProgram);
-  BitmapText::createTexture(godModeOffTex, "MODE DEU INACTIU", 2);
+  BitmapText::createTexture(godModeOffTex, "MODE DEU DESACTIVAT");
   godModeOffSprite = Sprite::createSprite(
       glm::vec2(float(godModeOffTex.width()), float(godModeOffTex.height())),
       glm::vec2(1.f, 1.f), &godModeOffTex, &texProgram);
@@ -1175,10 +1145,6 @@ void Scene::update(int deltaTime) {
             Explosion *exp = new Explosion();
             exp->init(bombs[i]->getPosition(), glm::ivec2(SCREEN_X, SCREEN_Y),
                       bombs[i]->getRadius(), map, texProgram);
-            const std::vector<glm::vec2> &destroyed = exp->getDestroyedBlocks();
-            for (size_t d = 0; d < destroyed.size(); ++d) {
-              onBlockDestroyed(destroyed[d]);
-            }
             explosions.push_back(exp);
 
             delete bombs[i];
@@ -1341,8 +1307,12 @@ void Scene::update(int deltaTime) {
 
   case STAGE_INTRO:
     stageIntroTimer += deltaTime;
-    if (isKeyJustPressed(GLFW_KEY_ENTER) ||
-        isKeyJustPressed(GLFW_KEY_SPACE)) {
+    if (stageIntroTimer >= 1800 ||
+        isKeyJustPressed(GLFW_KEY_ENTER) ||
+        isKeyJustPressed(GLFW_KEY_SPACE) ||
+        isKeyJustPressed(GLFW_KEY_X) ||
+        isKeyJustPressed(GLFW_KEY_Z) ||
+        Game::instance().getAndResetMouseClick()) {
       gameState = PLAYING;
     }
     break;

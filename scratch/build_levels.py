@@ -74,14 +74,6 @@ def build_level01():
     # Row 7: Top Sanctuary (Door at col 17, 18)
     for x in range(14, 22): grid[7][x] = '8'
 
-    # Destructible blocks ('B') containing power-ups
-    grid[25][6] = 'B'   # Ground floor near player spawn
-    grid[25][18] = 'B'  # Ground floor center
-    grid[21][13] = 'B'  # Tier 1 ledge left
-    grid[21][23] = 'B'  # Tier 1 ledge right
-    grid[17][6] = 'B'   # Tier 2 walkway left
-    grid[17][29] = 'B'  # Tier 2 walkway right
-
     return grid
 
 def build_level02():
@@ -124,14 +116,6 @@ def build_level02():
 
     # Decorative pillars (columns 13, 22) below row 10
     grid[11][14] = '8'; grid[11][21] = '8'
-
-    # Destructible blocks ('B') containing power-ups
-    grid[25][8] = 'B'
-    grid[25][20] = 'B'
-    grid[21][13] = 'B'
-    grid[21][23] = 'B'
-    grid[17][11] = 'B'
-    grid[17][21] = 'B'
 
     return grid
 
@@ -181,14 +165,6 @@ def build_level03():
     # Row 7: Top Golden Altar (Door at 17, 5)
     for x in range(14, 22): grid[7][x] = '4'
 
-    # Destructible blocks ('B') containing power-ups
-    grid[25][6] = 'B'
-    grid[25][18] = 'B'
-    grid[21][11] = 'B'
-    grid[21][24] = 'B'
-    grid[17][7] = 'B'
-    grid[17][28] = 'B'
-
     return grid
 
 def build_level04():
@@ -227,14 +203,6 @@ def build_level04():
 
     # Tier 4 volcanic peak row 10
     for x in range(14, 22): grid[10][x] = '5'
-
-    # Destructible blocks ('B') containing power-ups
-    grid[25][7] = 'B'
-    grid[25][26] = 'B'
-    grid[21][12] = 'B'
-    grid[21][25] = 'B'
-    grid[17][16] = 'B'
-    grid[17][20] = 'B'
 
     return grid
 
@@ -284,14 +252,6 @@ def build_level05():
 
     # Row 7: Grand Ice Throne (Door at 17, 5; Guardian at 17, 6)
     for x in range(14, 22): grid[7][x] = '6'
-
-    # Destructible blocks ('B') containing power-ups
-    grid[25][8] = 'B'
-    grid[25][20] = 'B'
-    grid[21][11] = 'B'
-    grid[21][23] = 'B'
-    grid[17][7] = 'B'
-    grid[17][28] = 'B'
 
     return grid
 
