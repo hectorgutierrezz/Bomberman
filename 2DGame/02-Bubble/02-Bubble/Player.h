@@ -12,6 +12,9 @@
 // all properties it needs to track its movement, jumping, and collisions.
 
 
+#define PLAYER_WIDTH 16
+#define PLAYER_HEIGHT 16
+
 class Player
 {
 public:
@@ -27,6 +30,8 @@ public:
 	void setPosition(const glm::vec2 &pos);
 	void setBombs(const std::vector<Bomb*> *bombsList);
 	glm::ivec2 getPosition() const { return posPlayer; }
+	glm::ivec2 getSize() const { return glm::ivec2(PLAYER_WIDTH, PLAYER_HEIGHT); }
+	bool isOnJumpThroughPlatform() const;
 	int getFacingDirection() const { return facingDirection; }
 	int getInternalLives() const { return internalLives; }
 	void setInternalLives(int l) { internalLives = l; }
@@ -43,7 +48,7 @@ public:
 
 	float getSpeed() const { return moveSpeed; }
 	void setSpeed(float s) { moveSpeed = s; }
-	void addSpeed() { moveSpeed = std::min(moveSpeed + 0.5f, 4.0f); }
+	void addSpeed() { moveSpeed = std::min(moveSpeed + 0.25f, 2.1f); }
 
 	void resetPowerUps();
 	void respawn(const glm::vec2 &pos);
@@ -75,6 +80,7 @@ private:
 	float moveAccumX;
 	int invulnerableTime;
 	float fallSpeed;
+	int dropDownTimer;
 	Texture spritesheet;
 	Sprite *sprite;
 	TileMap *map;

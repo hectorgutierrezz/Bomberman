@@ -6,6 +6,7 @@
 void Game::init()
 {
 	bPlay = true;
+	bMouseClick = false;
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	scene.init();
 }
@@ -35,14 +36,19 @@ void Game::keyReleased(int key)
 
 void Game::mouseMove(int x, int y)
 {
+	(void)x;
+	(void)y;
 }
 
 void Game::mousePress(int button)
 {
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
+		bMouseClick = true;
 }
 
 void Game::mouseRelease(int button)
 {
+	(void)button;
 }
 
 bool Game::getKey(int key) const

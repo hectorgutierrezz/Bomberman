@@ -55,6 +55,9 @@ static const unsigned char FONT_GT[5]    = {0x41, 0x22, 0x14, 0x08, 0x00};
 static const unsigned char FONT_LT[5]    = {0x08, 0x14, 0x22, 0x41, 0x00};
 static const unsigned char FONT_OBRA[5]  = {0x00, 0x7F, 0x41, 0x41, 0x00};
 static const unsigned char FONT_CBRA[5]  = {0x00, 0x41, 0x41, 0x7F, 0x00};
+static const unsigned char FONT_APOS[5]  = {0x00, 0x02, 0x01, 0x00, 0x00};
+static const unsigned char FONT_COMMA[5] = {0x00, 0x40, 0x20, 0x00, 0x00};
+static const unsigned char FONT_QMARK[5] = {0x02, 0x01, 0x51, 0x09, 0x06};
 
 static const unsigned char *glyphFor(char c)
 {
@@ -82,6 +85,9 @@ static const unsigned char *glyphFor(char c)
 	case '<': return FONT_LT;
 	case '[': return FONT_OBRA;
 	case ']': return FONT_CBRA;
+	case '\'': return FONT_APOS;
+	case ',': return FONT_COMMA;
+	case '?': return FONT_QMARK;
 	case 'A': return FONT_A;
 	case 'B': return FONT_B;
 	case 'C': return FONT_C;

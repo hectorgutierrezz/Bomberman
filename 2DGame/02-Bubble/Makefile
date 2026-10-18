@@ -4,8 +4,8 @@
 
 CXX      ?= g++
 CC       ?= gcc
-CXXFLAGS ?= -std=c++11 -Wall -Wextra -O2 -DGLEW_NO_GLU
-CFLAGS   ?= -Wall -Wextra -O2 -DGLEW_NO_GLU
+CXXFLAGS ?= -std=c++11 -Wall -Wextra -O2 -g -DGLEW_NO_GLU -MMD -MP
+CFLAGS   ?= -Wall -Wextra -O2 -g -DGLEW_NO_GLU -MMD -MP
 
 # Directorios relativos
 SRC_DIR   := 02-Bubble
@@ -86,6 +86,8 @@ $(BUILD_DIR)/glew.o: $(GLEW_SRC) | $(BUILD_DIR)
 
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
+
+-include $(wildcard $(BUILD_DIR)/*.d)
 
 run: all
 	@echo "Iniciando $(TARGET)..."

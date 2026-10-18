@@ -20,11 +20,14 @@
 enum GameState {
   MAIN_MENU,
   INSTRUCTIONS,
+  CHEATS,
   CREDITS,
   PLAYING,
   PAUSED,
   GAME_OVER,
-  WIN
+  WIN,
+  TRY_AGAIN,
+  STAGE_INTRO
 };
 
 struct TextLabel {
@@ -63,6 +66,7 @@ public:
   void clearPowerUps();
 
 private:
+  void breakDestructibleTiles(Explosion *explosion);
   void initShaders();
   bool isKeyJustPressed(int key);
 
@@ -71,10 +75,17 @@ private:
 
   void renderMainMenu();
   void renderInstructions();
+  void renderCheats();
   void renderCredits();
   void renderPauseOverlay();
   void renderGameOver();
   void renderWin();
+  void renderTryAgain();
+  void initTryAgainScreen();
+  void freeTryAgainScreen();
+  void renderStageIntro();
+  void initStageIntroScreen();
+  void freeStageIntroScreen();
   void renderEnemies();
   void renderBombs();
   void renderExplosions();
@@ -82,6 +93,7 @@ private:
   void renderHUD();
   void placeBomb();
   void showGodModeMessage(bool enabled);
+  void showDoorOpenMessage();
   void startLevel(int levelNum = 1, bool keepPowerUps = true);
   void nextLevel();
   void onPlayerDeath();
@@ -119,11 +131,14 @@ private:
   Texture cursorTex;
   Sprite *cursorSprite;
   int menuOption;
-  TextLabel menuLabels[4];
+  TextLabel menuLabels[5];
   TextLabel menuFooterLabel;
 
   // Instruccions
   std::vector<TextLabel*> instructionsLabels;
+
+  // Trucs
+  std::vector<TextLabel*> cheatsLabels;
 
   // Crèdits
   std::vector<TextLabel*> creditsLabels;
@@ -154,9 +169,31 @@ private:
   TextLabel winPeaceLabel;
   TextLabel winPromptLabel;
 
+  // Pantalla intermèdia en perdre una vida (Try Again)
+  int tryAgainTimer;
+  Texture tryAgainBomberTex;
+  Sprite *tryAgainBomberSprite;
+  TextLabel tryAgainStageLabel;
+  TextLabel tryAgainTitleLabel;
+  TextLabel tryAgainLivesLabel;
+  TextLabel tryAgainChanceLabel;
+  TextLabel tryAgainEncourageLabel;
+  TextLabel tryAgainPromptLabel;
+  TextLabel tryAgainMenuLabel;
+
+  // Mini pantalla d'inici de nivell (Stage Intro)
+  int stageIntroTimer;
+  Texture stageIntroBomberTex;
+  Sprite *stageIntroBomberSprite;
+  TextLabel stageIntroTitleLabel;
+  TextLabel stageIntroReadyLabel;
+  TextLabel stageIntroLivesLabel;
+  TextLabel stageIntroPromptLabel;
+
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;
   std::vector<PowerUp *> powerUps;
+  int powerUpCycle; // Rota Bomb/Fire/Heart/Skates en sortir dels blocs D
 
   // HUD: icones de vides generals (sprites del personatge)
   Texture hudTex;
@@ -191,6 +228,11 @@ private:
   Sprite *godModeOffSprite;
   int godModeMsgTime;
   bool godModeMsgActive;
+
+  // Missatge temporal d'avís de porta oberta
+  Texture doorOpenTex;
+  Sprite *doorOpenSprite;
+  int doorOpenMsgTime;
 
   // Càmera dinàmica centrada al jugador
   float camX, camY;        // posició (cantonada superior-esquerra) de la càmera en world coords
