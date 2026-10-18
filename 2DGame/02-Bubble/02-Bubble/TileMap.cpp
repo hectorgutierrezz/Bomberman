@@ -25,6 +25,10 @@ TileMap::TileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProg
 	tilesheetSize = glm::ivec2(16, 16);
 	mapSize = glm::ivec2(0, 0);
 	tileTexSize = glm::vec2(1.f / 16.f, 1.f / 16.f);
+	storedMinCoords = minCoords;
+	shaderProgram = &program;
+	vao = 0;
+	vbo = 0;
 
 	if(loadLevel(levelFile))
 		prepareArrays(minCoords, program);
@@ -40,6 +44,8 @@ TileMap::~TileMap()
 
 void TileMap::render() const
 {
+	if(nTiles <= 0)
+		return;
 	glEnable(GL_TEXTURE_2D);
 	tilesheet.use();
 	glBindVertexArray(vao);
@@ -51,8 +57,17 @@ void TileMap::render() const
 
 void TileMap::free()
 {
-	glDeleteVertexArrays(1, &vao);
-	glDeleteBuffers(1, &vbo);
+	if(vao != 0)
+	{
+		glDeleteVertexArrays(1, &vao);
+		vao = 0;
+	}
+	if(vbo != 0)
+	{
+		glDeleteBuffers(1, &vbo);
+		vbo = 0;
+	}
+	nTiles = 0;
 }
 
 bool TileMap::loadLevel(const string &levelFile)
@@ -186,7 +201,10 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 	glBindVertexArray(vao);
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, 24 * nTiles * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+	if(nTiles > 0)
+		glBufferData(GL_ARRAY_BUFFER, 24 * nTiles * sizeof(float), &vertices[0], GL_STATIC_DRAW);
+	else
+		glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_STATIC_DRAW);
 	posLocation = program.bindVertexAttribute("position", 2, 4*sizeof(float), 0);
 	texCoordLocation = program.bindVertexAttribute("texCoord", 2, 4*sizeof(float), (void *)(2*sizeof(float)));
 	glEnableVertexAttribArray(posLocation);
@@ -293,6 +311,42 @@ bool TileMap::isSolidTile(const glm::ivec2 &pos) const
 	int x = pos.x / tileSize;
 	int y = pos.y / tileSize;
 	return isTileSolid(x, y);
+}
+
+bool TileMap::isDestructibleTile(int tileX, int tileY) const
+{
+	if(tileX < 0 || tileX >= mapSize.x || tileY < 0 || tileY >= mapSize.y)
+		return false;
+	return map[tileY * mapSize.x + tileX] == DESTRUCTIBLE_TILE;
+}
+
+bool TileMap::isDestructibleTileAt(const glm::ivec2 &pos) const
+{
+	return isDestructibleTile(pos.x / tileSize, pos.y / tileSize);
+}
+
+bool TileMap::destroyTile(int tileX, int tileY, bool rebuild)
+{
+	if(!isDestructibleTile(tileX, tileY))
+		return false;
+
+	map[tileY * mapSize.x + tileX] = 0;
+	if(rebuild)
+		rebuildArrays();
+	return true;
+}
+
+void TileMap::rebuildMesh()
+{
+	rebuildArrays();
+}
+
+void TileMap::rebuildArrays()
+{
+	if(shaderProgram == NULL)
+		return;
+	free();
+	prepareArrays(storedMinCoords, *shaderProgram);
 }
 
 

@@ -51,10 +51,13 @@ void Explosion::init(const glm::vec2 &centerPos, const glm::ivec2 &tileMapPos, i
 		for(int step = 1; step <= range; ++step)
 		{
 			glm::vec2 nextPos = centerPos + glm::vec2(float(dirs[d].x * 16 * step), float(dirs[d].y * 16 * step));
-			
-			// Si hi ha xoc amb un bloc sòlid del mapa, la flama s'atura
-			if(map != NULL && map->isSolidTile(glm::ivec2(int(nextPos.x + 8.f), int(nextPos.y + 8.f))))
+			glm::ivec2 samplePos(int(nextPos.x + 8.f), int(nextPos.y + 8.f));
+
+			// La flama s'atura amb els blocs sòlids; si és destruïble, l'abasta i no continua
+			if(map != NULL && map->isSolidTile(samplePos))
 			{
+				if(map->isDestructibleTileAt(samplePos))
+					cells.push_back(nextPos);
 				break;
 			}
 			cells.push_back(nextPos);

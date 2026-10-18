@@ -94,6 +94,7 @@ Scene::Scene() {
   tryAgainBomberSprite = NULL;
   stageIntroTimer = 0;
   stageIntroBomberSprite = NULL;
+  powerUpCycle = 0;
   gameState = MAIN_MENU;
   for (int i = 0; i <= GLFW_KEY_LAST; ++i)
     keyLastState[i] = false;
@@ -171,6 +172,34 @@ PowerUp *Scene::tryDropPowerUp(const glm::vec2 &pos, float probability) {
     return NULL;
   int pick = rand() % 4;
   return spawnPowerUp(PowerUpType(pick), pos);
+}
+
+void Scene::breakDestructibleTiles(Explosion *explosion) {
+  if (explosion == NULL || map == NULL)
+    return;
+
+  int tileSize = map->getTileSize();
+  const std::vector<glm::vec2> &cells = explosion->getCells();
+  bool anyBroken = false;
+
+  for (size_t i = 0; i < cells.size(); ++i) {
+    int tileX = int(cells[i].x + 8.f) / tileSize;
+    int tileY = int(cells[i].y + 8.f) / tileSize;
+    if (!map->isDestructibleTile(tileX, tileY))
+      continue;
+
+    // El power-up queda amagat dins el bloc D i surt en trencar-lo
+    glm::vec2 dropPos(float(tileX * tileSize), float(tileY * tileSize));
+    if (map->destroyTile(tileX, tileY, false)) {
+      anyBroken = true;
+      PowerUpType type = PowerUpType(powerUpCycle % 4);
+      powerUpCycle++;
+      spawnPowerUp(type, dropPos);
+    }
+  }
+
+  if (anyBroken)
+    map->rebuildMesh();
 }
 
 void Scene::updatePowerUps(int deltaTime) {
@@ -300,6 +329,7 @@ void Scene::updateEnemies(int deltaTime) {
       Explosion *exp = new Explosion();
       exp->init(glm::vec2(enemies[i]->getPosition()),
                 glm::ivec2(SCREEN_X, SCREEN_Y), 1, map, texProgram);
+      breakDestructibleTiles(exp);
       explosions.push_back(exp);
       enemies[i]->clearExplosionTrigger();
     }
@@ -404,13 +434,8 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   }
   explosions.clear();
   clearPowerUps();
-
-  // Deixar els 4 power-ups al terra del mapa per provar-los de forma immediata
-  int pY = spawnTileY * tileSize;
-  spawnPowerUp(POWERUP_BOMB_UP, glm::vec2(6 * tileSize, pY));
-  spawnPowerUp(POWERUP_FIRE_UP, glm::vec2(9 * tileSize, pY));
-  spawnPowerUp(POWERUP_HEART,   glm::vec2(12 * tileSize, pY));
-  spawnPowerUp(POWERUP_SKATES,  glm::vec2(15 * tileSize, pY));
+  powerUpCycle = 0;
+  // Els power-ups queden dins els blocs 'D' del nivell i surten en trencar-los.
 
   spawnEnemies();
   updateDoorFromEnemies();
@@ -1145,6 +1170,7 @@ void Scene::update(int deltaTime) {
             Explosion *exp = new Explosion();
             exp->init(bombs[i]->getPosition(), glm::ivec2(SCREEN_X, SCREEN_Y),
                       bombs[i]->getRadius(), map, texProgram);
+            breakDestructibleTiles(exp);
             explosions.push_back(exp);
 
             delete bombs[i];

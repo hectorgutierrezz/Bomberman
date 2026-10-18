@@ -66,6 +66,7 @@ public:
   void clearPowerUps();
 
 private:
+  void breakDestructibleTiles(Explosion *explosion);
   void initShaders();
   bool isKeyJustPressed(int key);
 
@@ -192,6 +193,7 @@ private:
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;
   std::vector<PowerUp *> powerUps;
+  int powerUpCycle; // Rota Bomb/Fire/Heart/Skates en sortir dels blocs D
 
   // HUD: icones de vides generals (sprites del personatge)
   Texture hudTex;
