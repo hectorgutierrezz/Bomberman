@@ -16,6 +16,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
+#include <map>
+#include <utility>
 
 enum GameState {
   MAIN_MENU,
@@ -64,6 +66,7 @@ public:
   PowerUp *spawnPowerUp(PowerUpType type, const glm::vec2 &pos);
   PowerUp *tryDropPowerUp(const glm::vec2 &pos, float probability = 0.40f);
   void clearPowerUps();
+  void onBlockDestroyed(const glm::vec2 &blockPos);
 
 private:
   void initShaders();
@@ -192,6 +195,8 @@ private:
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;
   std::vector<PowerUp *> powerUps;
+  int powerUpCycle;
+  std::map<std::pair<int, int>, PowerUpType> blockPowerUpMap;
 
   // HUD: icones de vides generals (sprites del personatge)
   Texture hudTex;

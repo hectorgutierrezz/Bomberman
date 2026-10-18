@@ -20,6 +20,7 @@ public:
 	bool isActive() const { return active; }
 	bool checkCollision(const glm::ivec2 &targetPos, const glm::ivec2 &targetSize) const;
 	const std::vector<glm::vec2> &getCells() const { return cells; }
+	const std::vector<glm::vec2> &getDestroyedBlocks() const { return destroyedBlocks; }
 
 private:
 	static Texture explosionTexture;
@@ -29,6 +30,7 @@ private:
 	float lifetime;
 	glm::ivec2 tileMapDispl;
 	std::vector<glm::vec2> cells;
+	std::vector<glm::vec2> destroyedBlocks;
 	Sprite *sprite;
 };
 

@@ -34,9 +34,18 @@ void Explosion::init(const glm::vec2 &centerPos, const glm::ivec2 &tileMapPos, i
 	}
 
 	cells.clear();
+	destroyedBlocks.clear();
 
 	// 1. Casella central de la bomba
 	cells.push_back(centerPos);
+
+	int centerTileX = int((centerPos.x + 8.f) / 16.f);
+	int centerTileY = int((centerPos.y + 8.f) / 16.f);
+	if(map != NULL && map->isTileDestructible(centerTileX, centerTileY))
+	{
+		map->destroyTile(centerTileX, centerTileY);
+		destroyedBlocks.push_back(glm::vec2(float(centerTileX * 16), float(centerTileY * 16)));
+	}
 
 	// 2. Propagació en creu (4 direccions)
 	glm::ivec2 dirs[4] = {
@@ -51,12 +60,27 @@ void Explosion::init(const glm::vec2 &centerPos, const glm::ivec2 &tileMapPos, i
 		for(int step = 1; step <= range; ++step)
 		{
 			glm::vec2 nextPos = centerPos + glm::vec2(float(dirs[d].x * 16 * step), float(dirs[d].y * 16 * step));
-			
-			// Si hi ha xoc amb un bloc sòlid del mapa, la flama s'atura
-			if(map != NULL && map->isSolidTile(glm::ivec2(int(nextPos.x + 8.f), int(nextPos.y + 8.f))))
+			int tileX = int((nextPos.x + 8.f) / 16.f);
+			int tileY = int((nextPos.y + 8.f) / 16.f);
+
+			if(map != NULL)
 			{
-				break;
+				if(map->isTileDestructible(tileX, tileY))
+				{
+					// La flama arriba al bloc destructible i el trenca
+					cells.push_back(nextPos);
+					map->destroyTile(tileX, tileY);
+					destroyedBlocks.push_back(glm::vec2(float(tileX * 16), float(tileY * 16)));
+					// La flama s'atura aquí (no travessa el bloc destruït)
+					break;
+				}
+				else if(map->isSolidTile(glm::ivec2(int(nextPos.x + 8.f), int(nextPos.y + 8.f))))
+				{
+					// Si hi ha xoc amb un bloc sòlid indestructible, la flama s'atura abans
+					break;
+				}
 			}
+
 			cells.push_back(nextPos);
 		}
 	}
