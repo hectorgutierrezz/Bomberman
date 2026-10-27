@@ -74,12 +74,27 @@ Scene::Scene() {
   celebrateSprite = NULL;
   menuOption = 0;
   bTimeOver = false;
+  hudBarSprite = NULL;
+  clockIconSprite = NULL;
+  doorIconSprite = NULL;
+  flameIconSprite = NULL;
+  bombIconSprite = NULL;
   lifeIcon = NULL;
   heartIcon = NULL;
   timerSprite = NULL;
-  levelHUDSprite = NULL;
   enemiesHUDSprite = NULL;
+  stageHUDSprite = NULL;
+  flameHUDSprite = NULL;
+  bombsHUDSprite = NULL;
+  livesHUDSprite = NULL;
+  heartsHUDSprite = NULL;
   lastDisplayedEnemies = -1;
+  lastDisplayedSeconds = -1;
+  lastDisplayedStage = -1;
+  lastDisplayedRadius = -1;
+  lastDisplayedMaxBombs = -1;
+  lastDisplayedLives = -1;
+  lastDisplayedHearts = -1;
   godModeOnSprite = NULL;
   godModeOffSprite = NULL;
   godModeMsgTime = 0;
@@ -87,8 +102,6 @@ Scene::Scene() {
   doorOpenSprite = NULL;
   doorOpenMsgTime = 0;
   levelTimeLeft = 120000;
-  lastDisplayedSeconds = -1;
-  lastDisplayedLevel = -1;
   externalLives = 3;
   tryAgainTimer = 0;
   tryAgainBomberSprite = NULL;
@@ -111,18 +124,7 @@ Scene::~Scene() {
   freeMenuScreens();
   freeTryAgainScreen();
   freeStageIntroScreen();
-  if (lifeIcon != NULL)
-    delete lifeIcon;
-  if (heartIcon != NULL)
-    delete heartIcon;
-  if (timerSprite != NULL)
-    delete timerSprite;
-  if (levelHUDSprite != NULL)
-    delete levelHUDSprite;
-  if (enemiesHUDSprite != NULL) {
-    delete enemiesHUDSprite;
-    enemiesHUDSprite = NULL;
-  }
+  freeHUD();
   if (godModeOnSprite != NULL)
     delete godModeOnSprite;
   if (godModeOffSprite != NULL)
@@ -358,22 +360,41 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
 
   levelTimeLeft = 120000; // 2 minuts (120 segons) per nivell
   lastDisplayedSeconds = -1;
-  lastDisplayedLevel = -1;
   lastDisplayedEnemies = -1;
+  lastDisplayedStage = -1;
+  lastDisplayedRadius = -1;
+  lastDisplayedMaxBombs = -1;
+  lastDisplayedLives = -1;
+  lastDisplayedHearts = -1;
 
   if (timerSprite != NULL) {
     delete timerSprite;
     timerSprite = NULL;
   }
-  if (levelHUDSprite != NULL) {
-    delete levelHUDSprite;
-    levelHUDSprite = NULL;
-  }
   if (enemiesHUDSprite != NULL) {
     delete enemiesHUDSprite;
     enemiesHUDSprite = NULL;
   }
-  lastDisplayedEnemies = -1;
+  if (stageHUDSprite != NULL) {
+    delete stageHUDSprite;
+    stageHUDSprite = NULL;
+  }
+  if (flameHUDSprite != NULL) {
+    delete flameHUDSprite;
+    flameHUDSprite = NULL;
+  }
+  if (bombsHUDSprite != NULL) {
+    delete bombsHUDSprite;
+    bombsHUDSprite = NULL;
+  }
+  if (livesHUDSprite != NULL) {
+    delete livesHUDSprite;
+    livesHUDSprite = NULL;
+  }
+  if (heartsHUDSprite != NULL) {
+    delete heartsHUDSprite;
+    heartsHUDSprite = NULL;
+  }
 
   char levelPath[64];
   snprintf(levelPath, sizeof(levelPath), "levels/level%02d.txt", currentLevel);
@@ -939,18 +960,7 @@ void Scene::initMenuScreens() {
 void Scene::init() {
   initShaders();
 
-  if (timerSprite != NULL) {
-    delete timerSprite;
-    timerSprite = NULL;
-  }
-  if (levelHUDSprite != NULL) {
-    delete levelHUDSprite;
-    levelHUDSprite = NULL;
-  }
-  if (heartIcon != NULL) {
-    delete heartIcon;
-    heartIcon = NULL;
-  }
+  freeHUD();
   if (godModeOnSprite != NULL) {
     delete godModeOnSprite;
     godModeOnSprite = NULL;
@@ -963,11 +973,6 @@ void Scene::init() {
     delete doorOpenSprite;
     doorOpenSprite = NULL;
   }
-  if (enemiesHUDSprite != NULL) {
-    delete enemiesHUDSprite;
-    enemiesHUDSprite = NULL;
-  }
-  lastDisplayedEnemies = -1;
 
   initMenuScreens();
 
@@ -976,19 +981,8 @@ void Scene::init() {
   gameState = MAIN_MENU;
   currentTime = 0.0f;
 
-  // Icona de vida per al HUD (mateix spritesheet del jugador)
-  hudTex.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png",
-                      TEXTURE_PIXEL_FORMAT_RGBA);
-  glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f);
-  lifeIcon =
-      Sprite::createSprite(glm::ivec2(16, 16), sizeInUV, &hudTex, &texProgram);
-  lifeIcon->setNumberAnimations(1);
-  lifeIcon->setAnimationSpeed(0, 8);
-  lifeIcon->addKeyframe(0, glm::vec2(0.f, 0.f));
-  lifeIcon->changeAnimation(0);
-
-  // Inicialitzar textura i sprite de cor pixel-art per a les vides de nivell
-  initHeartTexture();
+  // Inicialitzar recursos de la barra inferior de HUD estil Game Boy Color
+  initHUDTextures();
 
   BitmapText::createTexture(godModeOnTex, "MODE DEU ON", 2);
   godModeOnSprite = Sprite::createSprite(
@@ -1619,6 +1613,259 @@ void Scene::renderExplosions() {
       explosions[i]->render();
   }
 }
+void Scene::freeHUD() {
+  if (hudBarSprite != NULL) {
+    delete hudBarSprite;
+    hudBarSprite = NULL;
+  }
+  hudBarTex.free();
+
+  if (clockIconSprite != NULL) {
+    delete clockIconSprite;
+    clockIconSprite = NULL;
+  }
+  clockIconTex.free();
+
+  if (doorIconSprite != NULL) {
+    delete doorIconSprite;
+    doorIconSprite = NULL;
+  }
+  doorIconTex.free();
+
+  if (flameIconSprite != NULL) {
+    delete flameIconSprite;
+    flameIconSprite = NULL;
+  }
+  flameIconTex.free();
+
+  if (bombIconSprite != NULL) {
+    delete bombIconSprite;
+    bombIconSprite = NULL;
+  }
+  bombIconTex.free();
+
+  if (lifeIcon != NULL) {
+    delete lifeIcon;
+    lifeIcon = NULL;
+  }
+  hudTex.free();
+
+  if (heartIcon != NULL) {
+    delete heartIcon;
+    heartIcon = NULL;
+  }
+  heartTex.free();
+
+  if (timerSprite != NULL) {
+    delete timerSprite;
+    timerSprite = NULL;
+  }
+  timerTex.free();
+
+  if (enemiesHUDSprite != NULL) {
+    delete enemiesHUDSprite;
+    enemiesHUDSprite = NULL;
+  }
+  enemiesHUDTex.free();
+
+  if (stageHUDSprite != NULL) {
+    delete stageHUDSprite;
+    stageHUDSprite = NULL;
+  }
+  stageHUDTex.free();
+
+  if (flameHUDSprite != NULL) {
+    delete flameHUDSprite;
+    flameHUDSprite = NULL;
+  }
+  flameHUDTex.free();
+
+  if (bombsHUDSprite != NULL) {
+    delete bombsHUDSprite;
+    bombsHUDSprite = NULL;
+  }
+  bombsHUDTex.free();
+
+  if (livesHUDSprite != NULL) {
+    delete livesHUDSprite;
+    livesHUDSprite = NULL;
+  }
+  livesHUDTex.free();
+
+  if (heartsHUDSprite != NULL) {
+    delete heartsHUDSprite;
+    heartsHUDSprite = NULL;
+  }
+  heartsHUDTex.free();
+}
+
+void Scene::initHUDTextures() {
+  // 1. Barra de fons estil GBC (2x14 px, línia fosca a dalt i fons pastís rosat #F8A8B8)
+  {
+    std::vector<unsigned char> barPixels(2 * 14 * 4);
+    for (int y = 0; y < 14; ++y) {
+      for (int x = 0; x < 2; ++x) {
+        int idx = (y * 2 + x) * 4;
+        if (y == 0) {
+          barPixels[idx + 0] = 28;
+          barPixels[idx + 1] = 28;
+          barPixels[idx + 2] = 28;
+          barPixels[idx + 3] = 255;
+        } else {
+          barPixels[idx + 0] = 248;
+          barPixels[idx + 1] = 168;
+          barPixels[idx + 2] = 184;
+          barPixels[idx + 3] = 255;
+        }
+      }
+    }
+    hudBarTex.loadFromRGBABuffer(barPixels.data(), 2, 14);
+    hudBarTex.setMinFilter(GL_NEAREST);
+    hudBarTex.setMagFilter(GL_NEAREST);
+    hudBarTex.setWrapS(GL_CLAMP_TO_EDGE);
+    hudBarTex.setWrapT(GL_CLAMP_TO_EDGE);
+    hudBarSprite = Sprite::createSprite(
+        glm::vec2(CAM_VIEW_W, 14.f), glm::vec2(1.f, 1.f), &hudBarTex, &texProgram);
+  }
+
+  // 2. Icona de Rellotge / Cronòmetre (8x8)
+  {
+    static const char *clockPattern[8] = {
+      "..XXXX..",
+      ".X....X.",
+      "X..X...X",
+      "X..XX..X",
+      "X...X..X",
+      "X......X",
+      ".X....X.",
+      "..XXXX.."
+    };
+    std::vector<unsigned char> pixels(8 * 8 * 4, 0);
+    for (int y = 0; y < 8; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        if (clockPattern[y][x] == 'X') {
+          int idx = (y * 8 + x) * 4;
+          pixels[idx + 0] = 255;
+          pixels[idx + 1] = 255;
+          pixels[idx + 2] = 255;
+          pixels[idx + 3] = 255;
+        }
+      }
+    }
+    clockIconTex.loadFromRGBABuffer(pixels.data(), 8, 8);
+    clockIconTex.setMinFilter(GL_NEAREST);
+    clockIconTex.setMagFilter(GL_NEAREST);
+    clockIconSprite = Sprite::createSprite(
+        glm::vec2(8.f, 8.f), glm::vec2(1.f, 1.f), &clockIconTex, &texProgram);
+  }
+
+  // 3. Icona de Porta / Enemics (8x8)
+  {
+    static const char *doorPattern[8] = {
+      ".XXXXXX.",
+      "X..XX..X",
+      "X..XX..X",
+      "X.XXXX.X",
+      "X..XX..X",
+      "X..XX..X",
+      "X..XX..X",
+      "XXXXXXXX"
+    };
+    std::vector<unsigned char> pixels(8 * 8 * 4, 0);
+    for (int y = 0; y < 8; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        if (doorPattern[y][x] == 'X') {
+          int idx = (y * 8 + x) * 4;
+          pixels[idx + 0] = 255;
+          pixels[idx + 1] = 255;
+          pixels[idx + 2] = 255;
+          pixels[idx + 3] = 255;
+        }
+      }
+    }
+    doorIconTex.loadFromRGBABuffer(pixels.data(), 8, 8);
+    doorIconTex.setMinFilter(GL_NEAREST);
+    doorIconTex.setMagFilter(GL_NEAREST);
+    doorIconSprite = Sprite::createSprite(
+        glm::vec2(8.f, 8.f), glm::vec2(1.f, 1.f), &doorIconTex, &texProgram);
+  }
+
+  // 4. Icona de Flama / Radi d'explosió (8x8)
+  {
+    static const char *flamePattern[8] = {
+      "...X....",
+      "..XXX...",
+      ".XXXXX..",
+      "XXXXXXX.",
+      "XXXXXXXX",
+      "XXXXXXXX",
+      ".XXXXXX.",
+      "..XXXX.."
+    };
+    std::vector<unsigned char> pixels(8 * 8 * 4, 0);
+    for (int y = 0; y < 8; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        if (flamePattern[y][x] == 'X') {
+          int idx = (y * 8 + x) * 4;
+          pixels[idx + 0] = 255;
+          pixels[idx + 1] = 255;
+          pixels[idx + 2] = 255;
+          pixels[idx + 3] = 255;
+        }
+      }
+    }
+    flameIconTex.loadFromRGBABuffer(pixels.data(), 8, 8);
+    flameIconTex.setMinFilter(GL_NEAREST);
+    flameIconTex.setMagFilter(GL_NEAREST);
+    flameIconSprite = Sprite::createSprite(
+        glm::vec2(8.f, 8.f), glm::vec2(1.f, 1.f), &flameIconTex, &texProgram);
+  }
+
+  // 5. Icona de Bomba estil GBC (8x8)
+  {
+    static const char *bombPattern[8] = {
+      ".....X..",
+      "....X...",
+      "...XXXX.",
+      "..XXXXXX",
+      ".XXXXXXX",
+      ".XXXXXXX",
+      "..XXXXXX",
+      "...XXXX."
+    };
+    std::vector<unsigned char> pixels(8 * 8 * 4, 0);
+    for (int y = 0; y < 8; ++y) {
+      for (int x = 0; x < 8; ++x) {
+        if (bombPattern[y][x] == 'X') {
+          int idx = (y * 8 + x) * 4;
+          pixels[idx + 0] = 255;
+          pixels[idx + 1] = 255;
+          pixels[idx + 2] = 255;
+          pixels[idx + 3] = 255;
+        }
+      }
+    }
+    bombIconTex.loadFromRGBABuffer(pixels.data(), 8, 8);
+    bombIconTex.setMinFilter(GL_NEAREST);
+    bombIconTex.setMagFilter(GL_NEAREST);
+    bombIconSprite = Sprite::createSprite(
+        glm::vec2(8.f, 8.f), glm::vec2(1.f, 1.f), &bombIconTex, &texProgram);
+  }
+
+  // 6. Icona del cap de Bomberman (spritesheet oficial)
+  hudTex.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png",
+                      TEXTURE_PIXEL_FORMAT_RGBA);
+  glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f);
+  lifeIcon = Sprite::createSprite(glm::ivec2(9, 9), sizeInUV, &hudTex, &texProgram);
+  lifeIcon->setNumberAnimations(1);
+  lifeIcon->setAnimationSpeed(0, 8);
+  lifeIcon->addKeyframe(0, glm::vec2(0.f, 0.f));
+  lifeIcon->changeAnimation(0);
+
+  // 7. Icona de cor pixel-art per a vides addicionals
+  initHeartTexture();
+}
+
 void Scene::updateTimerHUD() {
   int totalSecs = (levelTimeLeft + 999) / 1000;
   if (totalSecs < 0)
@@ -1636,6 +1883,7 @@ void Scene::updateTimerHUD() {
       delete timerSprite;
       timerSprite = NULL;
     }
+    timerTex.free();
 
     if (BitmapText::createTexture(timerTex, buf, 1)) {
       timerSprite = Sprite::createSprite(
@@ -1646,39 +1894,21 @@ void Scene::updateTimerHUD() {
 }
 
 void Scene::updateLevelHUD() {
-  if (currentLevel != lastDisplayedLevel) {
-    lastDisplayedLevel = currentLevel;
-    char buf[32];
-    snprintf(buf, sizeof(buf), "1-%d", currentLevel);
-
-    if (levelHUDSprite != NULL) {
-      delete levelHUDSprite;
-      levelHUDSprite = NULL;
-    }
-
-    if (BitmapText::createTexture(levelHUDTex, buf, 1)) {
-      levelHUDSprite = Sprite::createSprite(
-          glm::vec2(float(levelHUDTex.width()), float(levelHUDTex.height())),
-          glm::vec2(1.f, 1.f), &levelHUDTex, &texProgram);
-    }
-  }
+  updateStageHUD();
 }
 
 void Scene::updateEnemiesHUD() {
   int count = countAliveEnemies();
-  if (count == lastDisplayedEnemies && (count == 0 || enemiesHUDSprite != NULL))
-    return;
+  if (count != lastDisplayedEnemies) {
+    lastDisplayedEnemies = count;
+    if (enemiesHUDSprite != NULL) {
+      delete enemiesHUDSprite;
+      enemiesHUDSprite = NULL;
+    }
+    enemiesHUDTex.free();
 
-  lastDisplayedEnemies = count;
-  if (enemiesHUDSprite != NULL) {
-    delete enemiesHUDSprite;
-    enemiesHUDSprite = NULL;
-  }
-  enemiesHUDTex.free();
-
-  if (count > 0) {
     char buf[32];
-    snprintf(buf, sizeof(buf), "E:%d", count);
+    snprintf(buf, sizeof(buf), "%02d", count);
     if (BitmapText::createTexture(enemiesHUDTex, buf, 1)) {
       enemiesHUDSprite = Sprite::createSprite(
           glm::vec2(float(enemiesHUDTex.width()), float(enemiesHUDTex.height())),
@@ -1687,116 +1917,249 @@ void Scene::updateEnemiesHUD() {
   }
 }
 
+void Scene::updateStageHUD() {
+  if (currentLevel != lastDisplayedStage) {
+    lastDisplayedStage = currentLevel;
+    if (stageHUDSprite != NULL) {
+      delete stageHUDSprite;
+      stageHUDSprite = NULL;
+    }
+    stageHUDTex.free();
+
+    char buf[32];
+    snprintf(buf, sizeof(buf), "T%d", currentLevel);
+    if (BitmapText::createTexture(stageHUDTex, buf, 1)) {
+      stageHUDSprite = Sprite::createSprite(
+          glm::vec2(float(stageHUDTex.width()), float(stageHUDTex.height())),
+          glm::vec2(1.f, 1.f), &stageHUDTex, &texProgram);
+    }
+  }
+}
+
+void Scene::updateRadiusHUD() {
+  int r = (player != NULL) ? player->getBombRadius() : 1;
+  if (r != lastDisplayedRadius) {
+    lastDisplayedRadius = r;
+    if (flameHUDSprite != NULL) {
+      delete flameHUDSprite;
+      flameHUDSprite = NULL;
+    }
+    flameHUDTex.free();
+
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", r);
+    if (BitmapText::createTexture(flameHUDTex, buf, 1)) {
+      flameHUDSprite = Sprite::createSprite(
+          glm::vec2(float(flameHUDTex.width()), float(flameHUDTex.height())),
+          glm::vec2(1.f, 1.f), &flameHUDTex, &texProgram);
+    }
+  }
+}
+
+void Scene::updateBombsHUD() {
+  int b = (player != NULL) ? player->getMaxBombs() : 1;
+  if (b != lastDisplayedMaxBombs) {
+    lastDisplayedMaxBombs = b;
+    if (bombsHUDSprite != NULL) {
+      delete bombsHUDSprite;
+      bombsHUDSprite = NULL;
+    }
+    bombsHUDTex.free();
+
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", b);
+    if (BitmapText::createTexture(bombsHUDTex, buf, 1)) {
+      bombsHUDSprite = Sprite::createSprite(
+          glm::vec2(float(bombsHUDTex.width()), float(bombsHUDTex.height())),
+          glm::vec2(1.f, 1.f), &bombsHUDTex, &texProgram);
+    }
+  }
+}
+
+void Scene::updateLivesHUD() {
+  int l = externalLives;
+  if (l != lastDisplayedLives) {
+    lastDisplayedLives = l;
+    if (livesHUDSprite != NULL) {
+      delete livesHUDSprite;
+      livesHUDSprite = NULL;
+    }
+    livesHUDTex.free();
+
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", l);
+    if (BitmapText::createTexture(livesHUDTex, buf, 1)) {
+      livesHUDSprite = Sprite::createSprite(
+          glm::vec2(float(livesHUDTex.width()), float(livesHUDTex.height())),
+          glm::vec2(1.f, 1.f), &livesHUDTex, &texProgram);
+    }
+  }
+}
+
+void Scene::updateHeartsHUD() {
+  int h = (player != NULL) ? player->getInternalLives() : 1;
+  if (h != lastDisplayedHearts) {
+    lastDisplayedHearts = h;
+    if (heartsHUDSprite != NULL) {
+      delete heartsHUDSprite;
+      heartsHUDSprite = NULL;
+    }
+    heartsHUDTex.free();
+
+    if (h > 1) {
+      char buf[16];
+      snprintf(buf, sizeof(buf), "%d", h);
+      if (BitmapText::createTexture(heartsHUDTex, buf, 1)) {
+        heartsHUDSprite = Sprite::createSprite(
+            glm::vec2(float(heartsHUDTex.width()), float(heartsHUDTex.height())),
+            glm::vec2(1.f, 1.f), &heartsHUDTex, &texProgram);
+      }
+    }
+  }
+}
+
 void Scene::renderHUD() {
-  if (player == NULL || lifeIcon == NULL)
+  if (player == NULL || hudBarSprite == NULL)
     return;
 
-  const float hudY = camY + 4.f;
-  const float hudPad = 6.f;
+  // Actualitzar comptadors del HUD si han canviat
+  updateTimerHUD();
+  updateEnemiesHUD();
+  updateStageHUD();
+  updateRadiusHUD();
+  updateBombsHUD();
+  updateLivesHUD();
+  updateHeartsHUD();
 
-  // 1. Contador extern: nombre de vides generals (cares de Bomberman de 16x16)
-  for (int i = 0; i < externalLives; ++i) {
-    float x = camX + hudPad + float(i) * 16.f;
-    lifeIcon->setPosition(glm::vec2(x, hudY));
+  // Posicionament a la part inferior de la càmera (GBC bottom bar)
+  const float barH = 14.f;
+  const float barX = camX;
+  const float barY = camY + viewHeight - barH;
+  const float iconY = barY + 3.f;
+  const float textY = barY + 4.f;
+
+  // 1. Dibuixar franja de fons estil GBC
+  hudBarSprite->setPosition(glm::vec2(barX, barY));
+  texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+  hudBarSprite->render();
+
+  const glm::vec4 darkInk(0.11f, 0.11f, 0.14f, 1.0f);
+
+  // 2. Element 1: Rellotge + Temps restant [03:58]
+  int totalSecs = (levelTimeLeft + 999) / 1000;
+  glm::vec4 timerCol = (totalSecs <= 30) ? glm::vec4(0.85f, 0.1f, 0.1f, 1.0f) : darkInk;
+  if (clockIconSprite != NULL) {
+    clockIconSprite->setPosition(glm::vec2(barX + 4.f, iconY));
+    texProgram.setUniform4f("color", timerCol.r, timerCol.g, timerCol.b, 1.0f);
+    clockIconSprite->render();
+  }
+  if (timerSprite != NULL) {
+    timerSprite->setPosition(glm::vec2(barX + 13.f, textY));
+    texProgram.setUniform4f("color", timerCol.r, timerCol.g, timerCol.b, 1.0f);
+    timerSprite->render();
+  }
+
+  // 3. Element 2: Porta + Enemics restants [01]
+  int aliveEnemies = countAliveEnemies();
+  glm::vec4 doorCol = (aliveEnemies == 0) ? glm::vec4(0.08f, 0.65f, 0.18f, 1.0f) : darkInk;
+  if (doorIconSprite != NULL) {
+    doorIconSprite->setPosition(glm::vec2(barX + 50.f, iconY));
+    texProgram.setUniform4f("color", doorCol.r, doorCol.g, doorCol.b, 1.0f);
+    doorIconSprite->render();
+  }
+  if (enemiesHUDSprite != NULL) {
+    enemiesHUDSprite->setPosition(glm::vec2(barX + 60.f, textY));
+    texProgram.setUniform4f("color", doorCol.r, doorCol.g, doorCol.b, 1.0f);
+    enemiesHUDSprite->render();
+  }
+
+  // 4. Element 3: Estadi / Target [T4]
+  if (stageHUDSprite != NULL) {
+    stageHUDSprite->setPosition(glm::vec2(barX + 79.f, textY));
+    texProgram.setUniform4f("color", darkInk.r, darkInk.g, darkInk.b, 1.0f);
+    stageHUDSprite->render();
+  }
+
+  // 5. Element 4: Mida explosions / Flama (power-up Fire Up)
+  if (flameIconSprite != NULL) {
+    flameIconSprite->setPosition(glm::vec2(barX + 104.f, iconY));
+    texProgram.setUniform4f("color", 0.88f, 0.32f, 0.05f, 1.0f);
+    flameIconSprite->render();
+  }
+  if (flameHUDSprite != NULL) {
+    flameHUDSprite->setPosition(glm::vec2(barX + 114.f, textY));
+    texProgram.setUniform4f("color", darkInk.r, darkInk.g, darkInk.b, 1.0f);
+    flameHUDSprite->render();
+  }
+
+  // 6. Element 5: Bombes simultànies / Bomba (power-up Bomb Up)
+  if (bombIconSprite != NULL) {
+    bombIconSprite->setPosition(glm::vec2(barX + 132.f, iconY));
+    texProgram.setUniform4f("color", darkInk.r, darkInk.g, darkInk.b, 1.0f);
+    bombIconSprite->render();
+  }
+  if (bombsHUDSprite != NULL) {
+    bombsHUDSprite->setPosition(glm::vec2(barX + 142.f, textY));
+    texProgram.setUniform4f("color", darkInk.r, darkInk.g, darkInk.b, 1.0f);
+    bombsHUDSprite->render();
+  }
+
+  // 7. Element 6: Vides / Cap de Bomberman
+  if (lifeIcon != NULL) {
+    lifeIcon->setPosition(glm::vec2(barX + 160.f, iconY - 1.f));
+    texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
     lifeIcon->render();
   }
-
-  const float livesRight = hudPad + float(externalLives) * 16.f;
-
-  // 2. Vida de nivell: cors pixel-art (1 de base; augmenta amb power-ups com cors)
-  float heartsRight = livesRight;
-  if (heartIcon != NULL) {
-    int hp = player->getInternalLives();
-    for (int j = 0; j < hp; ++j) {
-      float hx = camX + livesRight + 4.f + float(j) * 13.f;
-      heartIcon->setPosition(glm::vec2(hx, hudY + 2.f));
-      heartIcon->render();
-    }
-    if (hp > 0)
-      heartsRight = livesRight + 4.f + float(hp) * 13.f;
+  if (livesHUDSprite != NULL) {
+    livesHUDSprite->setPosition(glm::vec2(barX + 171.f, textY));
+    texProgram.setUniform4f("color", darkInk.r, darkInk.g, darkInk.b, 1.0f);
+    livesHUDSprite->render();
   }
 
-  // 3. Temporitzador a la cantonada dreta
-  updateTimerHUD();
-  float timerLeft = camX + viewWidth - hudPad;
-  if (timerSprite != NULL) {
-    float timerW = float(timerTex.width());
-    timerLeft = camX + viewWidth - timerW - hudPad;
-    timerSprite->setPosition(glm::vec2(timerLeft, hudY + 4.f));
-
-    int totalSecs = (levelTimeLeft + 999) / 1000;
-    if (totalSecs <= 30)
-      texProgram.setUniform4f("color", 1.0f, 0.2f, 0.2f,
-                              1.0f); // Vermell <= 30s
-    else
-      texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
-
-    timerSprite->render();
+  // Cors extra de nivell si en té
+  if (player->getInternalLives() > 1 && heartIcon != NULL && heartsHUDSprite != NULL) {
+    heartIcon->setPosition(glm::vec2(barX + 185.f, iconY));
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+    heartIcon->render();
+    heartsHUDSprite->setPosition(glm::vec2(barX + 195.f, textY));
+    texProgram.setUniform4f("color", darkInk.r, darkInk.g, darkInk.b, 1.0f);
+    heartsHUDSprite->render();
   }
 
-  // 4. Comptador d'enemics restants al costat del temporitzador
-  updateEnemiesHUD();
-  float enemyHudLeft = timerLeft;
-  if (enemiesHUDSprite != NULL) {
-    const float enemyHudWidth = float(enemiesHUDTex.width());
-    enemyHudLeft = timerLeft - enemyHudWidth - 8.f;
-    enemiesHUDSprite->setPosition(glm::vec2(enemyHudLeft, hudY + 4.f));
-    texProgram.setUniform4f("color", 1.0f, 0.85f, 0.2f, 1.0f); // Groc daurat
-    enemiesHUDSprite->render();
-    texProgram.setUniform4f("color", 1.f, 1.f, 1.f, 1.f);
-  }
-
-  // 5. Indicador de nivell centrat entre les vides i els comptadors drets
-  updateLevelHUD();
-  if (levelHUDSprite != NULL) {
-    float hudW = float(levelHUDTex.width());
-    float gapLeft = camX + heartsRight + 6.f;
-    float gapRight = enemyHudLeft - 6.f;
-    float x = gapLeft + (gapRight - gapLeft - hudW) * 0.5f;
-    if (x < gapLeft)
-      x = gapLeft;
-    levelHUDSprite->setPosition(glm::vec2(x, hudY + 4.f));
-    texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
-    levelHUDSprite->render();
-  }
-
-  // 6. Missatge temporal de god mode si s'ha activat / desactivat
+  // 8. Missatges temporals flotants centrats a la part superior (God Mode i Porta)
   if (godModeMsgTime > 0) {
     Sprite *msgSprite = godModeMsgActive ? godModeOnSprite : godModeOffSprite;
     if (msgSprite != NULL) {
       float msgW = godModeMsgActive ? float(godModeOnTex.width())
                                     : float(godModeOffTex.width());
       float x = camX + (viewWidth - msgW) * 0.5f;
-      float y = camY + 28.f;
+      float y = camY + 18.f;
       msgSprite->setPosition(glm::vec2(x, y));
 
       if (godModeMsgActive)
-        texProgram.setUniform4f("color", 1.0f, 1.0f, 0.0f, 1.0f); // groc
+        texProgram.setUniform4f("color", 1.0f, 1.0f, 0.0f, 1.0f);
       else
-        texProgram.setUniform4f("color", 1.0f, 0.15f, 0.15f, 1.0f); // vermell
+        texProgram.setUniform4f("color", 1.0f, 0.15f, 0.15f, 1.0f);
 
       msgSprite->render();
       texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
     }
   }
 
-  // 7. Missatge temporal d'avís de porta oberta quan moren tots els enemics
   if (doorOpenMsgTime > 0 && doorOpenSprite != NULL) {
     float msgW = float(doorOpenTex.width());
     float x = camX + (viewWidth - msgW) * 0.5f;
-    float y = camY + (godModeMsgTime > 0 ? 46.f : 36.f);
+    float y = camY + (godModeMsgTime > 0 ? 36.f : 24.f);
     doorOpenSprite->setPosition(glm::vec2(x, y));
 
-    // Parpelleig suau als últims 400ms abans de desaparèixer
-    if (doorOpenMsgTime < 400 && ((doorOpenMsgTime / 100) % 2 == 0)) {
-      // parpelleig transparent
-    } else {
-      texProgram.setUniform4f("color", 0.2f, 1.0f, 0.3f, 1.0f); // Verd brillant d'èxit
+    if (doorOpenMsgTime >= 400 || ((doorOpenMsgTime / 100) % 2 != 0)) {
+      texProgram.setUniform4f("color", 0.2f, 1.0f, 0.3f, 1.0f);
       doorOpenSprite->render();
       texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
     }
   }
+
+  texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 void Scene::showDoorOpenMessage() {
@@ -1896,7 +2259,7 @@ void Scene::initHeartTexture() {
 
   if (heartIcon != NULL)
     delete heartIcon;
-  heartIcon = Sprite::createSprite(glm::ivec2(12, 12), glm::vec2(1.f, 1.f),
+  heartIcon = Sprite::createSprite(glm::ivec2(8, 8), glm::vec2(1.f, 1.f),
                                    &heartTex, &texProgram);
   heartIcon->setNumberAnimations(1);
   heartIcon->setAnimationSpeed(0, 8);

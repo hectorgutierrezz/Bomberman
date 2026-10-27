@@ -25,7 +25,7 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 | **9** | **Quatre objectes (com a mínim ‘Bomb Up’ i ‘Fire Up’)** | **Completat** | 100% | Les entitats recollibles són `Bomb Up`, `Fire Up`, cor i patins. Cada bloc trencat genera un tipus en rotació; recollir-lo aplica l'efecte al jugador. |
 | **10** | **Temps límit per passar-se cada nivell** | **Completat** | 100% | Temporitzador enrere de 120s (2 min) per nivell. Si s'esgota, pantalla de *Time Over* amb sprite autèntic de Bomberman marejat. |
 | **11** | **Boss final al nivell 5** | **Pendent** | 0% | El nivell 5 disposa d'spawn i enemics, però falta programar el cap final (múltiples punts de vida, sprite gran i patró d'atac). |
-| **12** | **Interfície gràfica (HUD) amb dades mínimes requerides** | **Completat** | 80% | - **Temps restant:** `TIME MM:SS` (vermell si <= 30s).<br>- **Vides generals:** Icones de la cara de Bomberman (3 intents globals).<br>- **Cors de nivell:** Cors pixel-art renderitzats proceduralment en vermell/blanc al costat de les vides.<br>- **Nivell actual:** Format `1-1`, `1-2`, ...<br>- **Comptador d'enemics:** Mostra `E:X` en groc i `OPEN!` en verd quan no en queden.<br>Redistribució aplicada per mantenir els elements llegibles a l'amplada de la càmera. |
+| **12** | **Interfície gràfica (HUD) amb dades mínimes requerides** | **Completat** | 100% | **Barra inferior fidel a Pocket Bomberman de Game Boy Color:** Franja sòlida pastel/rosada a la part inferior (`CAM_VIEW_W = 208px`) amb vora fosca superior.<br>- **Temps restant:** Icona de cronòmetre (8x8) + `MM:SS` (vermell d'alerta si <= 30s).<br>- **Enemics restants / Porta:** Icona de porta + comptador `02` (verd quan s'obre la porta).<br>- **Estadi / Target:** Indicador `T1`..`T5` idèntic a la ROM original.<br>- **Mida d'explosions:** Icona de foc + radi actual de bomba (power-up *Fire Up*).<br>- **Bombes simultànies:** Icona de bomba GBC + capacitat màxima de bombes (power-up *Bomb Up*).<br>- **Vides restants:** Icona oficial de la cara de Bomberman + comptador de vides globals (i cors pixel-art si en té addicionals). |
 | **13** | **Tecles de truc (Cheats de correcció)** | **Completat** | 95% | La pantalla **TRUCS**, separada de les instruccions i accessible des del menú principal, mostra els codis disponibles durant la partida: **`G`** activa/desactiva la invulnerabilitat; **`K`** elimina els enemics i obre la porta; **`H`** afegeix un cor; **`B`** augmenta la capacitat de bombes; **`F`** augmenta el radi de l'explosió; **`S`** augmenta la velocitat; **`N`** passa al nivell següent; **`1`–`5`** seleccionen directament un nivell. (`P` i `ESC` posen el joc en pausa.) |
 
 ---
@@ -114,7 +114,7 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
   - Tecles de truc / Cheats (G, K, 1-5, H, B, F, S, N): 95% [██████████]
   - Sistema de vides i pantalla TRY_AGAIN           : 100% [██████████]
   - Cinc nivells i porta condicionada a enemics     : 100% [██████████]
-  - HUD complet (Vides, Cors, Temps, Nivell, E:X)   :  80% [████████░░]
+  - HUD complet estil GBC (Temps, Porta, T, F, B, Vides): 100% [██████████]
   - 4 Objectes (Bomb Up, Fire Up, Cor, Patins)       : 100% [██████████]
   - Blocs destructibles als mapes                   : 100% [██████████]
   - Boss final al nivell 5                          :   0% [░░░░░░░░░░]
@@ -163,8 +163,15 @@ A continuació es detallen les tasques prioritàries pendents per completar el p
    - La quantitat i tipus d'enemics varia segons la fase: Nivell 1 (2 enemics terrestres, introductori sense voladors), Nivell 2 (3 enemics amb voladors en pous verticals), Nivell 3 (4 enemics amb globus estàtic), Nivell 4 (4 enemics volcànics amb 2 voladors) i Nivell 5 (5 enemics protegint la porta final).
 
 ### 4.3. Millores d'Interfície (UI/UX) i Feedback
-9. **(COMPLETAT) Redistribució de la interfície gràfica (HUD):**
-   - Adaptat el text de la font bitmap a escala 1 (8x8 px) per a la càmera de 208px: distribució neta a la barra superior amb les 3 vides generals (16x16), cors de nivell, indicador de fase central `1-X`, comptador d'enemics `E:X` i temporitzador `02:00` sense cap solapament.
+9. **(COMPLETAT) Interfície gràfica inferior autèntica de Game Boy Color:**
+   - Implementada la barra inferior retro de Pocket Bomberman (`CAM_VIEW_W = 208px`, alçada 14px) amb fons pastís rosat `#F8A8B8` i vora fosca superior.
+   - Inclou els 5 requeriments oficials del PDF distribuïts en una sola fila neta:
+     1. Cronòmetre pixel-art + temps restant (`MM:SS`, alerta vermella $\le$ 30s).
+     2. Icona de porta + comptador d'enemics `02`, `01` (verd en obrir-se la porta).
+     3. Indicador de fase `T1` a `T5` fidel a la ROM original.
+     4. Icona de foc + radi d'explosió (power-up *Fire Up*).
+     5. Icona de bomba + bombes simultànies màximes (power-up *Bomb Up*).
+     6. Icona de la cara de Bomberman + vides restants globals (més cors de nivell).
 ### 4.4. Mecàniques Fonamentals del Joc (Part Bàsica)
 6. **(COMPLETAT) Blocs destructibles i power-ups:**
    - Rajoles `D` als nivells, destrucció per explosió, actualització de malla i aparició rotativa dels quatre power-ups: `Bomb Up`, `Fire Up`, cor i patins.

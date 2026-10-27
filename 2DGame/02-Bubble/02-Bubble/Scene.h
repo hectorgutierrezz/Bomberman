@@ -97,9 +97,16 @@ private:
   void startLevel(int levelNum = 1, bool keepPowerUps = true);
   void nextLevel();
   void onPlayerDeath();
+  void initHUDTextures();
+  void freeHUD();
   void updateTimerHUD();
   void updateLevelHUD();
   void updateEnemiesHUD();
+  void updateStageHUD();
+  void updateRadiusHUD();
+  void updateBombsHUD();
+  void updateLivesHUD();
+  void updateHeartsHUD();
   void initHeartTexture();
   void clearEnemies();
   void spawnEnemies();
@@ -195,31 +202,56 @@ private:
   std::vector<PowerUp *> powerUps;
   int powerUpCycle; // Rota Bomb/Fire/Heart/Skates en sortir dels blocs D
 
-  // HUD: icones de vides generals (sprites del personatge)
+  // HUD: Barra inferior estil Game Boy Color (Pocket Bomberman)
+  Texture hudBarTex;
+  Sprite *hudBarSprite;
+
+  Texture clockIconTex;
+  Sprite *clockIconSprite;
+
+  Texture doorIconTex;
+  Sprite *doorIconSprite;
+
+  Texture flameIconTex;
+  Sprite *flameIconSprite;
+
+  Texture bombIconTex;
+  Sprite *bombIconSprite;
+
   Texture hudTex;
   Sprite *lifeIcon;
 
-  // HUD: indicador de vida de nivell (cors pixel-art)
   Texture heartTex;
   Sprite *heartIcon;
 
-
-  // HUD: comptador enrere de temps
   int levelTimeLeft;
   Texture timerTex;
   Sprite *timerSprite;
   int lastDisplayedSeconds;
 
-  // HUD: indicador de nivell
-  Texture levelHUDTex;
-  Sprite *levelHUDSprite;
-  int lastDisplayedLevel;
-
-  // HUD: enemics vius del nivell
-  // HUD: indicador d'enemics restants / estat de la porta
   Texture enemiesHUDTex;
   Sprite *enemiesHUDSprite;
   int lastDisplayedEnemies;
+
+  Texture stageHUDTex;
+  Sprite *stageHUDSprite;
+  int lastDisplayedStage;
+
+  Texture flameHUDTex;
+  Sprite *flameHUDSprite;
+  int lastDisplayedRadius;
+
+  Texture bombsHUDTex;
+  Sprite *bombsHUDSprite;
+  int lastDisplayedMaxBombs;
+
+  Texture livesHUDTex;
+  Sprite *livesHUDSprite;
+  int lastDisplayedLives;
+
+  Texture heartsHUDTex;
+  Sprite *heartsHUDSprite;
+  int lastDisplayedHearts;
 
   // Missatge temporal de god mode
   Texture godModeOnTex;
