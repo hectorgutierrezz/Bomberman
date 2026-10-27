@@ -1998,6 +1998,8 @@ void Scene::updateLivesHUD() {
 
 void Scene::updateHeartsHUD() {
   int h = (player != NULL) ? player->getInternalLives() : 1;
+  if (h < 0)
+    h = 0;
   if (h != lastDisplayedHearts) {
     lastDisplayedHearts = h;
     if (heartsHUDSprite != NULL) {
@@ -2006,14 +2008,12 @@ void Scene::updateHeartsHUD() {
     }
     heartsHUDTex.free();
 
-    if (h > 1) {
-      char buf[16];
-      snprintf(buf, sizeof(buf), "%d", h);
-      if (BitmapText::createTexture(heartsHUDTex, buf, 1)) {
-        heartsHUDSprite = Sprite::createSprite(
-            glm::vec2(float(heartsHUDTex.width()), float(heartsHUDTex.height())),
-            glm::vec2(1.f, 1.f), &heartsHUDTex, &texProgram);
-      }
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", h);
+    if (BitmapText::createTexture(heartsHUDTex, buf, 1)) {
+      heartsHUDSprite = Sprite::createSprite(
+          glm::vec2(float(heartsHUDTex.width()), float(heartsHUDTex.height())),
+          glm::vec2(1.f, 1.f), &heartsHUDTex, &texProgram);
     }
   }
 }
@@ -2104,23 +2104,25 @@ void Scene::renderHUD() {
     bombsHUDSprite->render();
   }
 
-  // 7. Element 6: Vides / Cap de Bomberman
+  // 7. Element 6: Vides generals / Cap de Bomberman
   if (lifeIcon != NULL) {
-    lifeIcon->setPosition(glm::vec2(barX + 160.f, iconY - 1.f));
+    lifeIcon->setPosition(glm::vec2(barX + 158.f, iconY - 1.f));
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
     lifeIcon->render();
   }
   if (livesHUDSprite != NULL) {
-    livesHUDSprite->setPosition(glm::vec2(barX + 171.f, textY));
+    livesHUDSprite->setPosition(glm::vec2(barX + 169.f, textY));
     texProgram.setUniform4f("color", darkInk.r, darkInk.g, darkInk.b, 1.0f);
     livesHUDSprite->render();
   }
 
-  // Cors extra de nivell si en té
-  if (player->getInternalLives() > 1 && heartIcon != NULL && heartsHUDSprite != NULL) {
+  // 8. Element 7: Vides del nivell (cors) / Cor pixel-art (sempre visible)
+  if (heartIcon != NULL) {
     heartIcon->setPosition(glm::vec2(barX + 185.f, iconY));
     texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
     heartIcon->render();
+  }
+  if (heartsHUDSprite != NULL) {
     heartsHUDSprite->setPosition(glm::vec2(barX + 195.f, textY));
     texProgram.setUniform4f("color", darkInk.r, darkInk.g, darkInk.b, 1.0f);
     heartsHUDSprite->render();
