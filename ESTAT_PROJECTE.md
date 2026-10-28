@@ -2,7 +2,13 @@
 
 Aquest document detalla l'estat actual del desenvolupament del videojoc **Pocket Bomberman** desenvolupat a `2DGame/`, contrastat punt per punt amb els requeriments de la guia de la pràctica (**FIB - Videojocs Curs 2026/27 Q1: Laboratori Exercici 2D**), incorporant l'estat real del codi a la branca `development` i el full de ruta amb les noves tasques i millores pendents.
 
-> **Actualització (18/10/2026):** els blocs destructibles i els quatre tipus de power-up ja estan implementats als nivells. Les explosions trenquen les rajoles marcades amb `D`, regeneren la malla i fan aparèixer els power-ups en rotació (`Bomb Up`, `Fire Up`, cor i patins). La pantalla d'inici de nivell ja no avança automàticament: cal prémer Enter o Esc. El fons dels nivells torna a ser negre; es conserva tota la mecànica dels blocs. La compilació Linux amb `make -C 2DGame/02-Bubble all` s'ha verificat correctament.
+> **Actualització (28/10/2026):**
+> - **Fons temàtics autèntics per als 5 mons:** Integrats patrons de textura *seamless* fidels a la ROM de GBC (`images/Map/backgrounds/bg_world1.png` a `bg_world5.png`) renderitzats al darrere del TileMap i adaptats dinàmicament a la mida de cada nivell, eliminant el fons negre buit.
+> - **Il·lustracions pixel-art oficials:** Afegides a la pantalla d'inici de nivell (`STAGE_INTRO`) les escenes il·lustrades de 128x96 px per a cadascun dels 5 mons (`images/Map/illustrations/world1_art.png` a `world5_art.png`).
+> - **Ajust mil·limètric de càmera:** Límit mínim de càmera ajustat a `(SCREEN_X, SCREEN_Y) = (32, 16)`, eliminant qualsevol desplaçament al buit negre exterior quan Bomberman s'apropa a la paret esquerra o superior.
+> - **Motor d'àudio integrat (100% completat):** Implementat [`SoundManager`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/SoundManager.h) amb `miniaudio.h`, compatibilitat amb WSL2/PulseAudio (`/mnt/wslg/PulseServer`), 9 pistes BGM oficials de Pocket Bomberman i 7 efectes SFX (explosions reforçades, passos suaus mitjançant script de normalització `scratch/adjust_steps.py`).
+> - **Correcció de col·lisions:** Solucionat el bug de travessament de blocs destructibles per l'esquerra a `Player.cpp`.
+> - **Verificació de compilació:** 0 errors tant a Linux (`make -C 2DGame/02-Bubble all`) com a Windows (`Release|Win32` a MSBuild v142).
 
 ---
 
@@ -103,7 +109,7 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 ## 3. Resum Gràfic de Progrés Global
 
 ```
-[████████████████░░░░] 82% Progrés Total del Projecte (estimació actualitzada)
+[██████████████████░░] 92% Progrés Total del Projecte (estimació actualitzada)
 
   Part Bàsica (6 punts):
   - Pantalles del joc (Menú, Jugar, Inst., Trucs, Crèdits): 100% [██████████]
@@ -120,10 +126,11 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
   - Boss final al nivell 5                          :   0% [░░░░░░░░░░]
 
   Polish (4 punts):
-  - Tileset oficial GBC i estètica gràfica retro    :  95% [██████████]
-  - Interactivitat i animacions d'entitats / menús   :  80% [████████░░]
-  - Game Feeling i fidelitat a Pocket Bomberman      :  80% [████████░░]
-  - So (Música BGM i Efectes SFX)                   :   0% [░░░░░░░░░░]
+  - Tileset oficial GBC i estètica gràfica retro    : 100% [██████████]
+  - Fons temàtics autèntics i il·lustracions de món : 100% [██████████]
+  - Interactivitat i animacions d'entitats / menús   :  85% [████████░░]
+  - Game Feeling i fidelitat a Pocket Bomberman      :  90% [█████████░]
+  - So (Música BGM i Efectes SFX integrats)         : 100% [██████████]
 ```
 
 ---
@@ -179,7 +186,14 @@ A continuació es detallen les tasques prioritàries pendents per completar el p
     - Dissenyar el cap final del món al nivell 5: sprite de grans dimensions de Pocket Bomberman, barra de vida / múltiples impactes i patrons d'atac propis.
 
 ### 4.5. Polish i Lliurament Final
-9. **Motor d'Àudio (BGM i SFX):**
-    - Integrar `miniaudio.h` per reproduir música chiptune retro a menús i nivells, juntament amb efectes de so per a bombes, explosions, salts, recollida d'objectes i mort.
-10. **Preparació del Paquet de Lliurament:**
+9. **(COMPLETAT) Motor d'Àudio Integral (BGM i SFX):**
+    - Integració de la llibreria d'àudio `miniaudio.h` (v0.11+) mitjançant la classe [`SoundManager`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/SoundManager.h).
+    - Compatibilitat tant amb Windows (DirectSound/WASAPI) com amb Linux/WSL2 (suport PulseAudio nadiu apuntant al servidor de so `/mnt/wslg/PulseServer` amb paquets `libpulse0` i `libasound2-plugins`).
+    - **Banda sonora oficial completa (9 temes):** Menú principal (`MUSIC_TITLE`), transició de món (`MUSIC_WORLD_INTRO`), bosc nivells 1-4 (`MUSIC_STAGE_FOREST`), combat de boss (`MUSIC_BOSS_BATTLE`), continuació (`MUSIC_CONTINUE`), victòria (`MUSIC_ENDING`), nivell superat (`MUSIC_STAGE_CLEAR`), temps exhaurit (`MUSIC_TIME_OVER`) i derrota (`MUSIC_GAME_OVER`).
+    - **Efectes sonors (7 SFX balancejats):** Plantar bomba (`SFX_PLACE_BOMB`), explosió reforçada (`SFX_EXPLOSION`, volum balancejat al 220%), agafar power-up (`SFX_PICKUP`), mort de Bomberman (`SFX_DEATH`), pausa (`SFX_PAUSE`), passos atenuats (`SFX_STEP_H`, normalitzats al 22% de pic amb `scratch/adjust_steps.py`) i salt vertical (`SFX_STEP_V`, normalitzat al 40%).
+10. **(COMPLETAT) Fons temàtics autèntics i il·lustracions retro per als 5 mons:**
+    - Generació de textures *seamless* de 32x32 px basades en els patrons de fons originals de Game Boy Color (`images/Map/backgrounds/bg_world1.png` a `bg_world5.png`), renderitzats al darrere del TileMap i adaptats a la mida de cada nivell amb `GL_REPEAT` i `GL_NEAREST`.
+    - Integració de les il·lustracions oficials de 128x96 px (`world1_art.png` a `world5_art.png`) escalades a la pantalla de transició `STAGE_INTRO`.
+    - Ajust de precisió als límits de càmera (`camX >= SCREEN_X`, `camY >= SCREEN_Y`), evitant que es vegi cap franja negra exterior al voltant del mapa.
+11. **Preparació del Paquet de Lliurament:**
     - Redacció d'`info.txt`, organització de la carpeta `Binari/` i enregistrament del vídeo `demo.avi` d'1 minut.
