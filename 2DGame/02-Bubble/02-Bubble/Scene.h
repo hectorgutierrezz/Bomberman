@@ -94,6 +94,8 @@ private:
   void placeBomb();
   void showGodModeMessage(bool enabled);
   void showDoorOpenMessage();
+  void initLevelBackground(int level);
+  void freeLevelBackground();
   void startLevel(int levelNum = 1, bool keepPowerUps = true);
   void nextLevel();
   void onPlayerDeath();
@@ -121,6 +123,10 @@ private:
   std::vector<Enemy *> enemies;
   int currentLevel;
   int externalLives; // Contador extern (re-runs fins al Game Over)
+
+  // Fons del nivell (Backgrounds tematics per a cada mon)
+  Texture bgTex;
+  Sprite *bgSprite;
 
   ShaderProgram texProgram;
   float currentTime;
@@ -190,6 +196,8 @@ private:
 
   // Mini pantalla d'inici de nivell (Stage Intro)
   int stageIntroTimer;
+  Texture stageIntroArtTex;
+  Sprite *stageIntroArtSprite;
   Texture stageIntroBomberTex;
   Sprite *stageIntroBomberSprite;
   TextLabel stageIntroTitleLabel;

@@ -108,6 +108,8 @@ Scene::Scene() {
   tryAgainBomberSprite = NULL;
   stageIntroTimer = 0;
   stageIntroBomberSprite = NULL;
+  stageIntroArtSprite = NULL;
+  bgSprite = NULL;
   powerUpCycle = 0;
   gameState = MAIN_MENU;
   for (int i = 0; i <= GLFW_KEY_LAST; ++i)
@@ -125,6 +127,7 @@ Scene::~Scene() {
   freeMenuScreens();
   freeTryAgainScreen();
   freeStageIntroScreen();
+  freeLevelBackground();
   freeHUD();
   if (godModeOnSprite != NULL)
     delete godModeOnSprite;
@@ -352,6 +355,50 @@ void Scene::updateEnemies(int deltaTime) {
   updateDoorFromEnemies();
 }
 
+void Scene::freeLevelBackground() {
+  if (bgSprite != NULL) {
+    delete bgSprite;
+    bgSprite = NULL;
+  }
+  bgTex.free();
+}
+
+void Scene::initLevelBackground(int level) {
+  freeLevelBackground();
+  if (map == NULL)
+    return;
+
+  int lvl = level;
+  if (lvl < 1)
+    lvl = 1;
+  if (lvl > 5)
+    lvl = 5;
+
+  char bgPath[128];
+  snprintf(bgPath, sizeof(bgPath), "images/Map/backgrounds/bg_world%d.png", lvl);
+
+  if (bgTex.loadFromFile(bgPath, TEXTURE_PIXEL_FORMAT_RGB)) {
+    bgTex.setWrapS(GL_REPEAT);
+    bgTex.setWrapT(GL_REPEAT);
+    bgTex.setMinFilter(GL_NEAREST);
+    bgTex.setMagFilter(GL_NEAREST);
+
+    float mapW = float(map->getMapWidth());
+    float mapH = float(map->getMapHeight());
+    // bg_worldX.png conte el patro seamless de 32x32 px
+    glm::vec2 quadSize(mapW, mapH);
+    glm::vec2 sizeInUV(mapW / 32.f, mapH / 32.f);
+
+    bgSprite = Sprite::createSprite(quadSize, sizeInUV, &bgTex, &texProgram);
+    if (bgSprite != NULL) {
+      bgSprite->setPosition(glm::vec2(float(SCREEN_X), float(SCREEN_Y)));
+    }
+  }
+
+  // Mantenir sempre el fons extern de la finestra en negre net
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+}
+
 void Scene::startLevel(int levelNum, bool keepPowerUps) {
   clearEnemies();
   currentLevel = levelNum;
@@ -407,6 +454,8 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   }
   map = TileMap::createTileMap(levelPath, glm::vec2(SCREEN_X, SCREEN_Y),
                                texProgram);
+
+  initLevelBackground(currentLevel);
 
   // Spawn i porta alineats exactament sobre el terra (fila 26 de tiles)
   int tileSize = map->getTileSize();
@@ -472,10 +521,10 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
 
   float mapRight = float(SCREEN_X) + float(map->getMapWidth()) - viewWidth;
   float mapBottom = float(SCREEN_Y) + float(map->getMapHeight()) - viewHeight;
-  if (camX < 0.f)
-    camX = 0.f;
-  if (camY < 0.f)
-    camY = 0.f;
+  if (camX < float(SCREEN_X))
+    camX = float(SCREEN_X);
+  if (camY < float(SCREEN_Y))
+    camY = float(SCREEN_Y);
   if (camX > mapRight)
     camX = mapRight;
   if (camY > mapBottom)
@@ -688,11 +737,27 @@ void Scene::initStageIntroScreen() {
     }
   };
 
+  int lvl = currentLevel;
+  if (lvl < 1) lvl = 1;
+  if (lvl > 5) lvl = 5;
+
+  char artPath[128];
+  snprintf(artPath, sizeof(artPath), "images/Map/illustrations/world%d_art.png", lvl);
+  if (stageIntroArtTex.loadFromFile(artPath, TEXTURE_PIXEL_FORMAT_RGB)) {
+    stageIntroArtTex.setMinFilter(GL_NEAREST);
+    stageIntroArtTex.setMagFilter(GL_NEAREST);
+    stageIntroArtSprite = Sprite::createSprite(
+        glm::vec2(256.f, 192.f), glm::vec2(1.f, 1.f), &stageIntroArtTex, &texProgram);
+    if (stageIntroArtSprite != NULL) {
+      stageIntroArtSprite->setPosition(glm::vec2((float(SCREEN_WIDTH) - 256.f) * 0.5f, 30.f));
+    }
+  }
+
   char stageBuf[32];
   snprintf(stageBuf, sizeof(stageBuf), "NIVELL 1-%d", currentLevel);
-  centerLabel(stageIntroTitleLabel, stageBuf, 4, 150.f, glm::vec4(1.f, 0.9f, 0.15f, 1.f));
+  centerLabel(stageIntroTitleLabel, stageBuf, 3, 245.f, glm::vec4(1.f, 0.9f, 0.15f, 1.f));
 
-  centerLabel(stageIntroReadyLabel, "PREPARAT!", 3, 230.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+  centerLabel(stageIntroReadyLabel, "PREPARAT!", 3, 290.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
 
   if (stageIntroBomberTex.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA)) {
     glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f);
@@ -702,17 +767,22 @@ void Scene::initStageIntroScreen() {
     stageIntroBomberSprite->setAnimationSpeed(0, 8);
     stageIntroBomberSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
     stageIntroBomberSprite->changeAnimation(0);
-    stageIntroBomberSprite->setPosition(glm::vec2(275.f, 305.f));
+    stageIntroBomberSprite->setPosition(glm::vec2(275.f, 345.f));
   }
 
   char livesBuf[32];
   snprintf(livesBuf, sizeof(livesBuf), "x %d", externalLives);
-  stageIntroLivesLabel.init(livesBuf, 3, glm::vec2(322.f, 312.f), glm::vec4(1.f, 1.f, 1.f, 1.f), &texProgram);
+  stageIntroLivesLabel.init(livesBuf, 3, glm::vec2(322.f, 352.f), glm::vec4(1.f, 1.f, 1.f, 1.f), &texProgram);
 
-  centerLabel(stageIntroPromptLabel, "PREM ENTER O ESC", 2, 400.f, glm::vec4(0.75f, 0.75f, 0.75f, 1.f));
+  centerLabel(stageIntroPromptLabel, "PREM ENTER O ESC", 2, 420.f, glm::vec4(0.75f, 0.75f, 0.75f, 1.f));
 }
 
 void Scene::freeStageIntroScreen() {
+  if (stageIntroArtSprite != NULL) {
+    delete stageIntroArtSprite;
+    stageIntroArtSprite = NULL;
+  }
+  stageIntroArtTex.free();
   if (stageIntroBomberSprite != NULL) {
     delete stageIntroBomberSprite;
     stageIntroBomberSprite = NULL;
@@ -729,6 +799,8 @@ void Scene::renderStageIntro() {
   texProgram.setUniformMatrix4f("modelview", modelview);
   texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 
+  if (stageIntroArtSprite != NULL)
+    stageIntroArtSprite->render();
   stageIntroTitleLabel.render(texProgram);
   stageIntroReadyLabel.render(texProgram);
   if (stageIntroBomberSprite != NULL)
@@ -990,6 +1062,7 @@ void Scene::init() {
   externalLives = 3;
   startLevel(1, false);
   gameState = MAIN_MENU;
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   SoundManager::instance().playMusic(MUSIC_TITLE, true);
   currentTime = 0.0f;
 
@@ -1287,10 +1360,10 @@ void Scene::update(int deltaTime) {
             float(SCREEN_X) + float(map->getMapWidth()) - viewWidth;
         float mapBottom =
             float(SCREEN_Y) + float(map->getMapHeight()) - viewHeight;
-        if (camX < 0.f)
-          camX = 0.f;
-        if (camY < 0.f)
-          camY = 0.f;
+        if (camX < float(SCREEN_X))
+          camX = float(SCREEN_X);
+        if (camY < float(SCREEN_Y))
+          camY = float(SCREEN_Y);
         if (camX > mapRight)
           camX = mapRight;
         if (camY > mapBottom)
@@ -1309,6 +1382,7 @@ void Scene::update(int deltaTime) {
       gameState = PLAYING;
     } else if (isKeyJustPressed(GLFW_KEY_M)) {
       gameState = MAIN_MENU;
+      glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
       SoundManager::instance().playMusic(MUSIC_TITLE, true);
     }
     break;
@@ -1319,6 +1393,7 @@ void Scene::update(int deltaTime) {
         isKeyJustPressed(GLFW_KEY_ESCAPE) ||
         isKeyJustPressed(GLFW_KEY_M)) {
       gameState = MAIN_MENU;
+      glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
       SoundManager::instance().playMusic(MUSIC_TITLE, true);
     }
     break;
@@ -1327,6 +1402,7 @@ void Scene::update(int deltaTime) {
     if (isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE) ||
         isKeyJustPressed(GLFW_KEY_SPACE)) {
       gameState = MAIN_MENU;
+      glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
       SoundManager::instance().playMusic(MUSIC_TITLE, true);
     }
     break;
@@ -1342,6 +1418,7 @@ void Scene::update(int deltaTime) {
     } else if (isKeyJustPressed(GLFW_KEY_ESCAPE) ||
                isKeyJustPressed(GLFW_KEY_M)) {
       gameState = MAIN_MENU;
+      glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
       SoundManager::instance().playMusic(MUSIC_TITLE, true);
     }
     break;
@@ -1394,6 +1471,11 @@ void Scene::render() {
     renderCredits();
     break;
   case PLAYING:
+    if (bgSprite != NULL)
+      bgSprite->render();
+    modelview = glm::mat4(1.0f);
+    texProgram.setUniformMatrix4f("modelview", modelview);
+    texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
     map->render();
     if (door != NULL)
       door->render();
@@ -1405,6 +1487,11 @@ void Scene::render() {
     renderHUD();
     break;
   case PAUSED:
+    if (bgSprite != NULL)
+      bgSprite->render();
+    modelview = glm::mat4(1.0f);
+    texProgram.setUniformMatrix4f("modelview", modelview);
+    texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
     map->render();
     if (door != NULL)
       door->render();
