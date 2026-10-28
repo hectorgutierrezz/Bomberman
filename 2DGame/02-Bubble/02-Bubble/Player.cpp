@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include "Player.h"
 #include "Game.h"
+#include "SoundManager.h"
 
 
 #define JUMP_ANGLE_STEP 4
@@ -32,6 +33,7 @@ Player::Player()
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
 	dropDownTimer = 0;
+	stepSoundTimer = 0;
 	godMode = false;
 	bDying = false;
 	bDead = false;
@@ -134,6 +136,7 @@ void Player::startDying()
 	bJumping = false;
 	if(sprite != NULL)
 		sprite->changeAnimation(DIE);
+	SoundManager::instance().playSound(SFX_BOMBERMAN_KILLED);
 }
 
 bool Player::isOnJumpThroughPlatform() const
@@ -274,6 +277,16 @@ void Player::update(int deltaTime)
 			sprite->changeAnimation(MOVE_LEFT);
 		sprite->setFlippedHorizontally(false);
 
+		if(!bJumping && fallSpeed == 0.0f)
+		{
+			stepSoundTimer -= deltaTime;
+			if(stepSoundTimer <= 0)
+			{
+				SoundManager::instance().playSound(SFX_STEP_HORIZONTAL);
+				stepSoundTimer = 260;
+			}
+		}
+
 		moveAccumX += moveSpeed;
 		int step = int(moveAccumX);
 		moveAccumX -= float(step);
@@ -314,6 +327,16 @@ void Player::update(int deltaTime)
 			sprite->changeAnimation(MOVE_RIGHT);
 		sprite->setFlippedHorizontally(true);
 
+		if(!bJumping && fallSpeed == 0.0f)
+		{
+			stepSoundTimer -= deltaTime;
+			if(stepSoundTimer <= 0)
+			{
+				SoundManager::instance().playSound(SFX_STEP_HORIZONTAL);
+				stepSoundTimer = 260;
+			}
+		}
+
 		moveAccumX += moveSpeed;
 		int step = int(moveAccumX);
 		moveAccumX -= float(step);
@@ -349,6 +372,7 @@ void Player::update(int deltaTime)
 	}
 	else
 	{
+		stepSoundTimer = 0;
 		moveAccumX = 0.0f;
 		if(sprite->animation() == MOVE_LEFT)
 		{
@@ -459,6 +483,7 @@ void Player::update(int deltaTime)
 				jumpAngle = 0;
 				startY = posPlayer.y;
 				fallSpeed = 0.0f;
+				SoundManager::instance().playSound(SFX_STEP_VERTICAL);
 			}
 		}
 	}

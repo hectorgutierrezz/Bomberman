@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "BitmapText.h"
 #include "Game.h"
+#include "SoundManager.h"
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
@@ -211,6 +212,7 @@ void Scene::updatePowerUps(int deltaTime) {
       if (player != NULL && !player->isDying() && !player->isDead()) {
         if (powerUps[i]->checkCollision(player->getPosition(), player->getSize())) {
           powerUps[i]->applyEffect(player);
+          SoundManager::instance().playSound(SFX_POWERUP);
         }
       }
     }
@@ -484,12 +486,15 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   initStageIntroScreen();
   stageIntroTimer = 0;
   gameState = STAGE_INTRO;
+  SoundManager::instance().playMusic(MUSIC_WORLD_INTRO, false);
 }
 
 void Scene::nextLevel() {
   if (currentLevel < 5) {
+    SoundManager::instance().playMusic(MUSIC_STAGE_CLEAR, false);
     startLevel(currentLevel + 1, true);
   } else {
+    SoundManager::instance().playMusic(MUSIC_ENDING, true);
     gameState = WIN;
   }
 }
@@ -513,6 +518,11 @@ void Scene::onPlayerDeath() {
     explosions.clear();
     clearEnemies();
     gameState = GAME_OVER;
+    if (bTimeOver) {
+      SoundManager::instance().playMusic(MUSIC_TIME_OVER, false);
+    } else {
+      SoundManager::instance().playMusic(MUSIC_GAME_OVER, false);
+    }
   } else {
     // Netejar bombes, explosions i enemics
     for (size_t i = 0; i < bombs.size(); ++i) {
@@ -531,6 +541,7 @@ void Scene::onPlayerDeath() {
     initTryAgainScreen();
     tryAgainTimer = 0;
     gameState = TRY_AGAIN;
+    SoundManager::instance().playMusic(MUSIC_CONTINUE, true);
   }
 }
 
@@ -979,6 +990,7 @@ void Scene::init() {
   externalLives = 3;
   startLevel(1, false);
   gameState = MAIN_MENU;
+  SoundManager::instance().playMusic(MUSIC_TITLE, true);
   currentTime = 0.0f;
 
   // Inicialitzar recursos de la barra inferior de HUD estil Game Boy Color
@@ -1071,6 +1083,8 @@ void Scene::update(int deltaTime) {
 
   case PLAYING:
     if (isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_P)) {
+      SoundManager::instance().playSound(SFX_PAUSE);
+      SoundManager::instance().pauseMusic();
       gameState = PAUSED;
     } else {
       // Descomptar el temps del nivell només si el jugador no està morint
@@ -1166,6 +1180,7 @@ void Scene::update(int deltaTime) {
                       bombs[i]->getRadius(), map, texProgram);
             breakDestructibleTiles(exp);
             explosions.push_back(exp);
+            SoundManager::instance().playSound(SFX_BOMB_EXPLOSION);
 
             delete bombs[i];
             bombs[i] = NULL;
@@ -1289,9 +1304,12 @@ void Scene::update(int deltaTime) {
 
   case PAUSED:
     if (isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_P)) {
+      SoundManager::instance().playSound(SFX_PAUSE);
+      SoundManager::instance().resumeMusic();
       gameState = PLAYING;
     } else if (isKeyJustPressed(GLFW_KEY_M)) {
       gameState = MAIN_MENU;
+      SoundManager::instance().playMusic(MUSIC_TITLE, true);
     }
     break;
 
@@ -1301,6 +1319,7 @@ void Scene::update(int deltaTime) {
         isKeyJustPressed(GLFW_KEY_ESCAPE) ||
         isKeyJustPressed(GLFW_KEY_M)) {
       gameState = MAIN_MENU;
+      SoundManager::instance().playMusic(MUSIC_TITLE, true);
     }
     break;
 
@@ -1308,6 +1327,7 @@ void Scene::update(int deltaTime) {
     if (isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE) ||
         isKeyJustPressed(GLFW_KEY_SPACE)) {
       gameState = MAIN_MENU;
+      SoundManager::instance().playMusic(MUSIC_TITLE, true);
     }
     break;
 
@@ -1322,14 +1342,22 @@ void Scene::update(int deltaTime) {
     } else if (isKeyJustPressed(GLFW_KEY_ESCAPE) ||
                isKeyJustPressed(GLFW_KEY_M)) {
       gameState = MAIN_MENU;
+      SoundManager::instance().playMusic(MUSIC_TITLE, true);
     }
     break;
 
   case STAGE_INTRO:
     stageIntroTimer += deltaTime;
     if (isKeyJustPressed(GLFW_KEY_ENTER) ||
-        isKeyJustPressed(GLFW_KEY_ESCAPE)) {
+        isKeyJustPressed(GLFW_KEY_ESCAPE) ||
+        isKeyJustPressed(GLFW_KEY_SPACE) ||
+        isKeyJustPressed(GLFW_KEY_X) ||
+        isKeyJustPressed(GLFW_KEY_Z)) {
       gameState = PLAYING;
+      if (currentLevel == 5)
+        SoundManager::instance().playMusic(MUSIC_BOSS_BATTLE, true);
+      else
+        SoundManager::instance().playMusic(MUSIC_STAGE_FOREST, true);
     }
     break;
   }
@@ -2209,6 +2237,7 @@ void Scene::placeBomb() {
   bomb->setRadius(player->getBombRadius());
   bomb->updatePlayerOverlap(playerPos, player->getSize());
   bombs.push_back(bomb);
+  SoundManager::instance().playSound(SFX_BOMB_LAY);
 }
 
 void Scene::initHeartTexture() {

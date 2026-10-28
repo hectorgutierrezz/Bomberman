@@ -63,6 +63,7 @@ assets:
 	@if [ ! -e images ]; then ln -s $(SRC_DIR)/images images; fi
 	@if [ ! -e shaders ]; then ln -s $(SRC_DIR)/shaders shaders; fi
 	@if [ ! -e levels ]; then ln -s $(SRC_DIR)/levels levels; fi
+	@if [ ! -e sound ]; then ln -s $(SRC_DIR)/sound sound; fi
 
 $(TARGET): $(ALL_OBJS)
 	@echo "Enlazando ejecutable $@..."
@@ -96,7 +97,7 @@ run: all
 clean:
 	@echo "Limpiando archivos de compilacion..."
 	@rm -rf $(BUILD_DIR) $(TARGET) $(SRC_DIR)/$(TARGET)
-	@rm -f images shaders levels
+	@rm -f images shaders levels sound
 	@echo "Limpieza completada."
 
 help:

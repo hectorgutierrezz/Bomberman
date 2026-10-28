@@ -1,13 +1,20 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "Game.h"
+#include "SoundManager.h"
 
+
+Game::~Game()
+{
+	SoundManager::instance().free();
+}
 
 void Game::init()
 {
 	bPlay = true;
 	bMouseClick = false;
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	SoundManager::instance().init();
 	scene.init();
 }
 
