@@ -74,6 +74,11 @@ def build_level01():
     # Row 7: Top Sanctuary (Door at col 17, 18)
     for x in range(14, 22): grid[7][x] = '8'
 
+    # Blocs destructibles ('D')
+    grid[17][6] = 'D'; grid[17][29] = 'D'
+    grid[21][13] = 'D'; grid[21][23] = 'D'
+    grid[25][6] = 'D'; grid[25][18] = 'D'
+
     return grid
 
 def build_level02():
@@ -116,6 +121,11 @@ def build_level02():
 
     # Decorative pillars (columns 13, 22) below row 10
     grid[11][14] = '8'; grid[11][21] = '8'
+
+    # Blocs destructibles ('D')
+    grid[17][11] = 'D'; grid[17][21] = 'D'
+    grid[21][13] = 'D'; grid[21][23] = 'D'
+    grid[25][8] = 'D'; grid[25][20] = 'D'
 
     return grid
 
@@ -165,6 +175,11 @@ def build_level03():
     # Row 7: Top Golden Altar (Door at 17, 5)
     for x in range(14, 22): grid[7][x] = '4'
 
+    # Blocs destructibles ('D')
+    grid[17][7] = 'D'; grid[17][28] = 'D'
+    grid[21][11] = 'D'; grid[21][24] = 'D'
+    grid[25][6] = 'D'; grid[25][18] = 'D'
+
     return grid
 
 def build_level04():
@@ -204,70 +219,60 @@ def build_level04():
     # Tier 4 volcanic peak row 10
     for x in range(14, 22): grid[10][x] = '5'
 
+    # Blocs destructibles ('D')
+    grid[17][16] = 'D'; grid[17][20] = 'D'
+    grid[21][12] = 'D'; grid[21][25] = 'D'
+    grid[25][7] = 'D'; grid[25][26] = 'D'
+
     return grid
 
 def build_level05():
-    # World 5: Ice Fortress / Grand Finale
-    # Door: top throne (17, 5) resting on row 7
-    # Player spawn: (3, 25)
-    # Enemies: (6, 25) [walker, ground], (22, 21) [walker, row 22],
-    #          (8, 12) [vertical], (28, 12) [vertical], (17, 6) [static, top door]
-    grid = create_base('6', 'M')
-
-    # Stepping ledges row 24
-    for x in range(5, 9): grid[24][x] = 'A'
-    for x in range(26, 30): grid[24][x] = 'A'
-
-    # Tier 1 row 22
-    for x in range(8, 16): grid[22][x] = '6'
-    for x in range(19, 27): grid[22][x] = '6'
-
-    # Stepping row 20
-    for x in range(5, 9): grid[20][x] = 'A'
-    for x in range(26, 30): grid[20][x] = 'A'
-
-    # Tier 2 row 18
-    for x in range(4, 12): grid[18][x] = '6'
-    for x in range(14, 22): grid[18][x] = 'A' # Ice bridge
-    for x in range(24, 32): grid[18][x] = '6'
-
-    # Stepping row 16
-    for x in range(10, 15): grid[16][x] = 'A'
-    for x in range(21, 26): grid[16][x] = 'A'
-
-    # Tier 3 row 14
-    for x in range(6, 13): grid[14][x] = '6'
-    for x in range(23, 30): grid[14][x] = '6'
-
-    # Stepping row 12
-    for x in range(11, 15): grid[12][x] = 'A'
-    for x in range(21, 25): grid[12][x] = 'A'
-
-    # Tier 4 row 10
-    for x in range(8, 14): grid[10][x] = '6'
-    for x in range(22, 28): grid[10][x] = '6'
-
-    # Row 8: Throne approach
-    for x in range(12, 24): grid[8][x] = 'A'
-
-    # Row 7: Grand Ice Throne (Door at 17, 5; Guardian at 17, 6)
-    for x in range(14, 22): grid[7][x] = '6'
-
+    # World 5: Boss Arena - compact 24x12 horizontal arena
+    # Door: right side (20, 8) resting on row 10 floor
+    # Player spawn: (4, 9)
+    # Boss spawn: (17, 4)
+    W5 = 24
+    H5 = 12
+    grid = [[' ' for _ in range(W5)] for _ in range(H5)]
+    # Sostre
+    for y in range(2):
+        for x in range(W5):
+            grid[y][x] = '8'
+    # Murs laterals
+    for y in range(H5):
+        grid[y][0] = '8'
+        grid[y][1] = '8'
+        grid[y][W5-2] = '8'
+        grid[y][W5-1] = '8'
+    # Terra sòlid
+    for x in range(W5):
+        grid[10][x] = '6'
+        grid[11][x] = 'M'
+    # Plataformes
+    # Plataforma central superior a la fila 5
+    for x in range(9, 15): grid[5][x] = '6'
+    # Plataformes laterals a la fila 7
+    for x in range(4, 8): grid[7][x] = 'A'
+    for x in range(16, 20): grid[7][x] = 'A'
+    # Sense blocs destructibles a l'arena del cap
     return grid
 
 def main():
     levels = [
-        ('level01.txt', build_level01()),
-        ('level02.txt', build_level02()),
-        ('level03.txt', build_level03()),
-        ('level04.txt', build_level04()),
-        ('level05.txt', build_level05()),
+        ('level01.txt', build_level01(), 36, 28),
+        ('level02.txt', build_level02(), 36, 28),
+        ('level03.txt', build_level03(), 36, 28),
+        ('level04.txt', build_level04(), 36, 28),
+        ('level05.txt', build_level05(), 24, 12),
     ]
     
     out_dir = '2DGame/02-Bubble/02-Bubble/levels'
-    for filename, grid in levels:
+    for filename, grid, w, h in levels:
         path = os.path.join(out_dir, filename)
-        content = grid_to_txt(grid)
+        lines = ['TILEMAP', f'{w} {h}', '16 16', 'images/Map/world_tileset.png', '16 16']
+        for row in grid:
+            lines.append(''.join(row))
+        content = '\n'.join(lines) + '\n'
         with open(path, 'w', newline='\n') as f:
             f.write(content)
         print(f'Wrote {path} ({len(grid)} rows, {len(grid[0])} cols)')

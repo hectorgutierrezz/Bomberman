@@ -2,13 +2,19 @@
 
 Aquest document detalla l'estat actual del desenvolupament del videojoc **Pocket Bomberman** desenvolupat a `2DGame/`, contrastat punt per punt amb els requeriments de la guia de la pràctica (**FIB - Videojocs Curs 2026/27 Q1: Laboratori Exercici 2D**), incorporant l'estat real del codi a la branca `development` i el full de ruta amb les noves tasques i millores pendents.
 
-> **Actualització (28/10/2026):**
-> - **Fons temàtics autèntics per als 5 mons:** Integrats patrons de textura *seamless* fidels a la ROM de GBC (`images/Map/backgrounds/bg_world1.png` a `bg_world5.png`) renderitzats al darrere del TileMap i adaptats dinàmicament a la mida de cada nivell, eliminant el fons negre buit.
-> - **Il·lustracions pixel-art oficials:** Afegides a la pantalla d'inici de nivell (`STAGE_INTRO`) les escenes il·lustrades de 128x96 px per a cadascun dels 5 mons (`images/Map/illustrations/world1_art.png` a `world5_art.png`).
-> - **Ajust mil·limètric de càmera:** Límit mínim de càmera ajustat a `(SCREEN_X, SCREEN_Y) = (32, 16)`, eliminant qualsevol desplaçament al buit negre exterior quan Bomberman s'apropa a la paret esquerra o superior.
-> - **Motor d'àudio integrat (100% completat):** Implementat [`SoundManager`](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/SoundManager.h) amb `miniaudio.h`, compatibilitat amb WSL2/PulseAudio (`/mnt/wslg/PulseServer`), 9 pistes BGM oficials de Pocket Bomberman i 7 efectes SFX (explosions reforçades, passos suaus mitjançant script de normalització `scratch/adjust_steps.py`).
-> - **Correcció de col·lisions:** Solucionat el bug de travessament de blocs destructibles per l'esquerra a `Player.cpp`.
-> - **Verificació de compilació:** 0 errors tant a Linux (`make -C 2DGame/02-Bubble all`) com a Windows (`Release|Win32` a MSBuild v142).
+> **Actualització (31/10/2026):**
+> - **Cap Final GBC Autèntic i Nivell 5 Completat:**
+>   - **Sprite i textura oficial de 32x32 px:** Integrada la gòrgola demoníaca de *Pocket Bomberman* GBC a [`images/boss.png`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/images/boss.png) amb filtratge `GL_NEAREST` pixel-perfect i `GL_CLAMP_TO_EDGE`, mantenint les proporcions idònies respecte a Bomberman (16x16) i a l'arena de combat.
+>   - **Arena de combat compacta i neta (24x12 rajoles):** Reestructurat [`levels/level05.txt`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/levels/level05.txt) com una arena de combat neta (384x192 px) sense blocs destructibles `D`, amb plataformes sòlides equilibrades per al duel.
+>   - **Mecàniques de combat i cicles d'IA:**
+>     - Persecució 2D suau amb aleteig i levitació (`speedX = 0.65f`, `speedY = 0.45f`, significativament més lent que Bomberman a 1.35f per permetre maniobres).
+>     - Cicle de combat calibrat: 3s de persecució (`BOSS_CHASE`) $\to$ atac de raig (`BOSS_SHOOT`) o invocació (`BOSS_SUMMON`) $\to$ 1s de pausa/descans (`BOSS_PAUSE`).
+>     - **Tret de raigs energètics dirigits:** Dispara projectils d'energia dirigits directament cap a la posició del jugador (a mig camí de la persecució i en finalitzar-la), amb detecció de col·lisió contra parets i dany a Bomberman.
+>     - **Invocació ocasional d'esbirros:** Cada 15 segons, el cap pot invocar enemics base (`ENEMY_HORIZONTAL` o `ENEMY_VERTICAL`, limitats a un màxim de 2 simultanis).
+>     - **Seguretat d'invulnerabilitat:** Quan el cap rep dany per una bomba i parpelleja invulnerable (1,5s), el contacte directe amb Bomberman **no** li resta vida, protegint el jugador de morts injustes immediatament després d'encertar un atac.
+>     - **HUD i Mort:** Indicador dinàmic de vides del cap (`B3` $\to$ `B2` $\to$ `B1` $\to$ `00`), múltiples explosions consecutives en ser derrotat i obertura de la porta cap a la victòria final (`WIN`).
+> - **Actualització anterior (28/10/2026):** Fons temàtics autèntics per als 5 mons, il·lustracions pixel-art oficials, ajust mil·limètric de càmera, motor d'àudio integrat amb miniaudio.h (BGM/SFX).
+> - **Verificació de compilació:** 0 errors i 0 avisos a Linux (`make -C 2DGame/02-Bubble all`).
 
 ---
 
@@ -30,7 +36,7 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 | **8** | **Tiles destructibles (arbustos/blocs) que poden deixar anar objectes** | **Completat** | 100% | El caràcter `D` identifica blocs destructibles als cinc nivells. Les explosions s'aturen en arribar-hi, eliminen el bloc i regeneren la malla de [TileMap](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/TileMap.h); en trencar-lo, apareix un power-up. |
 | **9** | **Quatre objectes (com a mínim ‘Bomb Up’ i ‘Fire Up’)** | **Completat** | 100% | Les entitats recollibles són `Bomb Up`, `Fire Up`, cor i patins. Cada bloc trencat genera un tipus en rotació; recollir-lo aplica l'efecte al jugador. **Escala reajustada a 16x16 px**, encaixant perfectament a la casella del tile i proporcional a Bomberman i als enemics. |
 | **10** | **Temps límit per passar-se cada nivell** | **Completat** | 100% | Temporitzador enrere de 120s (2 min) per nivell. Si s'esgota, pantalla de *Time Over* amb sprite autèntic de Bomberman marejat. |
-| **11** | **Boss final al nivell 5** | **Pendent** | 0% | El nivell 5 disposa d'spawn i enemics, però falta programar el cap final (múltiples punts de vida, sprite gran i patró d'atac). |
+| **11** | **Boss final al nivell 5** | **Completat** | 100% | **Dissenyat i implementat el Cap Final autèntic de Pocket Bomberman GBC a [`Boss.h`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Boss.h) / [`Boss.cpp`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Boss.cpp) i l'arena de combat compacta de 24x12 a [`level05.txt`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/levels/level05.txt).**<br>- **Sprite fidel de 32x32:** Cap gòrgola demoníaca oficial de Game Boy Color a `images/boss.png` amb animacions d'aleteig, atac i dany/derrota.<br>- **3 vides i invulnerabilitat segura:** Rep dany per explosions de bombes amb parpelleig; mentre és invulnerable, el contacte directe no danya Bomberman.<br>- **Persecució dinàmica i pauses:** Moviment aeri suau (3s de persecució i 1s de pausa) a velocitat inferior al jugador per permetre maniobres i trampes de bombes.<br>- **Atacs a distància i invocació:** Dispara raigs energètics dirigits cap a Bomberman i invoca esbirros bàsics de suport cada 15s.<br>- **Integració a l'HUD:** Indicador dinàmic de vides del cap (`B3` $\to$ `B2` $\to$ `B1` $\to$ `00`).<br>- **Transició i victòria:** En ser derrotat genera una seqüència d'explosions consecutives i obre la porta final cap a la pantalla de victòria (`WIN`). |
 | **12** | **Interfície gràfica (HUD) amb dades mínimes requerides** | **Completat** | 100% | **Barra inferior fidel a Pocket Bomberman de Game Boy Color:** Franja sòlida pastel/rosada a la part inferior (`CAM_VIEW_W = 208px`) amb vora fosca superior.<br>- **Temps restant:** Icona de cronòmetre (8x8) + `MM:SS` (vermell d'alerta si <= 30s).<br>- **Enemics restants / Porta:** Icona de porta + comptador `02` (verd quan s'obre la porta).<br>- **Estadi / Target:** Indicador `T1`..`T5` idèntic a la ROM original.<br>- **Mida d'explosions:** Icona de foc + radi actual de bomba (power-up *Fire Up*).<br>- **Bombes simultànies:** Icona de bomba GBC + capacitat màxima de bombes (power-up *Bomb Up*).<br>- **Vides del nivell (cors):** Icona de cor pixel-art + comptador de vides de nivell (sempre visible: `1` de base, augmentable amb power-ups de cor).<br>- **Vides globals:** Icona oficial de la cara de Bomberman + comptador de vides globals (3, 2, 1) situada a l'extrem dret fidel a la ROM de GBC. |
 | **13** | **Tecles de truc (Cheats de correcció)** | **Completat** | 95% | La pantalla **TRUCS**, separada de les instruccions i accessible des del menú principal, mostra els codis disponibles durant la partida: **`G`** activa/desactiva la invulnerabilitat; **`K`** elimina els enemics i obre la porta; **`H`** afegeix un cor; **`B`** augmenta la capacitat de bombes; **`F`** augmenta el radi de l'explosió; **`S`** augmenta la velocitat; **`N`** passa al nivell següent; **`1`–`5`** seleccionen directament un nivell. (`P` i `ESC` posen el joc en pausa.) |
 
@@ -96,9 +102,19 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
   - Identificació i destrucció de rajoles `D`, amb reconstrucció de la malla després de cada explosió.
 - [BitmapText.h](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/BitmapText.h) / [BitmapText.cpp](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/BitmapText.cpp):
   - Renderització de text retro amb font pixel-art (inclosos caràcters especials com `+` i `:`).
+- [Boss.h](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Boss.h) / [Boss.cpp](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Boss.cpp):
+  - Entitat del Cap Final (Gòrgola Demoníaca de 32x32 px) del Nivell 5.
+  - Màquina d'estats: `BOSS_IDLE`, `BOSS_CHASE`, `BOSS_PAUSE`, `BOSS_SHOOT`, `BOSS_SUMMON`, `BOSS_HURT`, `BOSS_DYING`.
+  - Moviment flotant i persecució suau cap a Bomberman, amb orientació horitzontal i aleteig.
+  - Tret de raigs energètics dirigits cap al jugador (`BossRay`) amb col·lisió contra el mapa i dany al jugador.
+  - Invocació periòdica d'esbirros (`ENEMY_HORIZONTAL` o `ENEMY_VERTICAL`) cada 15s.
+  - Gestió de 3 vides, parpelleig d'invulnerabilitat (sense dany per contacte durant aquest període) i seqüència final d'explosions consecutives.
+- [SoundManager.h](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/SoundManager.h) / [SoundManager.cpp](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/SoundManager.cpp):
+  - Motor d'àudio autònom basat en `miniaudio.h` per a la reproducció simultània de BGM i SFX amb suport Linux/WSL2 (PulseAudio) i Windows.
 
 ### Recursos i Nivells
 - **`levels/`**: Fitxers [level01.txt](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/levels/level01.txt) fins a [level05.txt](file:///c:/Users/jan10/Desktop/VJ/2D/Bomberman/2DGame/02-Bubble/02-Bubble/levels/level05.txt).
+- **`images/boss.png`**: Textura d'alta fidelitat amb els sprites de la gòrgola demoníaca de 32x32 i els projectils/raigs de 16x16.
 - **`images/Menu/`**: Sprites oficials transparents (RGBA): `logo.png`, `cursor.png`, `copyright.png`, `hudson.png`, `pause.png`, `game_over.png`, `time_over.png`, `world_clear.png`, `knights_celebrate.png`.
 - **`images/Sprites/Original/`**: Rips complets de la ROM original de Pocket Bomberman (tilesets de mons 1-5, personatges, enemics i bosses).
 - **`images/door.png`**: Sprite de la porta oberta i tancada.
@@ -109,7 +125,7 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
 ## 3. Resum Gràfic de Progrés Global
 
 ```
-[██████████████████░░] 92% Progrés Total del Projecte (estimació actualitzada)
+[████████████████████] 98% Progrés Total del Projecte (estimació actualitzada)
 
   Part Bàsica (6 punts):
   - Pantalles del joc (Menú, Jugar, Inst., Trucs, Crèdits): 100% [██████████]
@@ -123,13 +139,13 @@ L'exercici s'avalua sobre 10 punts dividits en dues parts principals: **Part Bà
   - HUD complet estil GBC (Temps, Porta, T, F, B, Vides): 100% [██████████]
   - 4 Objectes (Bomb Up, Fire Up, Cor, Patins)       : 100% [██████████]
   - Blocs destructibles als mapes                   : 100% [██████████]
-  - Boss final al nivell 5                          :   0% [░░░░░░░░░░]
+  - Boss final al nivell 5                          : 100% [██████████]
 
   Polish (4 punts):
   - Tileset oficial GBC i estètica gràfica retro    : 100% [██████████]
   - Fons temàtics autèntics i il·lustracions de món : 100% [██████████]
-  - Interactivitat i animacions d'entitats / menús   :  85% [████████░░]
-  - Game Feeling i fidelitat a Pocket Bomberman      :  90% [█████████░]
+  - Interactivitat i animacions d'entitats / menús   :  90% [█████████░]
+  - Game Feeling i fidelitat a Pocket Bomberman      :  95% [█████████░]
   - So (Música BGM i Efectes SFX integrats)         : 100% [██████████]
 ```
 
@@ -182,8 +198,8 @@ A continuació es detallen les tasques prioritàries pendents per completar el p
 ### 4.4. Mecàniques Fonamentals del Joc (Part Bàsica)
 6. **(COMPLETAT) Blocs destructibles i power-ups:**
    - Rajoles `D` als nivells, destrucció per explosió, actualització de malla i aparició rotativa dels quatre power-ups: `Bomb Up`, `Fire Up`, cor i patins. Mida reestructurada a escala nativa 16x16 px amb flotació suau de $\pm 1.5$ px i col·lisió precisa d'un bloc.
-7. **Boss Final al Nivell 5:**
-    - Dissenyar el cap final del món al nivell 5: sprite de grans dimensions de Pocket Bomberman, barra de vida / múltiples impactes i patrons d'atac propis.
+7. **(COMPLETAT) Boss Final al Nivell 5:**
+    - Dissenyat i implementat el Cap Final autèntic de Game Boy Color a [`Boss.h`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Boss.h) / [`Boss.cpp`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/Boss.cpp): 3 vides, sprite oficial de gòrgola demoníaca de 32x32 px a [`images/boss.png`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/images/boss.png), màquina d'estats (`BOSS_CHASE`, `BOSS_PAUSE`, `BOSS_SHOOT`, `BOSS_SUMMON`, `BOSS_HURT`, `BOSS_DYING`), tret de raigs energètics dirigits cap al jugador, convocatòria periòdica d'esbirros bàsics (cada 15s, màx. 2), col·lisions amb explosions, no-contacte letal durant la invulnerabilitat (1,5s de seguretat per al jugador) i obertura de la porta final de victòria en morir. Arena redissenyada a mida compacta de 24x12 rajoles (384x192 px) lliure de blocs destructibles a [`levels/level05.txt`](file:///home/toret/Desktop/Stuff/Bomberman/2DGame/02-Bubble/02-Bubble/levels/level05.txt).
 
 ### 4.5. Polish i Lliurament Final
 9. **(COMPLETAT) Motor d'Àudio Integral (BGM i SFX):**

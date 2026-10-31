@@ -2,6 +2,7 @@
 #define _SCENE_INCLUDE
 
 #include "Bomb.h"
+#include "Boss.h"
 #include "Door.h"
 #include "Enemy.h"
 #include "Explosion.h"
@@ -120,6 +121,7 @@ private:
   TileMap *map;
   Player *player;
   Door *door;
+  Boss *boss;
   std::vector<Enemy *> enemies;
   int currentLevel;
   int externalLives; // Contador extern (re-runs fins al Game Over)
@@ -240,6 +242,7 @@ private:
   Texture enemiesHUDTex;
   Sprite *enemiesHUDSprite;
   int lastDisplayedEnemies;
+  int lastDisplayedBossHealth;
 
   Texture stageHUDTex;
   Sprite *stageHUDSprite;

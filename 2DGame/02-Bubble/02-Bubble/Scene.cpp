@@ -63,6 +63,7 @@ Scene::Scene() {
   map = NULL;
   player = NULL;
   door = NULL;
+  boss = NULL;
   currentLevel = 1;
   logoSprite = NULL;
   copyrightSprite = NULL;
@@ -90,6 +91,7 @@ Scene::Scene() {
   livesHUDSprite = NULL;
   heartsHUDSprite = NULL;
   lastDisplayedEnemies = -1;
+  lastDisplayedBossHealth = -1;
   lastDisplayedSeconds = -1;
   lastDisplayedStage = -1;
   lastDisplayedRadius = -1;
@@ -124,6 +126,8 @@ Scene::~Scene() {
     delete player;
   if (door != NULL)
     delete door;
+  if (boss != NULL)
+    delete boss;
   freeMenuScreens();
   freeTryAgainScreen();
   freeStageIntroScreen();
@@ -284,12 +288,7 @@ void Scene::spawnEnemies() {
     specs.push_back({ENEMY_STATIC, 24, 25});      // Guardià sobre el terra
     break;
   default: // nivell 5
-    // Nivell 5: 5 enemics (màxim desafiament a la fortalesa final)
-    specs.push_back({ENEMY_HORIZONTAL, 6, 25});   // Caminant al terra
-    specs.push_back({ENEMY_HORIZONTAL, 22, 21});  // Caminant plataforma fila 22
-    specs.push_back({ENEMY_VERTICAL, 8, 12});     // Volador torre esquerra
-    specs.push_back({ENEMY_VERTICAL, 28, 12});    // Volador torre dreta
-    specs.push_back({ENEMY_STATIC, 17, 6});       // Guardià estàtic davant la porta final a dalt
+    // Nivell 5: Arena del Cap Final. El Boss s'encarrega d'invocar els seus propis sequaços.
     break;
   }
 
@@ -309,6 +308,8 @@ int Scene::countAliveEnemies() const {
     if (enemies[i] != NULL && enemies[i]->isAlive())
       ++n;
   }
+  if (boss != NULL && boss->isAlive())
+    ++n;
   return n;
 }
 
@@ -410,6 +411,7 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   levelTimeLeft = 120000; // 2 minuts (120 segons) per nivell
   lastDisplayedSeconds = -1;
   lastDisplayedEnemies = -1;
+  lastDisplayedBossHealth = -1;
   lastDisplayedStage = -1;
   lastDisplayedRadius = -1;
   lastDisplayedMaxBombs = -1;
@@ -464,12 +466,15 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   if (spawnTileY < 1)
     spawnTileY = 1;
 
-  // Configuració de la porta segons el nivell (Nivells 1, 3 i 5 a dalt; 2 i 4 a baix)
+  // Configuració de la porta segons el nivell (Nivells 1 i 3 a dalt; 2 i 4 a baix; 5 a la dreta)
   int doorTileX = 30;
   int doorTileY = 24; // Per defecte al terra (fila 24 per a porta de 32px: 24*16 + 32 = 416)
-  if (currentLevel == 1 || currentLevel == 3 || currentLevel == 5) {
+  if (currentLevel == 1 || currentLevel == 3) {
     doorTileX = 17;
     doorTileY = 5; // Sobre la plataforma superior de la fila 7 (5*16 + 32 = 112 = 7*16)
+  } else if (currentLevel == 5) {
+    doorTileX = 20;
+    doorTileY = 8; // Sobre el terra de la fila 10 a l'arena de 12 files (8*16 + 32 = 160 = 10*16)
   }
 
   glm::vec2 spawnPos(INIT_PLAYER_X_TILES * tileSize, spawnTileY * tileSize);
@@ -508,6 +513,17 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   clearPowerUps();
   powerUpCycle = 0;
   // Els power-ups queden dins els blocs 'D' del nivell i surten en trencar-los.
+
+  if (boss != NULL) {
+    delete boss;
+    boss = NULL;
+  }
+  if (currentLevel == 5) {
+    boss = new Boss();
+    boss->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+    boss->setTileMap(map);
+    boss->setPosition(glm::vec2(17 * tileSize, 3 * tileSize));
+  }
 
   spawnEnemies();
   updateDoorFromEnemies();
@@ -1205,10 +1221,13 @@ void Scene::update(int deltaTime) {
         showGodModeMessage(player->isGodMode());
       }
       if (isKeyJustPressed(GLFW_KEY_K)) {
-        // Cheat: elimina tots els enemics i obre la porta
+        // Cheat: elimina tots els enemics i el Boss, i obre la porta
         for (size_t i = 0; i < enemies.size(); ++i) {
           if (enemies[i] != NULL && enemies[i]->isAlive())
             enemies[i]->kill();
+        }
+        if (boss != NULL && boss->isAlive()) {
+          boss->kill();
         }
         if (door != NULL) {
           if (!door->isOpen())
@@ -1302,6 +1321,13 @@ void Scene::update(int deltaTime) {
             }
           }
 
+          // Col·lisió amb el Boss: l'explosió li resta 1 vida si no és invulnerable
+          if (boss != NULL && boss->isAlive() && !boss->isInvulnerable()) {
+            if (explosions[i]->checkCollision(boss->getPosition(), boss->getSize())) {
+              boss->hit();
+            }
+          }
+
           if (!explosions[i]->isActive()) {
             delete explosions[i];
             explosions[i] = NULL;
@@ -1318,8 +1344,34 @@ void Scene::update(int deltaTime) {
           ++it;
       }
 
-      // 3. Actualitzar enemics i estat de la porta
+      // 3. Actualitzar enemics, Boss i estat de la porta
       updateEnemies(deltaTime);
+
+      if (boss != NULL) {
+        boss->update(deltaTime, player->getPosition());
+
+        // Invocació de sequaços pel Boss
+        if (boss->shouldSpawnMinion()) {
+          if (countAliveEnemies() < 3) {
+            Enemy *minion = new Enemy();
+            minion->init(boss->getMinionType(), glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+            minion->setTileMap(map);
+            minion->setBombs(&bombs);
+            minion->setPosition(boss->getMinionSpawnPos());
+            enemies.push_back(minion);
+          }
+          boss->clearMinionTrigger();
+        }
+
+        // Explosions secundàries en morir el Boss
+        if (boss->shouldSpawnExplosion()) {
+          Explosion *exp = new Explosion();
+          exp->init(boss->getExplosionPos(), glm::ivec2(SCREEN_X, SCREEN_Y), 1, map, texProgram);
+          breakDestructibleTiles(exp);
+          explosions.push_back(exp);
+          boss->clearExplosionTrigger();
+        }
+      }
 
       // 4. Contacte enemic ↔ jugador (dany al sistema de vides)
       if (!player->isDying() && !player->isDead() && !player->isInvulnerable()) {
@@ -1331,6 +1383,17 @@ void Scene::update(int deltaTime) {
             break;
           }
         }
+
+        // Contacte directe Boss ↔ jugador
+        if (boss != NULL && boss->isAlive() && !boss->isInvulnerable() &&
+            boss->checkCollision(player->getPosition(), player->getSize())) {
+          player->hit();
+        }
+      }
+
+      // Impacte de projectils del Boss ↔ jugador
+      if (boss != NULL) {
+        boss->checkProjectilesPlayerCollision(player);
       }
 
       // 5. Actualitzar power-ups (animació de flotació i recol·lecció pel jugador)
@@ -1483,6 +1546,8 @@ void Scene::render() {
     renderExplosions();
     renderPowerUps();
     renderEnemies();
+    if (boss != NULL)
+      boss->render();
     player->render();
     renderHUD();
     break;
@@ -1499,6 +1564,8 @@ void Scene::render() {
     renderExplosions();
     renderPowerUps();
     renderEnemies();
+    if (boss != NULL)
+      boss->render();
     player->render();
     texProgram.setUniformMatrix4f("projection", screenProjection);
     renderPauseOverlay();
@@ -2014,8 +2081,10 @@ void Scene::updateLevelHUD() {
 
 void Scene::updateEnemiesHUD() {
   int count = countAliveEnemies();
-  if (count != lastDisplayedEnemies) {
+  int currentBossHp = (currentLevel == 5 && boss != NULL) ? boss->getHealth() : -1;
+  if (count != lastDisplayedEnemies || currentBossHp != lastDisplayedBossHealth) {
     lastDisplayedEnemies = count;
+    lastDisplayedBossHealth = currentBossHp;
     if (enemiesHUDSprite != NULL) {
       delete enemiesHUDSprite;
       enemiesHUDSprite = NULL;
@@ -2023,7 +2092,11 @@ void Scene::updateEnemiesHUD() {
     enemiesHUDTex.free();
 
     char buf[32];
-    snprintf(buf, sizeof(buf), "%02d", count);
+    if (currentLevel == 5 && boss != NULL && boss->isAlive()) {
+      snprintf(buf, sizeof(buf), "B%d", boss->getHealth());
+    } else {
+      snprintf(buf, sizeof(buf), "%02d", count);
+    }
     if (BitmapText::createTexture(enemiesHUDTex, buf, 1)) {
       enemiesHUDSprite = Sprite::createSprite(
           glm::vec2(float(enemiesHUDTex.width()), float(enemiesHUDTex.height())),
