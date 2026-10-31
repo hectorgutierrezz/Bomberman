@@ -4,8 +4,8 @@
 
 CXX      ?= g++
 CC       ?= gcc
-CXXFLAGS ?= -std=c++11 -Wall -Wextra -O2 -DGLEW_NO_GLU
-CFLAGS   ?= -Wall -Wextra -O2 -DGLEW_NO_GLU
+CXXFLAGS ?= -std=c++11 -Wall -Wextra -O2 -g -DGLEW_NO_GLU -MMD -MP
+CFLAGS   ?= -Wall -Wextra -O2 -g -DGLEW_NO_GLU -MMD -MP
 
 # Directorios relativos
 SRC_DIR   := 02-Bubble
@@ -63,6 +63,7 @@ assets:
 	@if [ ! -e images ]; then ln -s $(SRC_DIR)/images images; fi
 	@if [ ! -e shaders ]; then ln -s $(SRC_DIR)/shaders shaders; fi
 	@if [ ! -e levels ]; then ln -s $(SRC_DIR)/levels levels; fi
+	@if [ ! -e sound ]; then ln -s $(SRC_DIR)/sound sound; fi
 
 $(TARGET): $(ALL_OBJS)
 	@echo "Enlazando ejecutable $@..."
@@ -87,6 +88,8 @@ $(BUILD_DIR)/glew.o: $(GLEW_SRC) | $(BUILD_DIR)
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
+-include $(wildcard $(BUILD_DIR)/*.d)
+
 run: all
 	@echo "Iniciando $(TARGET)..."
 	./$(TARGET)
@@ -94,7 +97,7 @@ run: all
 clean:
 	@echo "Limpiando archivos de compilacion..."
 	@rm -rf $(BUILD_DIR) $(TARGET) $(SRC_DIR)/$(TARGET)
-	@rm -f images shaders levels
+	@rm -f images shaders levels sound
 	@echo "Limpieza completada."
 
 help:

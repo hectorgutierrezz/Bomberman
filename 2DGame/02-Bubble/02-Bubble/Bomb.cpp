@@ -31,6 +31,7 @@ void Bomb::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	}
 
 	// 4 frames horizontals de 52x56 cadascun en una textura de 208x56
+	// Quad de 52x56 per mantenir el pixel-art 1:1 natiu (el gràfic de la bomba fa 16x19 px amb espurnes)
 	glm::vec2 sizeInUV = glm::vec2(52.f / 208.f, 56.f / 56.f); // 0.25f, 1.0f
 	sprite = Sprite::createSprite(glm::vec2(52.f, 56.f), sizeInUV, &bombTexture, &shaderProgram);
 	sprite->setNumberAnimations(1);
@@ -46,8 +47,10 @@ void Bomb::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	playerInside = true;
 	fuseTime = 2200.f;
 
-	// Centrar bomba en bloc de 32x32: la bomba fa 18x21 px centrada a (28, 39) al quad de 52x56
-	glm::vec2 quadOffset = glm::vec2(16.f - 28.f, 32.f - 39.f);
+	// Dins la textura de 52x56, la bomba és a x=[20..35] (centre 27.5) i y=[20..38] (base a fila 38).
+	// Perquè la base reposi exactament sobre la superfície del terra (y + 16) i centrada al tile de 16x16 (x + 8):
+	// quadOffset.x = 8 - 27.5 = -19.5f; quadOffset.y = 16 - 38 = -22.f
+	glm::vec2 quadOffset = glm::vec2(-19.5f, -22.f);
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + position.x + quadOffset.x), float(tileMapDispl.y + position.y + quadOffset.y)));
 }
 
@@ -56,7 +59,7 @@ void Bomb::setPosition(const glm::vec2 &pos)
 	position = pos;
 	if(sprite != NULL)
 	{
-		glm::vec2 quadOffset = glm::vec2(16.f - 28.f, 32.f - 39.f);
+		glm::vec2 quadOffset = glm::vec2(-19.5f, -22.f);
 		sprite->setPosition(glm::vec2(float(tileMapDispl.x + position.x + quadOffset.x), float(tileMapDispl.y + position.y + quadOffset.y)));
 	}
 }
@@ -91,17 +94,17 @@ void Bomb::explode()
 bool Bomb::checkOverlap(const glm::ivec2 &pPos, const glm::ivec2 &pSize) const
 {
 	int bLeft = int(position.x);
-	int bRight = bLeft + 32;
+	int bRight = bLeft + 16;
 	int bTop = int(position.y);
-	int bBottom = bTop + 32;
+	int bBottom = bTop + 16;
 
 	int pLeft = pPos.x;
 	int pRight = pPos.x + pSize.x;
 	int pTop = pPos.y;
 	int pBottom = pPos.y + pSize.y;
 
-	bool overlapX = (pRight > bLeft + 2) && (pLeft < bRight - 2);
-	bool overlapY = (pBottom > bTop + 2) && (pTop < bBottom - 2);
+	bool overlapX = (pRight > bLeft + 1) && (pLeft < bRight - 1);
+	bool overlapY = (pBottom > bTop + 1) && (pTop < bBottom - 1);
 
 	return overlapX && overlapY;
 }
@@ -123,7 +126,7 @@ bool Bomb::collisionDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *pos
 		return false;
 
 	int bLeft = int(position.x);
-	int bRight = bLeft + 32;
+	int bRight = bLeft + 16;
 	int bTop = int(position.y);
 
 	int pLeft = pos.x;
@@ -131,9 +134,9 @@ bool Bomb::collisionDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *pos
 	int pBottom = pos.y + size.y;
 
 	// Solapament horitzontal amb marge
-	bool overlapX = (pRight > bLeft + 4) && (pLeft < bRight - 4);
+	bool overlapX = (pRight > bLeft + 2) && (pLeft < bRight - 2);
 	// El jugador cau o reposa sobre la cara superior
-	if(overlapX && pBottom >= bTop && pBottom <= bTop + 10)
+	if(overlapX && pBottom >= bTop && pBottom <= bTop + 8)
 	{
 		*posY = bTop - size.y;
 		return true;
@@ -146,16 +149,16 @@ bool Bomb::collisionLeft(const glm::ivec2 &pos, const glm::ivec2 &size) const
 	if(!isSolidForPlayer())
 		return false;
 
-	int bRight = int(position.x) + 32;
+	int bRight = int(position.x) + 16;
 	int bTop = int(position.y);
-	int bBottom = bTop + 32;
+	int bBottom = bTop + 16;
 
 	int pLeft = pos.x;
 	int pTop = pos.y;
 	int pBottom = pTop + size.y;
 
-	bool overlapY = (pBottom > bTop + 4) && (pTop < bBottom - 4);
-	if(overlapY && pLeft <= bRight && pLeft >= bRight - 4)
+	bool overlapY = (pBottom > bTop + 2) && (pTop < bBottom - 2);
+	if(overlapY && pLeft <= bRight && pLeft >= bRight - 3)
 	{
 		return true;
 	}
@@ -169,14 +172,14 @@ bool Bomb::collisionRight(const glm::ivec2 &pos, const glm::ivec2 &size) const
 
 	int bLeft = int(position.x);
 	int bTop = int(position.y);
-	int bBottom = bTop + 32;
+	int bBottom = bTop + 16;
 
 	int pRight = pos.x + size.x;
 	int pTop = pos.y;
 	int pBottom = pTop + size.y;
 
-	bool overlapY = (pBottom > bTop + 4) && (pTop < bBottom - 4);
-	if(overlapY && pRight >= bLeft && pRight <= bLeft + 4)
+	bool overlapY = (pBottom > bTop + 2) && (pTop < bBottom - 2);
+	if(overlapY && pRight >= bLeft && pRight <= bLeft + 3)
 	{
 		return true;
 	}
