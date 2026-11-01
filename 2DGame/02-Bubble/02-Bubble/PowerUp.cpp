@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <random>
 
 Texture PowerUp::powerUpTexture;
 bool PowerUp::textureLoaded = false;
@@ -26,7 +27,7 @@ PowerUp::~PowerUp()
 	}
 }
 
-void PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
+bool PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 {
 	tileMapDispl = tileMapPos;
 	if(!textureLoaded)
@@ -34,6 +35,7 @@ void PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 		if(!powerUpTexture.loadFromFile("images/powerups.png", TEXTURE_PIXEL_FORMAT_RGBA))
 		{
 			std::cerr << "Error loading images/powerups.png" << std::endl;
+			return false;
 		}
 		powerUpTexture.setMinFilter(GL_NEAREST);
 		powerUpTexture.setMagFilter(GL_NEAREST);
@@ -56,6 +58,7 @@ void PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 	sprite->changeAnimation(int(type));
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + position.x), float(tileMapDispl.y + position.y)));
+	return true;
 }
 
 void PowerUp::update(int deltaTime)
@@ -131,4 +134,21 @@ const char *PowerUp::getTypeName(PowerUpType type)
 	case POWERUP_SKATES:  return "SKATES";
 	}
 	return "UNKNOWN";
+}
+
+bool PowerUp::chooseRandomDrop(float probability, PowerUpType &type)
+{
+	if(!(probability > 0.f))
+		return false;
+	if(probability > 1.f)
+		probability = 1.f;
+
+	static std::mt19937 randomEngine(std::random_device{}());
+	std::bernoulli_distribution drop(probability);
+	if(!drop(randomEngine))
+		return false;
+
+	std::uniform_int_distribution<int> randomType(POWERUP_BOMB_UP, POWERUP_SKATES);
+	type = PowerUpType(randomType(randomEngine));
+	return true;
 }

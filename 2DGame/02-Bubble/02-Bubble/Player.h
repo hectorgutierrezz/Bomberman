@@ -61,6 +61,10 @@ public:
 	bool isDead() const { return bDead; }
 	void startDying();
 
+	bool isJumping() const { return bJumping; }
+	float getFallSpeed() const { return fallSpeed; }
+	bool isOnGround() const { return !bJumping && fallSpeed == 0.0f; }
+
 	// Retorna true si el comptador intern arriba a 0 (mort), false si sobreviu
 	bool hit();
 	

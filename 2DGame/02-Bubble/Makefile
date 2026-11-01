@@ -49,7 +49,7 @@ GLEW_OBJ  := $(BUILD_DIR)/glew.o
 # Todos los objetos
 ALL_OBJS := $(CPP_OBJS) $(SOIL_OBJS) $(GLEW_OBJ)
 
-.PHONY: all run clean help assets
+.PHONY: all run clean help assets test
 
 all: assets $(TARGET)
 	@echo "=================================================="
@@ -57,6 +57,17 @@ all: assets $(TARGET)
 	@echo " Ejecutable: ./$(TARGET)"
 	@echo " Ejecutar con: make run"
 	@echo "=================================================="
+
+TEST_TARGET := test_features
+TEST_SRC    := ../../tests/test_features.cpp
+TEST_OBJS   := $(filter-out $(BUILD_DIR)/game_main.o,$(ALL_OBJS))
+
+test: assets $(TARGET)
+	@echo "Compilando tests..."
+	@$(CXX) $(CXXFLAGS) $(INCLUDES) $(TEST_SRC) $(TEST_OBJS) $(LIBS) -o $(TEST_TARGET)
+	@echo "Ejecutando tests de funcionalidades..."
+	@./$(TEST_TARGET)
+	@rm -f $(TEST_TARGET)
 
 # Enlaces a recursos en 2DGame/02-Bubble para que se puedan cargar directamente desde aquí
 assets:

@@ -8,6 +8,7 @@
 #include "Explosion.h"
 #include "Player.h"
 #include "PowerUp.h"
+#include "SteppableBlock.h"
 #include "ShaderProgram.h"
 #include "TileMap.h"
 #include "Sprite.h"
@@ -63,8 +64,14 @@ public:
 
   // Power-ups API (accessible pel sistema de blocs destruïbles)
   PowerUp *spawnPowerUp(PowerUpType type, const glm::vec2 &pos);
-  PowerUp *tryDropPowerUp(const glm::vec2 &pos, float probability = 0.40f);
+  PowerUp *tryDropPowerUp(const glm::vec2 &pos, float probability = 0.50f);
   void clearPowerUps();
+
+  // Gestió de blocs que es trenquen en trepitjar-los (Steppable Blocks)
+  void initSteppableBlocks();
+  void updateSteppableBlocks(int deltaTime);
+  void clearSteppableBlocks();
+  const std::vector<SteppableBlock *> &getSteppableBlocks() const { return steppableBlocks; }
 
 private:
   void breakDestructibleTiles(Explosion *explosion);
@@ -210,6 +217,7 @@ private:
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;
   std::vector<PowerUp *> powerUps;
+  std::vector<SteppableBlock *> steppableBlocks;
   int powerUpCycle; // Rota Bomb/Fire/Heart/Skates en sortir dels blocs D
 
   // HUD: Barra inferior estil Game Boy Color (Pocket Bomberman)

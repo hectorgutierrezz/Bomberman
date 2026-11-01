@@ -22,7 +22,7 @@ public:
 	PowerUp(PowerUpType type, const glm::vec2 &pos);
 	~PowerUp();
 
-	void init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram);
+	bool init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram);
 	void update(int deltaTime);
 	void render();
 
@@ -34,6 +34,7 @@ public:
 	PowerUpType getType() const { return type; }
 	const glm::vec2 &getPosition() const { return position; }
 
+	static bool chooseRandomDrop(float probability, PowerUpType &type);
 	static const char *getTypeName(PowerUpType type);
 
 private:

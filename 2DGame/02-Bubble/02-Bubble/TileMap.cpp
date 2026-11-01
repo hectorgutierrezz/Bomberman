@@ -15,6 +15,30 @@ TileMap *TileMap::createTileMap(const string &levelFile, const glm::vec2 &minCoo
 	return map;
 }
 
+TileMap::TileMap()
+{
+	map = NULL;
+	nTiles = 0;
+	tileSize = 16;
+	blockSize = 16;
+	tilesheetSize = glm::ivec2(16, 16);
+	mapSize = glm::ivec2(0, 0);
+	tileTexSize = glm::vec2(1.f / 16.f, 1.f / 16.f);
+	storedMinCoords = glm::vec2(0.f);
+	shaderProgram = NULL;
+	vao = 0;
+	vbo = 0;
+}
+
+void TileMap::initForTest(int mapW, int mapH, int tSize)
+{
+	mapSize = glm::ivec2(mapW, mapH);
+	tileSize = tSize;
+	blockSize = tSize;
+	if (map != NULL) delete[] map;
+	map = new int[mapW * mapH];
+	for (int i = 0; i < mapW * mapH; ++i) map[i] = 0;
+}
 
 TileMap::TileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program)
 {
@@ -142,6 +166,8 @@ bool TileMap::loadLevel(const string &levelFile)
 			char c = (i < int(line.size())) ? line[i] : ' ';
 			if(c == ' ' || c == '0')
 				map[j*mapSize.x+i] = 0;
+			else if(c == 'C' || c == 'c' || c == 'E' || c == 'e' || c == 'S' || c == 's')
+				map[j*mapSize.x+i] = STEPPABLE_INTACT_TILE;
 			else if(c >= '1' && c <= '9')
 				map[j*mapSize.x+i] = c - '0';
 			else if(c >= 'A' && c <= 'Z')
@@ -295,8 +321,8 @@ bool TileMap::isTileJumpThrough(int tileX, int tileY) const
 	if(tileX < 0 || tileX >= mapSize.x || tileY < 0 || tileY >= mapSize.y)
 		return false;
 	int t = map[tileY * mapSize.x + tileX];
-	// 'A' (10) és la plataforma de pont que es pot travessar saltant des de sota
-	return (t == 10 || t == 11 || t == 12);
+	// 'A' (10) i 'B' (11) són les plataformes de pont que es poden travessar saltant des de sota
+	return (t == 10 || t == 11);
 }
 
 bool TileMap::isTileSolid(int tileX, int tileY) const
@@ -323,6 +349,35 @@ bool TileMap::isDestructibleTile(int tileX, int tileY) const
 bool TileMap::isDestructibleTileAt(const glm::ivec2 &pos) const
 {
 	return isDestructibleTile(pos.x / tileSize, pos.y / tileSize);
+}
+
+bool TileMap::isSteppableTile(int tileX, int tileY) const
+{
+	if(tileX < 0 || tileX >= mapSize.x || tileY < 0 || tileY >= mapSize.y)
+		return false;
+	int t = map[tileY * mapSize.x + tileX];
+	return (t == STEPPABLE_INTACT_TILE || t == STEPPABLE_CRACKED_TILE);
+}
+
+bool TileMap::isSteppableTileAt(const glm::ivec2 &pos) const
+{
+	return isSteppableTile(pos.x / tileSize, pos.y / tileSize);
+}
+
+int TileMap::getTile(int tileX, int tileY) const
+{
+	if(tileX < 0 || tileX >= mapSize.x || tileY < 0 || tileY >= mapSize.y)
+		return 0;
+	return map[tileY * mapSize.x + tileX];
+}
+
+void TileMap::setTile(int tileX, int tileY, int tileVal, bool rebuild)
+{
+	if(tileX < 0 || tileX >= mapSize.x || tileY < 0 || tileY >= mapSize.y)
+		return;
+	map[tileY * mapSize.x + tileX] = tileVal;
+	if(rebuild)
+		rebuildArrays();
 }
 
 bool TileMap::destroyTile(int tileX, int tileY, bool rebuild)

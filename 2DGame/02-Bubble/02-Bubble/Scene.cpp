@@ -151,6 +151,7 @@ Scene::~Scene() {
   explosions.clear();
   clearEnemies();
   clearPowerUps();
+  clearSteppableBlocks();
 }
 
 void Scene::clearEnemies() {
@@ -169,19 +170,67 @@ void Scene::clearPowerUps() {
   powerUps.clear();
 }
 
+void Scene::clearSteppableBlocks() {
+  for (size_t i = 0; i < steppableBlocks.size(); ++i) {
+    if (steppableBlocks[i] != NULL)
+      delete steppableBlocks[i];
+  }
+  steppableBlocks.clear();
+}
+
+void Scene::initSteppableBlocks() {
+  clearSteppableBlocks();
+  if (map == NULL)
+    return;
+
+  int tileSize = map->getTileSize();
+  int mapTilesX = map->getMapWidth() / tileSize;
+  int mapTilesY = map->getMapHeight() / tileSize;
+
+  for (int y = 0; y < mapTilesY; ++y) {
+    for (int x = 0; x < mapTilesX; ++x) {
+      if (map->isSteppableTile(x, y)) {
+        steppableBlocks.push_back(new SteppableBlock(x, y));
+      }
+    }
+  }
+}
+
+void Scene::updateSteppableBlocks(int deltaTime) {
+  if (map == NULL || player == NULL)
+    return;
+
+  bool playerOnGround = player->isOnGround();
+  bool anyChanged = false;
+
+  for (size_t i = 0; i < steppableBlocks.size(); ++i) {
+    if (steppableBlocks[i] != NULL) {
+      if (steppableBlocks[i]->update(deltaTime, player->getPosition(), player->getSize(), playerOnGround, map)) {
+        anyChanged = true;
+      }
+    }
+  }
+
+  if (anyChanged) {
+    map->rebuildMesh();
+  }
+}
+
 PowerUp *Scene::spawnPowerUp(PowerUpType type, const glm::vec2 &pos) {
   PowerUp *p = new PowerUp(type, pos);
-  p->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+  if (!p->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram)) {
+    delete p;
+    return NULL;
+  }
   powerUps.push_back(p);
   return p;
 }
 
 PowerUp *Scene::tryDropPowerUp(const glm::vec2 &pos, float probability) {
-  float roll = float(rand()) / float(RAND_MAX);
-  if (roll >= probability)
+  PowerUpType type;
+  if (!PowerUp::chooseRandomDrop(probability, type))
     return NULL;
-  int pick = rand() % 4;
-  return spawnPowerUp(PowerUpType(pick), pos);
+  return spawnPowerUp(type, pos);
 }
 
 void Scene::breakDestructibleTiles(Explosion *explosion) {
@@ -198,13 +247,13 @@ void Scene::breakDestructibleTiles(Explosion *explosion) {
     if (!map->isDestructibleTile(tileX, tileY))
       continue;
 
-    // El power-up queda amagat dins el bloc D i surt en trencar-lo
-    glm::vec2 dropPos(float(tileX * tileSize), float(tileY * tileSize));
+    // Cada bloc destruïble té una probabilitat independent del 50% de soltar un power-up aleatori
+    const int pickupOffset = (tileSize - 16) / 2;
+    glm::vec2 dropPos(float(tileX * tileSize + pickupOffset),
+                      float(tileY * tileSize + pickupOffset));
     if (map->destroyTile(tileX, tileY, false)) {
       anyBroken = true;
-      PowerUpType type = PowerUpType(powerUpCycle % 4);
-      powerUpCycle++;
-      spawnPowerUp(type, dropPos);
+      tryDropPowerUp(dropPos, 0.50f);
     }
   }
 
@@ -512,6 +561,7 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   explosions.clear();
   clearPowerUps();
   powerUpCycle = 0;
+  initSteppableBlocks();
   // Els power-ups queden dins els blocs 'D' del nivell i surten en trencar-los.
 
   if (boss != NULL) {
@@ -1396,10 +1446,13 @@ void Scene::update(int deltaTime) {
         boss->checkProjectilesPlayerCollision(player);
       }
 
-      // 5. Actualitzar power-ups (animació de flotació i recol·lecció pel jugador)
+      player->update(deltaTime);
+
+      // Check pickups after movement so collection uses the player's current position.
       updatePowerUps(deltaTime);
 
-      player->update(deltaTime);
+      // 6. Actualitzar blocs que es trenquen en trepitjar-los
+      updateSteppableBlocks(deltaTime);
 
       // Comprovar si l'animació de mort ha finalitzat per descomptar la vida general i reiniciar / Game Over
       if (player->isDead()) {

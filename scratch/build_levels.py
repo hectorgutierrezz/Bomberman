@@ -79,6 +79,11 @@ def build_level01():
     grid[21][13] = 'D'; grid[21][23] = 'D'
     grid[25][6] = 'D'; grid[25][18] = 'D'
 
+    # Blocs que es trenquen en trepitjar-los ('C')
+    grid[22][12] = 'C'; grid[22][13] = 'C'
+    grid[22][22] = 'C'; grid[22][23] = 'C'
+    grid[18][17] = 'C'; grid[18][18] = 'C'
+
     return grid
 
 def build_level02():
@@ -126,6 +131,10 @@ def build_level02():
     grid[17][11] = 'D'; grid[17][21] = 'D'
     grid[21][13] = 'D'; grid[21][23] = 'D'
     grid[25][8] = 'D'; grid[25][20] = 'D'
+
+    # Blocs que es trenquen en trepitjar-los ('C')
+    grid[22][13] = 'C'; grid[22][14] = 'C'
+    grid[16][17] = 'C'; grid[16][18] = 'C'
 
     return grid
 
@@ -180,6 +189,10 @@ def build_level03():
     grid[21][11] = 'D'; grid[21][24] = 'D'
     grid[25][6] = 'D'; grid[25][18] = 'D'
 
+    # Blocs que es trenquen en trepitjar-los ('C')
+    grid[22][11] = 'C'; grid[22][12] = 'C'
+    grid[18][17] = 'C'; grid[18][18] = 'C'
+
     return grid
 
 def build_level04():
@@ -223,6 +236,10 @@ def build_level04():
     grid[17][16] = 'D'; grid[17][20] = 'D'
     grid[21][12] = 'D'; grid[21][25] = 'D'
     grid[25][7] = 'D'; grid[25][26] = 'D'
+
+    # Blocs que es trenquen en trepitjar-los ('C')
+    grid[22][12] = 'C'; grid[22][13] = 'C'
+    grid[18][17] = 'C'; grid[18][18] = 'C'
 
     return grid
 

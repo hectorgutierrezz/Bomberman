@@ -21,11 +21,11 @@ images/Map/world_tileset.png
 88                                88
 88       AAAA         AAAA        88
 88     D                    D     88
-88  4444444  AAAAAAAAAA 44444444  88
+88  4444444  AAAACCAAAA 44444444  88
 88                                88
 88   AAAA                 AAAA    88
 88         D            D         88
-88      44444444    44444444      88
+88      444CC444    44444444      88
 88                                88
 88  AAAAA                 AAAAA   88
 88    D           D               88

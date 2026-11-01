@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <thread>
+#include <cstdlib>
+#include <ctime>
 #include "Game.h"
 
 
@@ -73,6 +75,9 @@ int main(void)
 	int fbWidth, fbHeight;
 	glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
 	glViewport(0, 0, fbWidth, fbHeight);
+
+	/* Init random seed */
+	srand((unsigned int)time(NULL));
 
 	/* Init step of the game loop */
 	Game::instance().init();

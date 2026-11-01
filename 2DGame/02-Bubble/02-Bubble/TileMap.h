@@ -16,12 +16,16 @@
 class TileMap
 {
 
-private:
-	TileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
-
 public:
+	TileMap();
+	TileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
+	void initForTest(int mapW, int mapH, int tSize = 16);
+
 	// Identificador del tile destruïble (caràcter 'D' als fitxers de nivell)
 	static const int DESTRUCTIBLE_TILE = 13;
+	// Identificadors del bloc que es trenca en trepitjar-lo (intacte i agrietat)
+	static const int STEPPABLE_INTACT_TILE = 14;
+	static const int STEPPABLE_CRACKED_TILE = 15;
 
 	// Tile maps can only be created inside an OpenGL context
 	static TileMap *createTileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
@@ -40,6 +44,10 @@ public:
 	bool isTileJumpThrough(int tileX, int tileY) const;
 	bool isDestructibleTile(int tileX, int tileY) const;
 	bool isDestructibleTileAt(const glm::ivec2 &pos) const;
+	bool isSteppableTile(int tileX, int tileY) const;
+	bool isSteppableTileAt(const glm::ivec2 &pos) const;
+	int getTile(int tileX, int tileY) const;
+	void setTile(int tileX, int tileY, int tileVal, bool rebuild = false);
 	// Destrueix un bloc D: el treu del mapa i regenera la malla. Retorna true si s'ha trencat.
 	bool destroyTile(int tileX, int tileY, bool rebuild = true);
 	void rebuildMesh();
