@@ -1231,18 +1231,14 @@ void Scene::update(int deltaTime) {
         levelTimeLeft -= deltaTime;
         if (levelTimeLeft <= 0) {
           levelTimeLeft = 0;
-          player->startDying();
+          if (!player->isGodMode())
+            player->startDying();
         }
       }
 
       // Tecles de drecera / debug per provar canvi de nivells
       if (isKeyJustPressed(GLFW_KEY_N)) {
         nextLevel();
-        break;
-      }
-      if (isKeyJustPressed(GLFW_KEY_P)) {
-        int prev = (currentLevel > 1) ? currentLevel - 1 : 1;
-        startLevel(prev, true);
         break;
       }
       if (isKeyJustPressed(GLFW_KEY_1)) {
