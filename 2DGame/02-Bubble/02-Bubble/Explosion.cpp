@@ -6,7 +6,7 @@ bool Explosion::textureLoaded = false;
 Explosion::Explosion()
 {
 	active = false;
-	lifetime = 600.f;
+	lifetime = 420.f;
 	tileMapDispl = glm::ivec2(0);
 	sprite = NULL;
 }
@@ -25,7 +25,7 @@ void Explosion::init(const glm::vec2 &centerPos, const glm::ivec2 &tileMapPos, i
 {
 	tileMapDispl = tileMapPos;
 	active = true;
-	lifetime = 600.f; // 6 frames a 10 fps = 600 ms
+	lifetime = 420.f; // 6 frames a 14 fps (~420 ms)
 
 	if(!textureLoaded)
 	{
@@ -75,7 +75,7 @@ void Explosion::init(const glm::vec2 &centerPos, const glm::ivec2 &tileMapPos, i
 
 	sprite = Sprite::createSprite(glm::vec2(32.f, 32.f), sizeInUV, &explosionTexture, &shaderProgram);
 	sprite->setNumberAnimations(1);
-	sprite->setAnimationSpeed(0, 10); // 10 fps
+	sprite->setAnimationSpeed(0, 14); // 14 fps perquè no quedin frames de fum invisibles al final
 	for(int k = 0; k < 6; ++k)
 	{
 		sprite->addKeyframe(0, glm::vec2(float(k) / 6.f, 0.f));
@@ -115,7 +115,8 @@ void Explosion::render()
 
 bool Explosion::checkCollision(const glm::ivec2 &targetPos, const glm::ivec2 &targetSize) const
 {
-	if(!active)
+	// Només fa mal durant els primers 240 ms (mentre la flama groga és viva; els últims 180 ms són només fum)
+	if(!active || lifetime < 180.f)
 		return false;
 
 	for(size_t i = 0; i < cells.size(); ++i)

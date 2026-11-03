@@ -33,6 +33,8 @@ Player::Player()
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
 	dropDownTimer = 0;
+	dropThroughTileY = -1;
+	dropCooldown = 0;
 	stepSoundTimer = 0;
 	godMode = false;
 	bDying = false;
@@ -60,6 +62,8 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
 	dropDownTimer = 0;
+	dropThroughTileY = -1;
+	dropCooldown = 0;
 	godMode = false;
 	if(sprite != NULL)
 	{
@@ -166,9 +170,7 @@ bool Player::isOnJumpThroughPlatform() const
 bool Player::stepFall(int step)
 {
 	bool onGround = false;
-	bool ignoreJT = (dropDownTimer > 0) ||
-	                Game::instance().getKey(GLFW_KEY_DOWN) ||
-	                Game::instance().getKey(GLFW_KEY_S);
+	int tileSize = (map != NULL) ? map->getTileSize() : 16;
 	glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
 	glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
 
@@ -176,6 +178,13 @@ bool Player::stepFall(int step)
 	{
 		posPlayer.y += 1;
 		colPos.y = posPlayer.y;
+		int footTileY = (colPos.y + colSize.y - 1) / tileSize;
+		if(dropThroughTileY >= 0 && footTileY > dropThroughTileY)
+		{
+			dropThroughTileY = -1;
+			dropDownTimer = 0;
+		}
+		bool ignoreJT = (dropDownTimer > 0) && (footTileY == dropThroughTileY);
 		int correctedY = colPos.y;
 		if(map != NULL && map->collisionMoveDown(colPos, colSize, &correctedY, ignoreJT))
 		{
@@ -258,16 +267,29 @@ void Player::update(int deltaTime)
 	if(dropDownTimer > 0)
 	{
 		dropDownTimer -= deltaTime;
-		if(dropDownTimer < 0)
+		if(dropDownTimer <= 0)
+		{
 			dropDownTimer = 0;
+			dropThroughTileY = -1;
+		}
+	}
+	if(dropCooldown > 0)
+	{
+		dropCooldown -= deltaTime;
+		if(dropCooldown < 0)
+			dropCooldown = 0;
 	}
 
-	// Baixar de les plataformes jump-through quan el jugador clica cap a baix (Fletxa avall o S)
-	if(!bJumping && isOnJumpThroughPlatform() && (Game::instance().getKey(GLFW_KEY_DOWN) || Game::instance().getKey(GLFW_KEY_S)))
+	// Baixar de les plataformes jump-through d'una en una amb gravetat suau quan clica Avall o S
+	if(!bJumping && fallSpeed == 0.0f && dropCooldown <= 0 && isOnJumpThroughPlatform() &&
+	   (Game::instance().getKey(GLFW_KEY_DOWN) || Game::instance().getKey(GLFW_KEY_S)))
 	{
-		dropDownTimer = 250;
-		posPlayer.y += 2;
-		fallSpeed = 2.0f;
+		int tileSize = (map != NULL) ? map->getTileSize() : 16;
+		dropThroughTileY = (posPlayer.y + PLAYER_HEIGHT) / tileSize;
+		dropDownTimer = 220;
+		dropCooldown = 320;
+		posPlayer.y += 1;
+		fallSpeed = 0.0f;
 	}
 
 	if(Game::instance().getKey(GLFW_KEY_LEFT) || Game::instance().getKey(GLFW_KEY_A))
@@ -438,9 +460,7 @@ void Player::update(int deltaTime)
 			}
 			else if(jumpAngle > 90)
 			{
-				bool ignoreJT = (dropDownTimer > 0) ||
-				                Game::instance().getKey(GLFW_KEY_DOWN) ||
-				                Game::instance().getKey(GLFW_KEY_S);
+				bool ignoreJT = false;
 				int correctedY = colPos.y;
 				bool hitGround = map->collisionMoveDown(colPos, colSize, &correctedY, ignoreJT);
 				if(hitGround)
@@ -534,6 +554,8 @@ void Player::respawn(const glm::vec2 &pos)
 	internalLives = 1;
 	fallSpeed = 0.0f;
 	dropDownTimer = 0;
+	dropThroughTileY = -1;
+	dropCooldown = 0;
 	moveAccumX = 0.0f;
 	setPosition(pos);
 	if(sprite != NULL)

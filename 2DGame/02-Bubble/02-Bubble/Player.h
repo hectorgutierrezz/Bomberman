@@ -85,6 +85,8 @@ private:
 	int invulnerableTime;
 	float fallSpeed;
 	int dropDownTimer;
+	int dropThroughTileY;
+	int dropCooldown;
 	int stepSoundTimer;
 	Texture spritesheet;
 	Sprite *sprite;
