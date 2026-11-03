@@ -3,31 +3,31 @@ TILEMAP
 16 16
 images/Map/world_tileset.png
 16 16
-888888888888888888888888888888888888
-888888888888888888888888888888888888
-88                                88
-88                                88
-88                                88
-88                                88
-88                                88
-88            44444444            88
-88          AAAAAAAAAAAA          88
-88                                88
-88      AAAAAA       AAAAAA       88
-88                                88
-88             444444             88
-88                                88
-88    444444           4444       88
-88                                88
-88       AAAA         AAAA        88
-88     D                    D     88
-88  4444444  AAAACCAAAA 44444444  88
-88                                88
-88   AAAA                 AAAA    88
-88         D            D         88
-88      444CC444    44444444      88
-88                                88
-88  AAAAA                 AAAAA   88
-88    D           D               88
-444444444444444444444444444444444444
-KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
+II22222222222222222222222222222222II
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+II                                II
+II                                II
+II                                II
+II                                II
+II        55       55     55      II
+II        LL     D LL     LL      II
+II5555    LLAA55555LL  555LL  5555II
+II        LL       LL     LL      II
+II    AAAALLAAAA   LLAAAA LL  AAAAII
+II    D   LL       LL     LLD     II
+II   5555 LLAAA5555LLAAAA   CCCC  II
+II        LL D     LL  D          II
+II    CCCCLLAAAA   LL55555  AAAA  II
+II               D LL             II
+II   AAAA  AAAAA55   AAAAA  555555II
+II    D5        LL                II
+II    55555 AAAALL       AAAA  AAAII
+II              55           55   II
+II55 AAAA  AAAA LL5555AAAAA  LLAAAII
+IILL    D      DLL          DLL   II
+IILL55555  5555555         555555 II
+II   D                            II
+II   55555   AAAA    555555       II
+II                                II
+II55555555555555555555555555555555II
+IILLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLII

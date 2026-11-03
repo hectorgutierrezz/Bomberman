@@ -148,7 +148,9 @@ bool PowerUp::chooseRandomDrop(float probability, PowerUpType &type)
 	if(!drop(randomEngine))
 		return false;
 
-	std::uniform_int_distribution<int> randomType(POWERUP_BOMB_UP, POWERUP_SKATES);
-	type = PowerUpType(randomType(randomEngine));
+	// Pesos segons l'ordre de PowerUpType:
+	// POWERUP_BOMB_UP (30%), POWERUP_FIRE_UP (30%), POWERUP_HEART (15%), POWERUP_SKATES (25%)
+	std::discrete_distribution<int> weightedType({30.0, 30.0, 15.0, 25.0});
+	type = PowerUpType(weightedType(randomEngine));
 	return true;
 }

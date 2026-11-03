@@ -3,15 +3,15 @@ TILEMAP
 16 16
 images/Map/world_tileset.png
 16 16
-888888888888888888888888
-888888888888888888888888
-88                    88
-88                    88
-88                    88
-88       666666       88
-88                    88
-88  AAAA        AAAA  88
-88                    88
-88                    88
-666666666666666666666666
-MMMMMMMMMMMMMMMMMMMMMMMM
+PP99999999999999999999PP
+PPPPPPPPPPPPPPPPPPPPPPPP
+PP                    PP
+PP                    PP
+PP      AAA  AAA      PP
+PP                    PP
+PP   AAAA      AAAA   PP
+PP                    PP
+PP        8888        PP
+PP                    PP
+PP88888888888888888888PP
+PPOOOOOOOOOOOOOOOOOOOOPP

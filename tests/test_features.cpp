@@ -141,9 +141,9 @@ void runSteppableBlockTests() {
 }
 
 void runPowerUpDropTests() {
-	std::cout << "[TEST] 2. Random Power-up Drop Probability & Uniform Distribution..." << std::endl;
+	std::cout << "[TEST] 2. Random Power-up Drop Probability & Weighted Distribution..." << std::endl;
 
-	const int TRIALS = 50000;
+	const int TRIALS = 60000;
 	int dropCount = 0;
 	std::map<int, int> typeCounts;
 
@@ -151,24 +151,25 @@ void runPowerUpDropTests() {
 	assert(!PowerUp::chooseRandomDrop(0.f, type));
 	assert(PowerUp::chooseRandomDrop(1.f, type));
 	for (int i = 0; i < TRIALS; ++i) {
-		if (PowerUp::chooseRandomDrop(0.50f, type)) {
+		if (PowerUp::chooseRandomDrop(0.30f, type)) {
 			dropCount++;
 			typeCounts[int(type)]++;
 		}
 	}
 
 	float dropRate = float(dropCount) / float(TRIALS);
-	std::cout << "  Drop rate over " << TRIALS << " trials: " << (dropRate * 100.0f) << "% (expected: 50.0%)" << std::endl;
-	assert(std::abs(dropRate - 0.50f) < 0.015f); // Within 1.5% of 50%
-	std::cout << "  ✓ 50% independent drop probability verified" << std::endl;
+	std::cout << "  Drop rate over " << TRIALS << " trials: " << (dropRate * 100.0f) << "% (expected: 30.0%)" << std::endl;
+	assert(std::abs(dropRate - 0.30f) < 0.015f); // Within 1.5% of 30%
+	std::cout << "  ✓ 30% independent drop probability verified" << std::endl;
 
+	const float expectedRates[4] = {0.30f, 0.30f, 0.15f, 0.25f};
 	for (int t = 0; t < 4; ++t) {
 		float typeRate = float(typeCounts[t]) / float(dropCount);
 		std::cout << "    Type " << t << " (" << PowerUp::getTypeName(PowerUpType(t)) << "): "
-		          << (typeRate * 100.0f) << "% (expected: 25.0%)" << std::endl;
-		assert(std::abs(typeRate - 0.25f) < 0.02f); // Within 2% of 25%
+		          << (typeRate * 100.0f) << "% (expected: " << (expectedRates[t] * 100.0f) << "%)" << std::endl;
+		assert(std::abs(typeRate - expectedRates[t]) < 0.02f); // Within 2% of expected weight
 	}
-	std::cout << "  ✓ Uniform 25% selection among all 4 supported power-ups verified" << std::endl;
+	std::cout << "  ✓ Weighted selection (30% Bomb, 30% Fire, 15% Heart, 25% Skates) verified" << std::endl;
 }
 
 void runPowerUpPickupTests() {

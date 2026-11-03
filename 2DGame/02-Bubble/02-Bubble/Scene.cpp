@@ -247,13 +247,13 @@ void Scene::breakDestructibleTiles(Explosion *explosion) {
     if (!map->isDestructibleTile(tileX, tileY))
       continue;
 
-    // Cada bloc destruïble té una probabilitat independent del 50% de soltar un power-up aleatori
+    // Cada bloc destruïble té una probabilitat independent del 30% de soltar un power-up ponderat
     const int pickupOffset = (tileSize - 16) / 2;
     glm::vec2 dropPos(float(tileX * tileSize + pickupOffset),
                       float(tileY * tileSize + pickupOffset));
     if (map->destroyTile(tileX, tileY, false)) {
       anyBroken = true;
-      tryDropPowerUp(dropPos, 0.50f);
+      tryDropPowerUp(dropPos, 0.30f);
     }
   }
 
@@ -312,29 +312,30 @@ void Scene::spawnEnemies() {
   std::vector<SpawnSpec> specs;
   switch (currentLevel) {
   case 1:
-    // Nivell 1: 2 enemics terrestres (nivell introductori, sense voladors ni explosius)
-    specs.push_back({ENEMY_HORIZONTAL, 11, 25});  // Patrulla sobre el terra
-    specs.push_back({ENEMY_HORIZONTAL, 22, 17});  // Patrulla plataforma fila 18
+    // Nivell 1 (Stage 1-1 / 1-3): 3 enemics terrestres a les terrasses del bosc
+    specs.push_back({ENEMY_HORIZONTAL, 13, 23});  // Patrulla terrassa baixa central (fila 24)
+    specs.push_back({ENEMY_HORIZONTAL, 9, 19});   // Patrulla terrassa esquerra (fila 20)
+    specs.push_back({ENEMY_HORIZONTAL, 27, 7});   // Patrulla dosser superior dret (fila 8)
     break;
   case 2:
-    // Nivell 2: 3 enemics (1 caminant i 2 voladors en corredors verticals)
-    specs.push_back({ENEMY_HORIZONTAL, 15, 21});  // Patrulla plataforma fila 22
-    specs.push_back({ENEMY_VERTICAL, 5, 14});      // Volador columna esquerra
-    specs.push_back({ENEMY_VERTICAL, 29, 14});     // Volador columna dreta
+    // Nivell 2 (Stage 2-1): 3 enemics (2 caminants de ruïnes i 1 volador al corredor esquerre)
+    specs.push_back({ENEMY_HORIZONTAL, 18, 21});  // Patrulla conca central (fila 22)
+    specs.push_back({ENEMY_VERTICAL, 5, 14});     // Volador al pou vertical esquerre
+    specs.push_back({ENEMY_HORIZONTAL, 21, 7});   // Patrulla passarel·la superior (fila 8)
     break;
   case 3:
-    // Nivell 3: 4 enemics (2 caminants, 1 volador i 1 globus estàtic)
-    specs.push_back({ENEMY_HORIZONTAL, 8, 25});   // Patrulla sobre el terra
-    specs.push_back({ENEMY_HORIZONTAL, 23, 21});  // Patrulla plataforma fila 22
-    specs.push_back({ENEMY_VERTICAL, 28, 14});    // Volador eix dret
-    specs.push_back({ENEMY_STATIC, 17, 11});      // Guardià estàtic al santuari superior
+    // Nivell 3 (Stage 3-1): 4 enemics a la torre vertical del temple daurat
+    specs.push_back({ENEMY_HORIZONTAL, 8, 25});   // Patrulla base del temple (fila 26)
+    specs.push_back({ENEMY_HORIZONTAL, 24, 23});  // Patrulla terrassa dreta (fila 24)
+    specs.push_back({ENEMY_VERTICAL, 4, 13});     // Volador a l'eix vertical esquerre
+    specs.push_back({ENEMY_STATIC, 16, 11});      // Guardià estàtic al xaft central (fila 12)
     break;
   case 4:
-    // Nivell 4: 4 enemics (voladors agressius i enemics terrestres)
-    specs.push_back({ENEMY_HORIZONTAL, 16, 21});  // Patrulla plataforma central
-    specs.push_back({ENEMY_VERTICAL, 6, 14});     // Volador eix esquerre
-    specs.push_back({ENEMY_VERTICAL, 29, 14});    // Volador eix dret
-    specs.push_back({ENEMY_STATIC, 24, 25});      // Guardià sobre el terra
+    // Nivell 4 (Stage 4-1 / 5-1): 4 enemics a la fortalesa subterrània
+    specs.push_back({ENEMY_HORIZONTAL, 18, 17});  // Patrulla sostre de la cambra central (fila 18)
+    specs.push_back({ENEMY_VERTICAL, 3, 11});     // Volador corredor esquerre
+    specs.push_back({ENEMY_VERTICAL, 32, 11});    // Volador corredor dret
+    specs.push_back({ENEMY_STATIC, 25, 21});      // Guardià al passadís d'àmfores (fila 22)
     break;
   default: // nivell 5
     // Nivell 5: Arena del Cap Final. El Boss s'encarrega d'invocar els seus propis sequaços.
@@ -515,15 +516,24 @@ void Scene::startLevel(int levelNum, bool keepPowerUps) {
   if (spawnTileY < 1)
     spawnTileY = 1;
 
-  // Configuració de la porta segons el nivell (Nivells 1 i 3 a dalt; 2 i 4 a baix; 5 a la dreta)
-  int doorTileX = 30;
-  int doorTileY = 24; // Per defecte al terra (fila 24 per a porta de 32px: 24*16 + 32 = 416)
-  if (currentLevel == 1 || currentLevel == 3) {
-    doorTileX = 17;
-    doorTileY = 5; // Sobre la plataforma superior de la fila 7 (5*16 + 32 = 112 = 7*16)
+  // Configuració de la porta segons el disseny autèntic de Pocket Bomberman per a cada nivell
+  int doorTileX = 21;
+  int doorTileY = 16;
+  if (currentLevel == 1) {
+    doorTileX = 21;
+    doorTileY = 16; // Dins l'alcova protegida de Stage 1-1 (descansa sobre la fila 18)
+  } else if (currentLevel == 2) {
+    doorTileX = 30;
+    doorTileY = 6;  // Santuari superior dret de Stage 2-1 (descansa sobre la fila 8)
+  } else if (currentLevel == 3) {
+    doorTileX = 14;
+    doorTileY = 6;  // Cim de l'eix central entre columnes de Stage 3-1 (descansa sobre la fila 8)
+  } else if (currentLevel == 4) {
+    doorTileX = 15;
+    doorTileY = 8;  // Cambra fortificada dels 3 pilars de Stage 4-1 (descansa sobre la fila 10)
   } else if (currentLevel == 5) {
     doorTileX = 20;
-    doorTileY = 8; // Sobre el terra de la fila 10 a l'arena de 12 files (8*16 + 32 = 160 = 10*16)
+    doorTileY = 8;  // Arena del Boss Stage 1-5 / 5-5 (descansa sobre la fila 10)
   }
 
   glm::vec2 spawnPos(INIT_PLAYER_X_TILES * tileSize, spawnTileY * tileSize);

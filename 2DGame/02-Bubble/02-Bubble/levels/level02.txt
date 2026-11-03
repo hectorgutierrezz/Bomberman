@@ -3,31 +3,31 @@ TILEMAP
 16 16
 images/Map/world_tileset.png
 16 16
-888888888888888888888888888888888888
-888888888888888888888888888888888888
-88                                88
-88                                88
-88                                88
-88                                88
-88                                88
-88                                88
-88                                88
-88                                88
-88            33333333            88
-88            8      8            88
-88        AAAAAA    AAAAAA        88
-88                                88
-88      333333        333333      88
-88                                88
-88           AAAACCAAAA           88
-88         D         D            88
-88       3333333  3333333         88
-88                                88
-88     AAAA             AAAA      88
-88           D         D          88
-88        333CC333  333333        88
-88                                88
-88    AAAAA            AAAAA      88
-88      D           D             88
-333333333333333333333333333333333333
-JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
+KK44444444444444444444444444444444KK
+KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK
+KK                                KK
+KK                                KK
+KK                                KK
+KK                                KK
+KK                           D    KK
+KK               D           D    KK
+KK     333333  333333333     33333KK
+KK         JJ                     KK
+KK    AAAA JJCCC    AAAA  AAAA    KK
+KK         JJ            DDD      KK
+KK333 AAAA JJ        AAA3333333333KK
+KK         JJ     33              KK
+KKAAA  CCCCJJ    DJJ AAA      AAAAKK
+KK         JJ   333333   DDDD     KK
+KK333 AAAAAJJ           333333CCC KK
+KK       D JJ           J    J    KK
+KKAAA  3333JJ 3AAA      J    JAAAAKK
+KK         JJ J         J    J    KK
+KK    AAAA JJ JAAAA     J    JAAAAKK
+KK D       JJ J D    D  J    J    KK
+KK333      JJ3333333333 J    JAAAAKK
+KK         DD           333333    KK
+KK    AAAA DD        AAA      AAAAKK
+KK         DD                     KK
+KK33333333333333333333333333333333KK
+KKJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJKK
