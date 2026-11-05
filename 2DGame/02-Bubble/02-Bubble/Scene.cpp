@@ -138,7 +138,7 @@ Scene::Scene() {
   settingsCheatBinding = -1;
   settingsBindingSlot = 0;
   settingsBindingConflict = false;
-  settingsMusicVolume = 0.20f;
+  settingsMusicVolume = 1.0f;
   settingsSoundVolume = 1.0f;
   bTimeOver = false;
   hudBarSprite = NULL;

@@ -118,7 +118,7 @@ bool SoundManager::init() {
 	ma_sound_group_init(&pImpl->engine, 0, NULL, &pImpl->explosionGroup);
 	ma_sound_group_init(&pImpl->engine, 0, NULL, &pImpl->stepGroup);
 
-	ma_sound_group_set_volume(&pImpl->musicGroup, 0.20f);     // Música de fons continguda
+	ma_sound_group_set_volume(&pImpl->musicGroup, 0.25f);     // Rang màxim (100%) de música de fons continguda
 	ma_sound_group_set_volume(&pImpl->sfxGroup, 1.20f);       // Efectes sonors clars
 	ma_sound_group_set_volume(&pImpl->explosionGroup, 2.20f); // Explosions contundents amb potència extra
 	ma_sound_group_set_volume(&pImpl->stepGroup, 0.35f);      // Passos suaus i discrets que no tapen el joc
@@ -277,7 +277,8 @@ void SoundManager::setMasterVolume(float volume) {
 void SoundManager::setMusicVolume(float volume) {
 	if (!initialized || pImpl == NULL)
 		return;
-	ma_sound_group_set_volume(&pImpl->musicGroup, std::max(0.f, std::min(volume, 1.f)));
+	const float level = std::max(0.f, std::min(volume, 1.f));
+	ma_sound_group_set_volume(&pImpl->musicGroup, 0.25f * level);
 }
 
 void SoundManager::setSoundVolume(float volume) {
