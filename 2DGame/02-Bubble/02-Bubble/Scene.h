@@ -19,10 +19,51 @@
 #include <vector>
 #include <string>
 
+enum GameAction {
+  ACTION_MOVE_LEFT,
+  ACTION_MOVE_RIGHT,
+  ACTION_JUMP,
+  ACTION_BOMB,
+  ACTION_PAUSE,
+  ACTION_DROP_THROUGH
+};
+
+enum ControlBinding {
+  BIND_LEFT_ARROW,
+  BIND_LEFT_A,
+  BIND_RIGHT_ARROW,
+  BIND_RIGHT_D,
+  BIND_JUMP_ARROW,
+  BIND_JUMP_W,
+  BIND_BOMB_SPACE,
+  BIND_BOMB_X,
+  BIND_PAUSE,
+  BIND_DOWN_ARROW,
+  BIND_DOWN_S,
+  CONTROL_BINDING_COUNT
+};
+
+enum GameCheat {
+  CHEAT_GOD_MODE,
+  CHEAT_KILL_ENEMIES,
+  CHEAT_ADD_HEART,
+  CHEAT_ADD_BOMB,
+  CHEAT_ADD_RADIUS,
+  CHEAT_ADD_SPEED,
+  CHEAT_NEXT_LEVEL,
+  CHEAT_LEVEL_1,
+  CHEAT_LEVEL_2,
+  CHEAT_LEVEL_3,
+  CHEAT_LEVEL_4,
+  CHEAT_LEVEL_5,
+  GAME_CHEAT_COUNT
+};
+
 enum GameState {
   MAIN_MENU,
   INSTRUCTIONS,
   CHEATS,
+  SETTINGS,
   CREDITS,
   PLAYING,
   PAUSED,
@@ -77,13 +118,18 @@ private:
   void breakDestructibleTiles(Explosion *explosion);
   void initShaders();
   bool isKeyJustPressed(int key);
+  bool isActionJustPressed(GameAction action);
+  bool isCheatJustPressed(GameCheat cheat);
 
   void initMenuScreens();
   void freeMenuScreens();
+  void refreshSettingsLabels();
+  void refreshCheatLabels();
 
   void renderMainMenu();
   void renderInstructions();
   void renderCheats();
+  void renderSettings();
   void renderCredits();
   void renderPauseOverlay();
   void renderGameOver();
@@ -150,10 +196,19 @@ private:
   Sprite *copyrightSprite;
   Texture hudsonTex;
   Sprite *hudsonSprite;
-  Texture cursorTex;
-  Sprite *cursorSprite;
   int menuOption;
-  TextLabel menuLabels[5];
+  TextLabel menuCursorLabel;
+  TextLabel menuLabels[6];
+  TextLabel settingsTitleLabel;
+  TextLabel settingsLabels[21];
+  TextLabel settingsFooterLabel;
+  int settingsOption;
+  int settingsBinding;
+  int settingsCheatBinding;
+  int settingsBindingSlot;
+  bool settingsBindingConflict;
+  float settingsMusicVolume;
+  float settingsSoundVolume;
   TextLabel menuFooterLabel;
 
   // Instruccions
@@ -168,6 +223,8 @@ private:
   // Pausa
   Texture pauseTex;
   Sprite *pauseSprite;
+  Texture pauseOverlayTex;
+  Sprite *pauseOverlaySprite;
   TextLabel pauseTitleLabel;
   TextLabel pauseResumeLabel;
   TextLabel pauseMenuLabel;
@@ -186,6 +243,7 @@ private:
   Sprite *worldClearSprite;
   Texture celebrateTex;
   Sprite *celebrateSprite;
+  Sprite *celebrateSecondSprite;
   TextLabel winCongratsLabel;
   TextLabel winSubLabel;
   TextLabel winPeaceLabel;

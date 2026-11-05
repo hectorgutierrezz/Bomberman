@@ -138,6 +138,7 @@ void Player::startDying()
 	bDead = false;
 	dyingTime = 1200; // 1.2 segons de durada de l'animació de mort
 	bJumping = false;
+	fallSpeed = 0.0f;
 	if(sprite != NULL)
 		sprite->changeAnimation(DIE);
 	SoundManager::instance().playSound(SFX_BOMBERMAN_KILLED);
@@ -225,11 +226,6 @@ void Player::update(int deltaTime)
 			bDying = false;
 			bDead = true; // Senyalitza que l'animació de mort ha finalitzat
 		}
-		// Cau amb acceleració si estava en l'aire
-		fallSpeed = std::min(fallSpeed + GRAVITY, MAX_FALL_SPEED);
-		int step = std::max(1, int(fallSpeed));
-		if(stepFall(step))
-			fallSpeed = 0.0f;
 		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 		return;
 	}
@@ -282,7 +278,7 @@ void Player::update(int deltaTime)
 
 	// Baixar de les plataformes jump-through d'una en una amb gravetat suau quan clica Avall o S
 	if(!bJumping && fallSpeed == 0.0f && dropCooldown <= 0 && isOnJumpThroughPlatform() &&
-	   (Game::instance().getKey(GLFW_KEY_DOWN) || Game::instance().getKey(GLFW_KEY_S)))
+	   Game::instance().getActionPressed(ACTION_DROP_THROUGH))
 	{
 		int tileSize = (map != NULL) ? map->getTileSize() : 16;
 		dropThroughTileY = (posPlayer.y + PLAYER_HEIGHT) / tileSize;
@@ -292,7 +288,7 @@ void Player::update(int deltaTime)
 		fallSpeed = 0.0f;
 	}
 
-	if(Game::instance().getKey(GLFW_KEY_LEFT) || Game::instance().getKey(GLFW_KEY_A))
+	if(Game::instance().getActionPressed(ACTION_MOVE_LEFT))
 	{
 		facingDirection = -1;
 		if(sprite->animation() != MOVE_LEFT)
@@ -342,7 +338,7 @@ void Player::update(int deltaTime)
 			}
 		}
 	}
-	else if(Game::instance().getKey(GLFW_KEY_RIGHT) || Game::instance().getKey(GLFW_KEY_D))
+	else if(Game::instance().getActionPressed(ACTION_MOVE_RIGHT))
 	{
 		facingDirection = 1;
 		if(sprite->animation() != MOVE_RIGHT)
@@ -416,8 +412,7 @@ void Player::update(int deltaTime)
 			bJumping = false;
 			posPlayer.y = startY;
 			bool ignoreJT = (dropDownTimer > 0) ||
-			                Game::instance().getKey(GLFW_KEY_DOWN) ||
-			                Game::instance().getKey(GLFW_KEY_S);
+			                Game::instance().getActionPressed(ACTION_DROP_THROUGH);
 			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
 			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
 			int correctedY = colPos.y;
@@ -497,7 +492,7 @@ void Player::update(int deltaTime)
 		if(onGround)
 		{
 			fallSpeed = 0.0f;
-			if(Game::instance().getKey(GLFW_KEY_UP) || Game::instance().getKey(GLFW_KEY_W))
+			if(Game::instance().getActionPressed(ACTION_JUMP))
 			{
 				bJumping = true;
 				jumpAngle = 0;
@@ -557,9 +552,13 @@ void Player::respawn(const glm::vec2 &pos)
 	dropThroughTileY = -1;
 	dropCooldown = 0;
 	moveAccumX = 0.0f;
+	facingDirection = 1;
+	stepSoundTimer = 0;
 	setPosition(pos);
-	if(sprite != NULL)
+	if(sprite != NULL) {
+		sprite->setFlippedHorizontally(false);
 		sprite->changeAnimation(IDLE);
+	}
 }
 
 bool Player::hit()
@@ -580,8 +579,6 @@ bool Player::hit()
 	startDying();
 	return true;
 }
-
-
 
 
 

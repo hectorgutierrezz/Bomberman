@@ -1,6 +1,7 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include "miniaudio.h"
 #include "SoundManager.h"
+#include <algorithm>
 #include <iostream>
 #include <unordered_map>
 #include <cstdio>
@@ -114,7 +115,7 @@ bool SoundManager::init() {
 	ma_sound_group_init(&pImpl->engine, 0, NULL, &pImpl->explosionGroup);
 	ma_sound_group_init(&pImpl->engine, 0, NULL, &pImpl->stepGroup);
 
-	ma_sound_group_set_volume(&pImpl->musicGroup, 0.40f);     // Música de fons continguda
+	ma_sound_group_set_volume(&pImpl->musicGroup, 0.20f);     // Música de fons continguda
 	ma_sound_group_set_volume(&pImpl->sfxGroup, 1.20f);       // Efectes sonors clars
 	ma_sound_group_set_volume(&pImpl->explosionGroup, 2.20f); // Explosions contundents amb potència extra
 	ma_sound_group_set_volume(&pImpl->stepGroup, 0.35f);      // Passos suaus i discrets que no tapen el joc
@@ -273,11 +274,14 @@ void SoundManager::setMasterVolume(float volume) {
 void SoundManager::setMusicVolume(float volume) {
 	if (!initialized || pImpl == NULL)
 		return;
-	ma_sound_group_set_volume(&pImpl->musicGroup, volume);
+	ma_sound_group_set_volume(&pImpl->musicGroup, std::max(0.f, std::min(volume, 1.f)));
 }
 
 void SoundManager::setSoundVolume(float volume) {
 	if (!initialized || pImpl == NULL)
 		return;
-	ma_sound_group_set_volume(&pImpl->sfxGroup, volume);
+	const float level = std::max(0.f, std::min(volume, 1.f));
+	ma_sound_group_set_volume(&pImpl->sfxGroup, 1.20f * level);
+	ma_sound_group_set_volume(&pImpl->explosionGroup, 2.20f * level);
+	ma_sound_group_set_volume(&pImpl->stepGroup, 0.35f * level);
 }

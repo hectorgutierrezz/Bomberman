@@ -9,7 +9,6 @@
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
 
-
 // Game is a singleton (a class with a single instance) that represents our whole application
 
 
@@ -17,7 +16,7 @@ class Game
 {
 
 private:
-	Game() {}
+	Game();
 	~Game();
 	
 public:
@@ -40,6 +39,11 @@ public:
 	void mouseRelease(int button);
 
 	bool getKey(int key) const;
+	bool getActionPressed(GameAction action) const;
+	int getControlKey(ControlBinding binding) const;
+	bool setControlKey(ControlBinding binding, int key);
+	int getCheatKey(GameCheat cheat) const;
+	bool setCheatKey(GameCheat cheat, int key);
 	bool getAndResetMouseClick() {
 		bool c = bMouseClick;
 		bMouseClick = false;
@@ -52,11 +56,11 @@ private:
 	bool bMouseClick;
 	bool keys[GLFW_KEY_LAST+1]; // Store key states so that 
 							    // we can have access at any time
+	int controlKeys[CONTROL_BINDING_COUNT];
+	int cheatKeys[GAME_CHEAT_COUNT];
 	Scene scene;
 
 };
 
 
 #endif // _GAME_INCLUDE
-
-

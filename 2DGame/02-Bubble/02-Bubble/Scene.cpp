@@ -3,6 +3,8 @@
 #include "Game.h"
 #include "SoundManager.h"
 #include <cmath>
+#include <cctype>
+#include <cstdio>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
@@ -18,6 +20,61 @@
 #define CAM_VIEW_H 156.f
 
 #define GOD_MODE_MSG_DURATION 2000
+
+static std::string controlKeyName(int key) {
+  switch (key) {
+  case GLFW_KEY_UNKNOWN: return "CAP";
+  case GLFW_KEY_LEFT: return "ESQ";
+  case GLFW_KEY_RIGHT: return "DRETA";
+  case GLFW_KEY_UP: return "AMUNT";
+  case GLFW_KEY_DOWN: return "AVALL";
+  case GLFW_KEY_SPACE: return "ESPAI";
+  case GLFW_KEY_ESCAPE: return "ESC";
+  case GLFW_KEY_ENTER: return "RETORN";
+  case GLFW_KEY_TAB: return "TAB";
+  case GLFW_KEY_BACKSPACE: return "RETROC";
+  case GLFW_KEY_DELETE: return "SUPR";
+  case GLFW_KEY_INSERT: return "INS";
+  case GLFW_KEY_HOME: return "INICI";
+  case GLFW_KEY_END: return "FI";
+  case GLFW_KEY_PAGE_UP: return "PAG AMUNT";
+  case GLFW_KEY_PAGE_DOWN: return "PAG AVALL";
+  case GLFW_KEY_APOSTROPHE: return "'";
+  case GLFW_KEY_COMMA: return ",";
+  case GLFW_KEY_MINUS: return "-";
+  case GLFW_KEY_PERIOD: return ".";
+  case GLFW_KEY_SLASH: return "/";
+  case GLFW_KEY_SEMICOLON: return ";";
+  case GLFW_KEY_EQUAL: return "=";
+  case GLFW_KEY_LEFT_BRACKET: return "[";
+  case GLFW_KEY_BACKSLASH: return "\\";
+  case GLFW_KEY_RIGHT_BRACKET: return "]";
+  case GLFW_KEY_GRAVE_ACCENT: return "`";
+  case GLFW_KEY_KP_0: return "TEC0";
+  case GLFW_KEY_KP_1: return "TEC1";
+  case GLFW_KEY_KP_2: return "TEC2";
+  case GLFW_KEY_KP_3: return "TEC3";
+  case GLFW_KEY_KP_4: return "TEC4";
+  case GLFW_KEY_KP_5: return "TEC5";
+  case GLFW_KEY_KP_6: return "TEC6";
+  case GLFW_KEY_KP_7: return "TEC7";
+  case GLFW_KEY_KP_8: return "TEC8";
+  case GLFW_KEY_KP_9: return "TEC9";
+  case GLFW_KEY_KP_DECIMAL: return "TEC.";
+  case GLFW_KEY_KP_DIVIDE: return "TEC/";
+  case GLFW_KEY_KP_MULTIPLY: return "TEC*";
+  case GLFW_KEY_KP_SUBTRACT: return "TEC-";
+  case GLFW_KEY_KP_ADD: return "TEC+";
+  case GLFW_KEY_KP_ENTER: return "TEC RET";
+  default:
+    if ((key >= GLFW_KEY_A && key <= GLFW_KEY_Z) ||
+        (key >= GLFW_KEY_0 && key <= GLFW_KEY_9))
+      return std::string(1, char(key));
+    if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12)
+      return "F" + std::to_string(key - GLFW_KEY_F1 + 1);
+    return "TECLA";
+  }
+}
 
 TextLabel::~TextLabel() { free(); }
 
@@ -68,13 +125,21 @@ Scene::Scene() {
   logoSprite = NULL;
   copyrightSprite = NULL;
   hudsonSprite = NULL;
-  cursorSprite = NULL;
   pauseSprite = NULL;
+  pauseOverlaySprite = NULL;
   gameOverSprite = NULL;
   timeOverSprite = NULL;
   worldClearSprite = NULL;
   celebrateSprite = NULL;
+  celebrateSecondSprite = NULL;
   menuOption = 0;
+  settingsOption = 0;
+  settingsBinding = -1;
+  settingsCheatBinding = -1;
+  settingsBindingSlot = 0;
+  settingsBindingConflict = false;
+  settingsMusicVolume = 0.20f;
+  settingsSoundVolume = 1.0f;
   bTimeOver = false;
   hudBarSprite = NULL;
   clockIconSprite = NULL;
@@ -683,14 +748,15 @@ void Scene::freeMenuScreens() {
     delete hudsonSprite;
     hudsonSprite = NULL;
   }
-  if (cursorSprite != NULL) {
-    delete cursorSprite;
-    cursorSprite = NULL;
-  }
   if (pauseSprite != NULL) {
     delete pauseSprite;
     pauseSprite = NULL;
   }
+  if (pauseOverlaySprite != NULL) {
+    delete pauseOverlaySprite;
+    pauseOverlaySprite = NULL;
+  }
+  pauseOverlayTex.free();
   if (gameOverSprite != NULL) {
     delete gameOverSprite;
     gameOverSprite = NULL;
@@ -707,9 +773,18 @@ void Scene::freeMenuScreens() {
     delete celebrateSprite;
     celebrateSprite = NULL;
   }
+  if (celebrateSecondSprite != NULL) {
+    delete celebrateSecondSprite;
+    celebrateSecondSprite = NULL;
+  }
 
-  for (int i = 0; i < 5; ++i)
+  for (int i = 0; i < 6; ++i)
     menuLabels[i].free();
+  menuCursorLabel.free();
+  settingsTitleLabel.free();
+  for (int i = 0; i < 21; ++i)
+    settingsLabels[i].free();
+  settingsFooterLabel.free();
   menuFooterLabel.free();
 
   for (size_t i = 0; i < instructionsLabels.size(); ++i) {
@@ -916,22 +991,23 @@ void Scene::initMenuScreens() {
     hudsonSprite->setPosition(glm::vec2(40.f, 404.f));
   }
 
-  if (cursorTex.loadFromFile("images/Menu/cursor.png",
-                             TEXTURE_PIXEL_FORMAT_RGBA)) {
-    cursorSprite = Sprite::createSprite(
-        glm::vec2(24.f, 30.f), glm::vec2(1.f, 1.f), &cursorTex, &texProgram);
-  }
-
-  menuLabels[0].init("1. COMENCA EL JOC", 3, glm::vec2(168.f, 214.f),
+  menuLabels[0].init("1. COMENCA EL JOC", 3, glm::vec2(168.f, 204.f),
                      glm::vec4(1.f), &texProgram);
-  menuLabels[1].init("2. INSTRUCCIONS", 3, glm::vec2(186.f, 250.f),
+  menuLabels[1].init("2. INSTRUCCIONS", 3, glm::vec2(186.f, 236.f),
                      glm::vec4(1.f), &texProgram);
-  menuLabels[2].init("3. TRUCS", 3, glm::vec2(249.f, 286.f), glm::vec4(1.f),
+  menuLabels[2].init("3. CONFIGURACIO", 3, glm::vec2(186.5f, 268.f), glm::vec4(1.f),
                      &texProgram);
-  menuLabels[3].init("4. CREDITS", 3, glm::vec2(231.f, 322.f), glm::vec4(1.f),
+  menuLabels[3].init("4. TRUCS", 3, glm::vec2(249.f, 300.f), glm::vec4(1.f),
                      &texProgram);
-  menuLabels[4].init("5. SURT", 3, glm::vec2(258.f, 358.f), glm::vec4(1.f),
+  menuLabels[4].init("5. CREDITS", 3, glm::vec2(231.f, 332.f), glm::vec4(1.f),
                      &texProgram);
+  menuLabels[5].init("6. SURT", 3, glm::vec2(258.f, 364.f), glm::vec4(1.f),
+                     &texProgram);
+  menuCursorLabel.init(">", 3, glm::vec2(0.f, 0.f),
+                       glm::vec4(1.f, 0.9f, 0.1f, 1.f), &texProgram);
+  settingsTitleLabel.init("CONFIGURACIO", 3, glm::vec2(213.5f, 30.f),
+                          glm::vec4(1.f, 0.9f, 0.1f, 1.f), &texProgram);
+  refreshSettingsLabels();
   menuFooterLabel.init("AMUNT/AVALL: TRIA  ENTER/ESPAI: OK  ESC: SURT", 2,
                        glm::vec2(32.f, 452.f), glm::vec4(0.8f, 0.8f, 0.9f, 1.f),
                        &texProgram);
@@ -966,40 +1042,16 @@ void Scene::initMenuScreens() {
   addInst("  - SUPERA EL NIVELL EN 2 MINUTS (120 S)", 2, 40.f, 234.f,
           glm::vec4(1.f));
 
-  addInst("TOTS ELS TRUCS SON AL MENU PRINCIPAL", 2,
-          40.f, 274.f, glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+  addInst("VOLUM I CONTROLS: MENU CONFIGURACIO", 2, 40.f, 260.f,
+          glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+  addInst("TOTS ELS TRUCS SON AL MENU PRINCIPAL", 2, 40.f, 284.f,
+          glm::vec4(0.3f, 0.9f, 1.f, 1.f));
 
   addInst("[ PREM ENTER O ESC PER TORNAR AL MENU ]", 2, 85.f, 452.f,
           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
 
   // 3. Pantalla de Trucs
-  auto addCheat = [&](const std::string &txt, int scale, float x, float y,
-                      const glm::vec4 &col) {
-    TextLabel *lbl = new TextLabel();
-    lbl->init(txt, scale, glm::vec2(x, y), col, &texProgram);
-    cheatsLabels.push_back(lbl);
-  };
-  addCheat("TRUCS DE PROVA", 3, 195.f, 35.f,
-           glm::vec4(1.f, 0.9f, 0.1f, 1.f));
-  addCheat("G: ACTIVA/DESACTIVA LA INVULNERABILITAT", 2, 50.f, 100.f,
-           glm::vec4(1.f));
-  addCheat("K: ELIMINA ELS ENEMICS I OBRE LA PORTA", 2, 50.f, 136.f,
-           glm::vec4(1.f));
-  addCheat("H: AFEGEIX UN COR", 2, 50.f, 172.f, glm::vec4(1.f));
-  addCheat("B: AUGMENTA EL NOMBRE DE BOMBES", 2, 50.f, 208.f,
-           glm::vec4(1.f));
-  addCheat("F: AUGMENTA EL RADI DE L'EXPLOSIO", 2, 50.f, 244.f,
-           glm::vec4(1.f));
-  addCheat("S: AUGMENTA LA VELOCITAT", 2, 50.f, 280.f,
-           glm::vec4(1.f));
-  addCheat("N: PASSA AL NIVELL SEGUENT", 2, 50.f, 316.f,
-           glm::vec4(1.f));
-  addCheat("1-5: CANVIA DIRECTAMENT AL NIVELL TRIAT", 2, 50.f, 352.f,
-           glm::vec4(1.f));
-  addCheat("ELS TRUCS FUNCIONEN DURANT LA PARTIDA", 2, 86.f, 394.f,
-           glm::vec4(0.3f, 0.9f, 1.f, 1.f));
-  addCheat("[ PREM ENTER O ESC PER TORNAR AL MENU ]", 2, 85.f, 442.f,
-           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+  refreshCheatLabels();
 
   // 4. Pantalla de Crèdits
   auto addCred = [&](const std::string &txt, int scale, float x, float y,
@@ -1035,6 +1087,14 @@ void Scene::initMenuScreens() {
         glm::vec2(208.f, 217.f), glm::vec2(1.f, 1.f), &pauseTex, &texProgram);
     pauseSprite->setPosition(
         glm::vec2((float(SCREEN_WIDTH) - 208.f) * 0.5f, 45.f));
+  }
+  {
+    const unsigned char whitePixel[4] = {255, 255, 255, 255};
+    pauseOverlayTex.loadFromRGBABuffer(whitePixel, 1, 1);
+    pauseOverlaySprite = Sprite::createSprite(
+        glm::vec2(float(SCREEN_WIDTH), float(SCREEN_HEIGHT)),
+        glm::vec2(1.f, 1.f), &pauseOverlayTex, &texProgram);
+    pauseOverlaySprite->setPosition(glm::vec2(0.f, 0.f));
   }
   {
     Texture tPause;
@@ -1096,13 +1156,25 @@ void Scene::initMenuScreens() {
     worldClearSprite->setPosition(
         glm::vec2((float(SCREEN_WIDTH) - 316.f) * 0.5f, 60.f));
   }
-  if (celebrateTex.loadFromFile("images/Menu/knights_celebrate.png",
-                                TEXTURE_PIXEL_FORMAT_RGBA)) {
-    celebrateSprite =
-        Sprite::createSprite(glm::vec2(316.f, 79.f), glm::vec2(1.f, 1.f),
-                             &celebrateTex, &texProgram);
-    celebrateSprite->setPosition(
-        glm::vec2((float(SCREEN_WIDTH) - 316.f) * 0.5f, 135.f));
+  if (celebrateTex.loadFromFile(
+          "images/Sprites/Original/Color/Characters/bomber.png",
+          TEXTURE_PIXEL_FORMAT_RGBA)) {
+    const glm::vec2 frameSize(17.f / 253.f, 17.f / 632.f);
+    const glm::vec2 standingFrame(51.f / 253.f, 0.f);
+    celebrateSprite = Sprite::createSprite(
+        glm::vec2(68.f, 68.f), frameSize, &celebrateTex, &texProgram);
+    celebrateSprite->setNumberAnimations(1);
+    celebrateSprite->addKeyframe(0, standingFrame);
+    celebrateSprite->changeAnimation(0);
+    celebrateSprite->setPosition(glm::vec2(236.f, 130.f));
+
+    celebrateSecondSprite = Sprite::createSprite(
+        glm::vec2(68.f, 68.f), frameSize, &celebrateTex, &texProgram);
+    celebrateSecondSprite->setNumberAnimations(1);
+    celebrateSecondSprite->addKeyframe(0, standingFrame);
+    celebrateSecondSprite->changeAnimation(0);
+    celebrateSecondSprite->setFlippedHorizontally(true);
+    celebrateSecondSprite->setPosition(glm::vec2(336.f, 130.f));
   }
   winCongratsLabel.init("FELICITATS!", 3, glm::vec2(219.f, 240.f),
                         glm::vec4(1.f, 0.9f, 0.1f, 1.f), &texProgram);
@@ -1116,8 +1188,120 @@ void Scene::initMenuScreens() {
                       &texProgram);
 }
 
+void Scene::refreshSettingsLabels() {
+  const char *controlLabels[] = {
+      "ESQUERRA", "DRETA", "AMUNT", "AVALL", "BOMBA", "PAUSA"};
+  const ControlBinding controlPairs[][2] = {
+      {BIND_LEFT_ARROW, BIND_LEFT_A},
+      {BIND_RIGHT_ARROW, BIND_RIGHT_D},
+      {BIND_JUMP_ARROW, BIND_JUMP_W},
+      {BIND_DOWN_ARROW, BIND_DOWN_S},
+      {BIND_BOMB_SPACE, BIND_BOMB_X},
+      {BIND_PAUSE, BIND_PAUSE}};
+  const char *cheatLabels[] = {
+      "INVULNERABILITAT", "ELIMINAR ENEMICS", "AFEGIR COR",
+      "AFEGIR BOMBA", "AUGMENTAR RADI", "AUGMENTAR VELOCITAT",
+      "NIVELL SEGUENT", "ANAR AL NIVELL 1", "ANAR AL NIVELL 2",
+      "ANAR AL NIVELL 3", "ANAR AL NIVELL 4", "ANAR AL NIVELL 5"};
+  char text[64];
+  const glm::vec4 normalColor(1.f);
+  const glm::vec4 selectedColor(1.f, 0.9f, 0.1f, 1.f);
+
+  for (int i = 0; i < 21; ++i) {
+    std::string label;
+    if (i == 0) {
+      snprintf(text, sizeof(text), "MUSICA: %d%%",
+               int(settingsMusicVolume * 100.f + 0.5f));
+      label = text;
+    } else if (i == 1) {
+      snprintf(text, sizeof(text), "EFECTOS: %d%%",
+               int(settingsSoundVolume * 100.f + 0.5f));
+      label = text;
+    } else if (i >= 2 && i <= 7) {
+      const int control = i - 2;
+      const int slot = (control == 5) ? 0 : settingsBindingSlot;
+      const std::string first =
+          controlKeyName(Game::instance().getControlKey(controlPairs[control][0]));
+      const std::string second =
+          (control == 5) ? "" :
+              controlKeyName(Game::instance().getControlKey(controlPairs[control][1]));
+      if (slot == 0)
+        label = std::string(controlLabels[control]) + ": [" + first + "]";
+      else
+        label = std::string(controlLabels[control]) + ": " + first;
+      if (control != 5) {
+        label += " / ";
+        label += slot == 1 ? "[" + second + "]" : second;
+      }
+      if (settingsBinding >= 0 &&
+          settingsBinding == controlPairs[control][slot])
+        label += " ...";
+    } else if (i >= 8 && i <= 19) {
+      const GameCheat cheat = GameCheat(i - 8);
+      label = std::string(cheatLabels[i - 8]) + ": " +
+              controlKeyName(Game::instance().getCheatKey(cheat));
+      if (settingsCheatBinding == i - 8)
+        label += " ...";
+    } else {
+      label = "TORNAR AL MENU";
+    }
+
+    settingsLabels[i].init(
+        label, 2, glm::vec2(100.f, 56.f + float(i) * 18.f),
+        i == settingsOption ? selectedColor : normalColor, &texProgram);
+  }
+
+  if (settingsBinding >= 0 || settingsCheatBinding >= 0)
+    settingsFooterLabel.init("PREM TECLA / SUPR: SENSE TECLA / ESC: CANCEL.LA", 1,
+                             glm::vec2(175.f, 452.f), selectedColor, &texProgram);
+  else if (settingsBindingConflict)
+    settingsFooterLabel.init("TECLA OCUPADA - TRIA'N UNA ALTRA", 1,
+                             glm::vec2(194.f, 452.f),
+                             glm::vec4(1.f, 0.35f, 0.2f, 1.f), &texProgram);
+  else
+    settingsFooterLabel.init("AMUNT/AVALL: TRIA ESQ/DRETA: VOLUM/TECLA RETORN: CAPTURA ESC: TORNA",
+                             1, glm::vec2(98.f, 452.f),
+                             glm::vec4(0.8f, 0.8f, 0.9f, 1.f), &texProgram);
+}
+
+void Scene::refreshCheatLabels() {
+  for (size_t i = 0; i < cheatsLabels.size(); ++i)
+    delete cheatsLabels[i];
+  cheatsLabels.clear();
+
+  const char *descriptions[] = {
+      "ACTIVA/DESACTIVA LA INVULNERABILITAT",
+      "ELIMINA ELS ENEMICS I OBRE LA PORTA", "AFEGEIX UN COR",
+      "AUGMENTA EL NOMBRE DE BOMBES", "AUGMENTA EL RADI DE L'EXPLOSIO",
+      "AUGMENTA LA VELOCITAT", "PASSA AL NIVELL SEGUENT",
+      "CANVIA DIRECTAMENT AL NIVELL 1", "CANVIA DIRECTAMENT AL NIVELL 2",
+      "CANVIA DIRECTAMENT AL NIVELL 3", "CANVIA DIRECTAMENT AL NIVELL 4",
+      "CANVIA DIRECTAMENT AL NIVELL 5"};
+  auto addLabel = [&](const std::string &text, int scale, float x, float y,
+                      const glm::vec4 &color) {
+    TextLabel *label = new TextLabel();
+    label->init(text, scale, glm::vec2(x, y), color, &texProgram);
+    cheatsLabels.push_back(label);
+  };
+
+  addLabel("TRUCS DE PROVA", 3, 195.f, 35.f,
+           glm::vec4(1.f, 0.9f, 0.1f, 1.f));
+  for (int i = 0; i < GAME_CHEAT_COUNT; ++i) {
+    const std::string text =
+        controlKeyName(Game::instance().getCheatKey(GameCheat(i))) + ": " +
+        descriptions[i];
+    addLabel(text, 2, 50.f, 83.f + float(i) * 22.f, glm::vec4(1.f));
+  }
+  addLabel("ELS TRUCS FUNCIONEN DURANT LA PARTIDA", 2, 86.f, 364.f,
+           glm::vec4(0.3f, 0.9f, 1.f, 1.f));
+  addLabel("[ PREM ENTER O ESC PER TORNAR AL MENU ]", 2, 85.f, 442.f,
+           glm::vec4(1.f, 0.9f, 0.2f, 1.f));
+}
+
 void Scene::init() {
   initShaders();
+  SoundManager::instance().setMusicVolume(settingsMusicVolume);
+  SoundManager::instance().setSoundVolume(settingsSoundVolume);
 
   freeHUD();
   if (godModeOnSprite != NULL) {
@@ -1176,10 +1360,10 @@ void Scene::update(int deltaTime) {
   switch (gameState) {
   case MAIN_MENU:
     if (isKeyJustPressed(GLFW_KEY_UP) || isKeyJustPressed(GLFW_KEY_W)) {
-      menuOption = (menuOption + 4) % 5;
+      menuOption = (menuOption + 5) % 6;
     } else if (isKeyJustPressed(GLFW_KEY_DOWN) ||
                isKeyJustPressed(GLFW_KEY_S)) {
-      menuOption = (menuOption + 1) % 5;
+      menuOption = (menuOption + 1) % 6;
     } else if (isKeyJustPressed(GLFW_KEY_ENTER) ||
                isKeyJustPressed(GLFW_KEY_SPACE)) {
       if (menuOption == 0) {
@@ -1188,10 +1372,18 @@ void Scene::update(int deltaTime) {
       } else if (menuOption == 1) {
         gameState = INSTRUCTIONS;
       } else if (menuOption == 2) {
-        gameState = CHEATS;
+        gameState = SETTINGS;
+        settingsBinding = -1;
+        settingsCheatBinding = -1;
+        settingsBindingSlot = 0;
+        settingsBindingConflict = false;
+        refreshSettingsLabels();
       } else if (menuOption == 3) {
-        gameState = CREDITS;
+        gameState = CHEATS;
+        refreshCheatLabels();
       } else if (menuOption == 4) {
+        gameState = CREDITS;
+      } else if (menuOption == 5) {
         Game::instance().exit();
       }
     } else if (isKeyJustPressed(GLFW_KEY_1)) {
@@ -1200,10 +1392,18 @@ void Scene::update(int deltaTime) {
     } else if (isKeyJustPressed(GLFW_KEY_2)) {
       gameState = INSTRUCTIONS;
     } else if (isKeyJustPressed(GLFW_KEY_3)) {
-      gameState = CHEATS;
+      gameState = SETTINGS;
+      settingsBinding = -1;
+      settingsCheatBinding = -1;
+      settingsBindingSlot = 0;
+      settingsBindingConflict = false;
+      refreshSettingsLabels();
     } else if (isKeyJustPressed(GLFW_KEY_4)) {
+      gameState = CHEATS;
+      refreshCheatLabels();
+    } else if (isKeyJustPressed(GLFW_KEY_5)) {
       gameState = CREDITS;
-    } else if (isKeyJustPressed(GLFW_KEY_5) ||
+    } else if (isKeyJustPressed(GLFW_KEY_6) ||
                isKeyJustPressed(GLFW_KEY_ESCAPE)) {
       Game::instance().exit();
     }
@@ -1223,6 +1423,100 @@ void Scene::update(int deltaTime) {
     }
     break;
 
+  case SETTINGS:
+    if (settingsBinding >= 0 || settingsCheatBinding >= 0) {
+      if (isKeyJustPressed(GLFW_KEY_ESCAPE)) {
+        settingsBinding = -1;
+        settingsCheatBinding = -1;
+        settingsBindingConflict = false;
+        refreshSettingsLabels();
+      } else {
+        for (int key = 0; key <= GLFW_KEY_LAST; ++key) {
+          if (!isKeyJustPressed(key))
+            continue;
+          const int assignedKey =
+              key == GLFW_KEY_DELETE ? GLFW_KEY_UNKNOWN : key;
+          const bool changed =
+              settingsBinding >= 0
+                  ? Game::instance().setControlKey(
+                        ControlBinding(settingsBinding), assignedKey)
+                  : Game::instance().setCheatKey(
+                        GameCheat(settingsCheatBinding), assignedKey);
+          if (changed) {
+            if (settingsCheatBinding >= 0)
+              refreshCheatLabels();
+            settingsBinding = -1;
+            settingsCheatBinding = -1;
+            settingsBindingConflict = false;
+          } else {
+            settingsBindingConflict = true;
+          }
+          refreshSettingsLabels();
+          break;
+        }
+      }
+    } else if (isKeyJustPressed(GLFW_KEY_ESCAPE)) {
+      gameState = MAIN_MENU;
+    } else if (isKeyJustPressed(GLFW_KEY_UP) ||
+               isKeyJustPressed(GLFW_KEY_W)) {
+      settingsOption = (settingsOption + 20) % 21;
+      settingsBindingConflict = false;
+      refreshSettingsLabels();
+    } else if (isKeyJustPressed(GLFW_KEY_DOWN) ||
+               isKeyJustPressed(GLFW_KEY_S)) {
+      settingsOption = (settingsOption + 1) % 21;
+      settingsBindingConflict = false;
+      refreshSettingsLabels();
+    } else if (settingsOption >= 2 && settingsOption <= 7 &&
+               (isKeyJustPressed(GLFW_KEY_LEFT) ||
+                isKeyJustPressed(GLFW_KEY_RIGHT))) {
+      if (settingsOption != 7)
+        settingsBindingSlot = 1 - settingsBindingSlot;
+      settingsBindingConflict = false;
+      refreshSettingsLabels();
+    } else if (settingsOption < 2 &&
+               (isKeyJustPressed(GLFW_KEY_LEFT) ||
+                isKeyJustPressed(GLFW_KEY_RIGHT))) {
+      const float delta =
+          Game::instance().getKey(GLFW_KEY_LEFT) ? -0.05f : 0.05f;
+      if (settingsOption == 0) {
+        settingsMusicVolume =
+            glm::clamp(settingsMusicVolume + delta, 0.f, 1.f);
+        SoundManager::instance().setMusicVolume(settingsMusicVolume);
+      } else {
+        settingsSoundVolume =
+            glm::clamp(settingsSoundVolume + delta, 0.f, 1.f);
+        SoundManager::instance().setSoundVolume(settingsSoundVolume);
+      }
+      settingsBindingConflict = false;
+      refreshSettingsLabels();
+    } else if (isKeyJustPressed(GLFW_KEY_ENTER) ||
+               isKeyJustPressed(GLFW_KEY_SPACE)) {
+      if (settingsOption >= 2 && settingsOption <= 7) {
+        static const ControlBinding controlPairs[][2] = {
+            {BIND_LEFT_ARROW, BIND_LEFT_A},
+            {BIND_RIGHT_ARROW, BIND_RIGHT_D},
+            {BIND_JUMP_ARROW, BIND_JUMP_W},
+            {BIND_DOWN_ARROW, BIND_DOWN_S},
+            {BIND_BOMB_SPACE, BIND_BOMB_X},
+            {BIND_PAUSE, BIND_PAUSE}};
+        const int control = settingsOption - 2;
+        const int slot = (control == 5) ? 0 : settingsBindingSlot;
+        settingsBinding = controlPairs[control][slot];
+        settingsCheatBinding = -1;
+        settingsBindingConflict = false;
+        refreshSettingsLabels();
+      } else if (settingsOption >= 8 && settingsOption <= 19) {
+        settingsCheatBinding = settingsOption - 8;
+        settingsBinding = -1;
+        settingsBindingConflict = false;
+        refreshSettingsLabels();
+      } else if (settingsOption == 20) {
+        gameState = MAIN_MENU;
+      }
+    }
+    break;
+
   case CREDITS:
     if (isKeyJustPressed(GLFW_KEY_ENTER) || isKeyJustPressed(GLFW_KEY_ESCAPE) ||
         isKeyJustPressed(GLFW_KEY_SPACE)) {
@@ -1231,7 +1525,8 @@ void Scene::update(int deltaTime) {
     break;
 
   case PLAYING:
-    if (isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_P)) {
+    if (isKeyJustPressed(GLFW_KEY_ESCAPE) ||
+        isActionJustPressed(ACTION_PAUSE)) {
       SoundManager::instance().playSound(SFX_PAUSE);
       SoundManager::instance().pauseMusic();
       gameState = PAUSED;
@@ -1247,36 +1542,36 @@ void Scene::update(int deltaTime) {
       }
 
       // Tecles de drecera / debug per provar canvi de nivells
-      if (isKeyJustPressed(GLFW_KEY_N)) {
+      if (isCheatJustPressed(CHEAT_NEXT_LEVEL)) {
         nextLevel();
         break;
       }
-      if (isKeyJustPressed(GLFW_KEY_1)) {
+      if (isCheatJustPressed(CHEAT_LEVEL_1)) {
         startLevel(1, true);
         break;
       }
-      if (isKeyJustPressed(GLFW_KEY_2)) {
+      if (isCheatJustPressed(CHEAT_LEVEL_2)) {
         startLevel(2, true);
         break;
       }
-      if (isKeyJustPressed(GLFW_KEY_3)) {
+      if (isCheatJustPressed(CHEAT_LEVEL_3)) {
         startLevel(3, true);
         break;
       }
-      if (isKeyJustPressed(GLFW_KEY_4)) {
+      if (isCheatJustPressed(CHEAT_LEVEL_4)) {
         startLevel(4, true);
         break;
       }
-      if (isKeyJustPressed(GLFW_KEY_5)) {
+      if (isCheatJustPressed(CHEAT_LEVEL_5)) {
         startLevel(5, true);
         break;
       }
 
-      if (isKeyJustPressed(GLFW_KEY_G)) {
+      if (isCheatJustPressed(CHEAT_GOD_MODE)) {
         player->toggleGodMode();
         showGodModeMessage(player->isGodMode());
       }
-      if (isKeyJustPressed(GLFW_KEY_K)) {
+      if (isCheatJustPressed(CHEAT_KILL_ENEMIES)) {
         // Cheat: elimina tots els enemics i el Boss, i obre la porta
         for (size_t i = 0; i < enemies.size(); ++i) {
           if (enemies[i] != NULL && enemies[i]->isAlive())
@@ -1292,19 +1587,19 @@ void Scene::update(int deltaTime) {
         }
       }
       // Cheats de testeig per provar el sistema de power-ups i vides
-      if (isKeyJustPressed(GLFW_KEY_H)) {
+      if (isCheatJustPressed(CHEAT_ADD_HEART)) {
         player->addInternalLife(); // Afegeix vida interna (cor/escut)
       }
-      if (isKeyJustPressed(GLFW_KEY_B)) {
+      if (isCheatJustPressed(CHEAT_ADD_BOMB)) {
         player->addMaxBomb(); // Incrementa bombes simultànies
       }
-      if (isKeyJustPressed(GLFW_KEY_F)) {
+      if (isCheatJustPressed(CHEAT_ADD_RADIUS)) {
         player->addBombRadius(); // Incrementa radi d'explosió (Fire Up)
       }
-      if (isKeyJustPressed(GLFW_KEY_S)) {
+      if (isCheatJustPressed(CHEAT_ADD_SPEED)) {
         player->addSpeed(); // Incrementa velocitat de moviment (Patins)
       }
-      if (isKeyJustPressed(GLFW_KEY_SPACE) || isKeyJustPressed(GLFW_KEY_X)) {
+      if (isActionJustPressed(ACTION_BOMB)) {
         placeBomb();
       }
 
@@ -1498,7 +1793,8 @@ void Scene::update(int deltaTime) {
     break;
 
   case PAUSED:
-    if (isKeyJustPressed(GLFW_KEY_ESCAPE) || isKeyJustPressed(GLFW_KEY_P)) {
+    if (isKeyJustPressed(GLFW_KEY_ESCAPE) ||
+        isActionJustPressed(ACTION_PAUSE)) {
       SoundManager::instance().playSound(SFX_PAUSE);
       SoundManager::instance().resumeMusic();
       gameState = PLAYING;
@@ -1587,6 +1883,10 @@ void Scene::render() {
   case CHEATS:
     texProgram.setUniformMatrix4f("projection", screenProjection);
     renderCheats();
+    break;
+  case SETTINGS:
+    texProgram.setUniformMatrix4f("projection", screenProjection);
+    renderSettings();
     break;
   case CREDITS:
     texProgram.setUniformMatrix4f("projection", screenProjection);
@@ -1682,7 +1982,7 @@ void Scene::renderMainMenu() {
   if (logoSprite != NULL)
     logoSprite->render();
 
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 6; ++i) {
     if (i == menuOption) {
       menuLabels[i].renderWithColor(texProgram,
                                     glm::vec4(1.0f, 0.95f, 0.15f, 1.0f));
@@ -1692,12 +1992,11 @@ void Scene::renderMainMenu() {
     }
   }
 
-  if (cursorSprite != NULL) {
-    float bob = sin(currentTime * 0.008f) * 4.0f;
-    float cursorX = 142.f + bob;
-    float cursorY = 211.f + float(menuOption) * 36.f;
-    cursorSprite->setPosition(glm::vec2(cursorX, cursorY));
-    cursorSprite->render();
+  if (menuCursorLabel.sprite != NULL) {
+    const glm::vec2 &selectedLabelPos = menuLabels[menuOption].pos;
+    menuCursorLabel.sprite->setPosition(
+        glm::vec2(selectedLabelPos.x - 20.f, selectedLabelPos.y - 1.f));
+    menuCursorLabel.render(texProgram);
   }
 
   if (hudsonSprite != NULL)
@@ -1731,6 +2030,22 @@ void Scene::renderCheats() {
   }
 }
 
+void Scene::renderSettings() {
+  glm::mat4 modelview = glm::mat4(1.0f);
+  texProgram.setUniformMatrix4f("modelview", modelview);
+  texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+
+  settingsTitleLabel.render(texProgram);
+  for (int i = 0; i < 21; ++i)
+    settingsLabels[i].render(texProgram);
+  if (menuCursorLabel.sprite != NULL) {
+    menuCursorLabel.sprite->setPosition(
+        glm::vec2(76.f, settingsLabels[settingsOption].pos.y - 1.f));
+    menuCursorLabel.render(texProgram);
+  }
+  settingsFooterLabel.render(texProgram);
+}
+
 void Scene::renderCredits() {
   glm::mat4 modelview = glm::mat4(1.0f);
   texProgram.setUniformMatrix4f("modelview", modelview);
@@ -1752,6 +2067,15 @@ void Scene::renderCredits() {
 void Scene::renderPauseOverlay() {
   glm::mat4 modelview = glm::mat4(1.0f);
   texProgram.setUniformMatrix4f("modelview", modelview);
+
+  if (pauseOverlaySprite != NULL) {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    texProgram.setUniform4f("color", 0.f, 0.f, 0.f, 0.5f);
+    pauseOverlaySprite->render();
+    glDisable(GL_BLEND);
+  }
+
   texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
 
   if (pauseSprite != NULL)
@@ -1789,6 +2113,8 @@ void Scene::renderWin() {
 
   if (celebrateSprite != NULL)
     celebrateSprite->render();
+  if (celebrateSecondSprite != NULL)
+    celebrateSecondSprite->render();
 
   winCongratsLabel.render(texProgram);
   winSubLabel.render(texProgram);
@@ -1834,6 +2160,49 @@ bool Scene::isKeyJustPressed(int key)
     keyLastState[key] = false;
   }
   return false;
+}
+
+bool Scene::isActionJustPressed(GameAction action) {
+  ControlBinding first = BIND_PAUSE;
+  ControlBinding second = ControlBinding(CONTROL_BINDING_COUNT);
+  switch (action) {
+  case ACTION_MOVE_LEFT:
+    first = BIND_LEFT_ARROW;
+    second = BIND_LEFT_A;
+    break;
+  case ACTION_MOVE_RIGHT:
+    first = BIND_RIGHT_ARROW;
+    second = BIND_RIGHT_D;
+    break;
+  case ACTION_JUMP:
+    first = BIND_JUMP_ARROW;
+    second = BIND_JUMP_W;
+    break;
+  case ACTION_BOMB:
+    first = BIND_BOMB_SPACE;
+    second = BIND_BOMB_X;
+    break;
+  case ACTION_PAUSE:
+    first = BIND_PAUSE;
+    break;
+  case ACTION_DROP_THROUGH:
+    first = BIND_DOWN_ARROW;
+    second = BIND_DOWN_S;
+    break;
+  default:
+    return false;
+  }
+
+  const bool firstPressed =
+      isKeyJustPressed(Game::instance().getControlKey(first));
+  const bool secondPressed =
+      second < CONTROL_BINDING_COUNT &&
+      isKeyJustPressed(Game::instance().getControlKey(second));
+  return firstPressed || secondPressed;
+}
+
+bool Scene::isCheatJustPressed(GameCheat cheat) {
+  return isKeyJustPressed(Game::instance().getCheatKey(cheat));
 }
 
 void Scene::renderEnemies() {
