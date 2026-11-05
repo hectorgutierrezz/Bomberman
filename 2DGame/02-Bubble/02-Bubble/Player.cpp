@@ -72,58 +72,63 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	}
 	spritesheet.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	
-	glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f); // 17x17 pixels normalitzats
+	// Cada frame a bomber.png té una caixa exacta de 16x16 píxels amb separació variable per columna i fila
+	glm::vec2 sizeInUV = glm::vec2(16.f / 253.f, 16.f / 632.f);
 	
 	sprite = Sprite::createSprite(glm::ivec2(PLAYER_WIDTH, PLAYER_HEIGHT), sizeInUV, &spritesheet, &shaderProgram);
 	sprite->setNumberAnimations(8); // Mateix nombre d'animacions que a l'enum
 
-	auto uv = [](int col, int row) {
-		return glm::vec2(float(col * 17.f / 253.f), float(row * 17.f / 632.f));
+	auto uvPx = [](int px, int py) {
+		return glm::vec2(float(px) / 253.f, float(py) / 632.f);
 	};
 	
 	// IDLE (Frontal / Parat)
 	sprite->setAnimationSpeed(IDLE, 8);
-	sprite->addKeyframe(IDLE, uv(0, 0));
+	sprite->addKeyframe(IDLE, uvPx(54, 21));
 
 	// STAND_RIGHT (Parat cara a la dreta)
 	sprite->setAnimationSpeed(STAND_RIGHT, 8);
-	sprite->addKeyframe(STAND_RIGHT, uv(3, 0));
+	sprite->addKeyframe(STAND_RIGHT, uvPx(4, 2));
 
 	// STAND_LEFT (Parat cara a l'esquerra)
 	sprite->setAnimationSpeed(STAND_LEFT, 8);
-	sprite->addKeyframe(STAND_LEFT, uv(3, 0));
+	sprite->addKeyframe(STAND_LEFT, uvPx(4, 2));
 
 	// MOVE_RIGHT (Caminar cap a la dreta)
 	sprite->setAnimationSpeed(MOVE_RIGHT, 8);
-	sprite->addKeyframe(MOVE_RIGHT, uv(3, 0));
-	sprite->addKeyframe(MOVE_RIGHT, uv(4, 0));
-	sprite->addKeyframe(MOVE_RIGHT, uv(3, 0));
-	sprite->addKeyframe(MOVE_RIGHT, uv(5, 0));
+	sprite->addKeyframe(MOVE_RIGHT, uvPx(4, 2));
+	sprite->addKeyframe(MOVE_RIGHT, uvPx(20, 2));
+	sprite->addKeyframe(MOVE_RIGHT, uvPx(4, 2));
+	sprite->addKeyframe(MOVE_RIGHT, uvPx(36, 2));
 
 	// MOVE_LEFT (Caminar cap a l'esquerra)
 	sprite->setAnimationSpeed(MOVE_LEFT, 8);
-	sprite->addKeyframe(MOVE_LEFT, uv(3, 0));
-	sprite->addKeyframe(MOVE_LEFT, uv(4, 0));
-	sprite->addKeyframe(MOVE_LEFT, uv(3, 0));
-	sprite->addKeyframe(MOVE_LEFT, uv(5, 0));
+	sprite->addKeyframe(MOVE_LEFT, uvPx(4, 2));
+	sprite->addKeyframe(MOVE_LEFT, uvPx(20, 2));
+	sprite->addKeyframe(MOVE_LEFT, uvPx(4, 2));
+	sprite->addKeyframe(MOVE_LEFT, uvPx(36, 2));
 
-	// FALL (En l'aire / Caiguda)
+	// FALL (En l'aire / Salt i caiguda)
 	sprite->setAnimationSpeed(FALL, 8);
-	sprite->addKeyframe(FALL, uv(1, 0));
+	sprite->addKeyframe(FALL, uvPx(69, 2));
 
-	// HURT (Expressió de dolor / impacte en rebre dany)
-	sprite->setAnimationSpeed(HURT, 8);
-	sprite->addKeyframe(HURT, uv(1, 1));
+	// HURT (Expressió de xoc / dolor en rebre dany)
+	sprite->setAnimationSpeed(HURT, 10);
+	sprite->addKeyframe(HURT, uvPx(104, 2));
+	sprite->addKeyframe(HURT, uvPx(122, 2));
 
-	// DIE (Animació completa de mort oficial de Pocket Bomberman)
-	sprite->setAnimationSpeed(DIE, 6);
-	sprite->addKeyframe(DIE, uv(1, 1)); // Xoc / impacte
-	sprite->addKeyframe(DIE, uv(2, 1)); // Gir / mareig
-	sprite->addKeyframe(DIE, uv(3, 1)); // Tombarella
-	sprite->addKeyframe(DIE, uv(7, 1)); // Caigut derrotat a terra
-	sprite->addKeyframe(DIE, uv(4, 1)); // Puf / flash
-	sprite->addKeyframe(DIE, uv(5, 1)); // Anell d'esvaïment
-	sprite->addKeyframe(DIE, uv(6, 1)); // Desaparició final
+	// DIE (Seqüència completa de mort oficial de Pocket Bomberman: 10 frames a 8 fps = 1250 ms > dyingTime 1200 ms)
+	sprite->setAnimationSpeed(DIE, 8);
+	sprite->addKeyframe(DIE, uvPx(104, 2));  // 1. Xoc elèctric / impacte 1
+	sprite->addKeyframe(DIE, uvPx(122, 2));  // 2. Xoc elèctric / impacte 2
+	sprite->addKeyframe(DIE, uvPx(140, 2));  // 3. Gir d'esquena
+	sprite->addKeyframe(DIE, uvPx(19, 21));  // 4. Mareig frontal
+	sprite->addKeyframe(DIE, uvPx(37, 21));  // 5. Tombarella lateral
+	sprite->addKeyframe(DIE, uvPx(125, 21)); // 6. Caigut derrotat a terra 1
+	sprite->addKeyframe(DIE, uvPx(143, 21)); // 7. Caigut plorant a terra 2
+	sprite->addKeyframe(DIE, uvPx(71, 21));  // 8. Inflant-se en bola blanca (puf)
+	sprite->addKeyframe(DIE, uvPx(89, 21));  // 9. Esclat d'espurnes
+	sprite->addKeyframe(DIE, uvPx(107, 21)); // 10. Anell d'esvaïment final
 
 	sprite->changeAnimation(IDLE);
 	tileMapDispl = tileMapPos;
@@ -140,7 +145,10 @@ void Player::startDying()
 	bJumping = false;
 	fallSpeed = 0.0f;
 	if(sprite != NULL)
+	{
+		sprite->setFlippedHorizontally(false);
 		sprite->changeAnimation(DIE);
+	}
 	SoundManager::instance().playSound(SFX_BOMBERMAN_KILLED);
 }
 
