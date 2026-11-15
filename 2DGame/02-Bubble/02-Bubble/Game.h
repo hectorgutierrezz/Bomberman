@@ -2,7 +2,7 @@
 #define _GAME_INCLUDE
 
 
-#include <GLFW/glfw3.h>
+#include "GLIncludes.h"
 #include "Scene.h"
 
 

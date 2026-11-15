@@ -1,5 +1,4 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include "GLIncludes.h"
 #include "Game.h"
 #include "SoundManager.h"
 

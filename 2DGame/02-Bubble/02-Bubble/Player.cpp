@@ -1,6 +1,6 @@
 #include <cmath>
 #include <iostream>
-#include <GL/glew.h>
+#include "GLIncludes.h"
 #include "Player.h"
 #include "Game.h"
 #include "SoundManager.h"
@@ -587,6 +587,5 @@ bool Player::hit()
 	startDying();
 	return true;
 }
-
 
 

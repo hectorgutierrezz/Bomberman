@@ -49,7 +49,7 @@ GLEW_OBJ  := $(BUILD_DIR)/glew.o
 # Todos los objetos
 ALL_OBJS := $(CPP_OBJS) $(SOIL_OBJS) $(GLEW_OBJ)
 
-.PHONY: all run clean help assets test
+.PHONY: all run clean help assets test web
 
 all: assets $(TARGET)
 	@echo "=================================================="
@@ -61,6 +61,18 @@ all: assets $(TARGET)
 TEST_TARGET := test_features
 TEST_SRC    := ../../tests/test_features.cpp
 TEST_OBJS   := $(filter-out $(BUILD_DIR)/game_main.o,$(ALL_OBJS))
+WEB_BUILD_DIR := web-build
+WEB_TARGET := $(WEB_BUILD_DIR)/index.html
+WEB_CPP_SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+WEB_IMAGE_LIB := $(SOIL_DIR)/stb_image_aug.c
+WEB_IMAGE_OBJ := $(WEB_BUILD_DIR)/stb_image_aug.o
+WEB_CFLAGS := -std=c++11 -O2 -I$(SRC_DIR) -I$(LIBS_DIR)/glm -I$(SOIL_DIR)
+WEB_LDFLAGS := -O2 -sUSE_GLFW=3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 \
+               -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1 -sEXIT_RUNTIME=0
+WEB_ASSETS := --preload-file $(SRC_DIR)/images@/images \
+              --preload-file $(SRC_DIR)/levels@/levels \
+              --preload-file $(SRC_DIR)/sound@/sound \
+              --preload-file $(SRC_DIR)/shaders@/shaders
 
 test: assets $(TARGET)
 	@echo "Compilando tests..."
@@ -68,6 +80,19 @@ test: assets $(TARGET)
 	@echo "Ejecutando tests de funcionalidades..."
 	@./$(TEST_TARGET)
 	@rm -f $(TEST_TARGET)
+
+web: $(WEB_TARGET)
+	@echo "Browser build ready: $(WEB_TARGET)"
+
+$(WEB_BUILD_DIR):
+	@mkdir -p $@
+
+$(WEB_TARGET): $(WEB_CPP_SRCS) $(WEB_IMAGE_OBJ) $(wildcard $(SRC_DIR)/*.h) $(wildcard $(SRC_DIR)/shaders/*) ../../web/shell.html | $(WEB_BUILD_DIR)
+	em++ $(WEB_CFLAGS) $(WEB_CPP_SRCS) $(WEB_IMAGE_OBJ) $(WEB_LDFLAGS) \
+		$(WEB_ASSETS) --shell-file ../../web/shell.html -o $@
+
+$(WEB_IMAGE_OBJ): $(WEB_IMAGE_LIB) | $(WEB_BUILD_DIR)
+	emcc -O2 -I$(SOIL_DIR) -c $< -o $@
 
 # Enlaces a recursos en 2DGame/02-Bubble para que se puedan cargar directamente desde aquí
 assets:
@@ -107,7 +132,7 @@ run: all
 
 clean:
 	@echo "Limpiando archivos de compilacion..."
-	@rm -rf $(BUILD_DIR) $(TARGET) $(SRC_DIR)/$(TARGET)
+	@rm -rf $(BUILD_DIR) $(TARGET) $(SRC_DIR)/$(TARGET) $(WEB_BUILD_DIR)
 	@rm -f images shaders levels sound
 	@echo "Limpieza completada."
 
@@ -116,4 +141,5 @@ help:
 	@echo "  make        - Compilar el proyecto"
 	@echo "  make run    - Compilar y ejecutar el juego"
 	@echo "  make clean  - Eliminar binarios y archivos objeto"
+	@echo "  make web    - Crear la version para navegador (Emscripten)"
 	@echo "  make help   - Mostrar esta ayuda"

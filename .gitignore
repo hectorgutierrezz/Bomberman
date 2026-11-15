@@ -17,6 +17,7 @@
 [Bb]in/
 [Oo]bj/
 build/
+/2DGame/02-Bubble/web-build/
 
 # Base de dades d'IntelliSense i fitxers temporals de compilació
 *.VC.db

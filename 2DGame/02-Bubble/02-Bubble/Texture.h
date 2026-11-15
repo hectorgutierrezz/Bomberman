@@ -3,7 +3,7 @@
 
 
 #include <string>
-#include <GL/glew.h>
+#include "GLIncludes.h"
 
 
 using namespace std;
@@ -53,4 +53,3 @@ private:
 
 
 #endif // _TEXTURE_INCLUDE
-

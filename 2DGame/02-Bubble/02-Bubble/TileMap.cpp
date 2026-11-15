@@ -70,13 +70,11 @@ void TileMap::render() const
 {
 	if(nTiles <= 0)
 		return;
-	glEnable(GL_TEXTURE_2D);
 	tilesheet.use();
 	glBindVertexArray(vao);
 	glEnableVertexAttribArray(posLocation);
 	glEnableVertexAttribArray(texCoordLocation);
 	glDrawArrays(GL_TRIANGLES, 0, 6 * nTiles);
-	glDisable(GL_TEXTURE_2D);
 }
 
 void TileMap::free()
@@ -403,7 +401,6 @@ void TileMap::rebuildArrays()
 	free();
 	prepareArrays(storedMinCoords, *shaderProgram);
 }
-
 
 
 

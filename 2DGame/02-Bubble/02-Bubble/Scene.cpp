@@ -1951,12 +1951,20 @@ void Scene::render() {
 void Scene::initShaders() {
   Shader vShader, fShader;
 
+#ifdef __EMSCRIPTEN__
+  vShader.initFromFile(VERTEX_SHADER, "shaders/webgl.vert");
+#else
   vShader.initFromFile(VERTEX_SHADER, "shaders/texture.vert");
+#endif
   if (!vShader.isCompiled()) {
     cout << "Vertex Shader Error" << endl;
     cout << "" << vShader.log() << endl << endl;
   }
+#ifdef __EMSCRIPTEN__
+  fShader.initFromFile(FRAGMENT_SHADER, "shaders/webgl.frag");
+#else
   fShader.initFromFile(FRAGMENT_SHADER, "shaders/texture.frag");
+#endif
   if (!fShader.isCompiled()) {
     cout << "Fragment Shader Error" << endl;
     cout << "" << fShader.log() << endl << endl;

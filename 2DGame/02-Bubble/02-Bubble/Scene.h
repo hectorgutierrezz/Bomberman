@@ -13,8 +13,7 @@
 #include "TileMap.h"
 #include "Sprite.h"
 #include "Texture.h"
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include "GLIncludes.h"
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>

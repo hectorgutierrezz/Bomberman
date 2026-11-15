@@ -1,4 +1,8 @@
+#ifdef __EMSCRIPTEN__
+#include <stb_image_aug.h>
+#else
 #include <SOIL.h>
+#endif
 #include "Texture.h"
 
 
@@ -13,7 +17,7 @@ Texture::Texture()
 	wrapS = GL_REPEAT;
 	wrapT = GL_REPEAT;
 	minFilter = GL_LINEAR_MIPMAP_LINEAR;
-	magFilter = GL_LINEAR_MIPMAP_LINEAR;
+	magFilter = GL_LINEAR;
 }
 
 Texture::~Texture()
@@ -41,10 +45,18 @@ bool Texture::loadFromFile(const string &filename, PixelFormat format)
 	switch(format)
 	{
 	case TEXTURE_PIXEL_FORMAT_RGB:
+#ifdef __EMSCRIPTEN__
+		image = stbi_load(filename.c_str(), &w, &h, 0, 3);
+#else
 		image = SOIL_load_image(filename.c_str(), &w, &h, 0, SOIL_LOAD_RGB);
+#endif
 		break;
 	case TEXTURE_PIXEL_FORMAT_RGBA:
+#ifdef __EMSCRIPTEN__
+		image = stbi_load(filename.c_str(), &w, &h, 0, 4);
+#else
 		image = SOIL_load_image(filename.c_str(), &w, &h, 0, SOIL_LOAD_RGBA);
+#endif
 		break;
 	}
 	if(image == NULL)
@@ -65,7 +77,11 @@ bool Texture::loadFromFile(const string &filename, PixelFormat format)
 		break;
 	}
 	glGenerateMipmap(GL_TEXTURE_2D);
+#ifdef __EMSCRIPTEN__
+	stbi_image_free(image);
+#else
 	SOIL_free_image_data(image);
+#endif
 	
 	return true;
 }
@@ -140,12 +156,12 @@ void Texture::setMagFilter(GLint value)
 
 void Texture::use() const
 {
+#ifndef __EMSCRIPTEN__
 	glEnable(GL_TEXTURE_2D);
+#endif
 	glBindTexture(GL_TEXTURE_2D, texId);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapS);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
 }
-
-

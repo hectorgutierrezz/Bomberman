@@ -11,25 +11,56 @@ amb C++ i OpenGL.
 - Cap final al cinquè nivell, música, efectes de so i mode invulnerable.
 - Proves automatitzades de funcionalitats del joc.
 
-## Requisits
+## Maneres d'executar el joc
+
+Pots executar el joc com a aplicació nativa amb una finestra d'escriptori o jugar
+des d'un navegador amb WebAssembly.
+
+### 1. Aplicació nativa (Makefile)
 
 En Linux cal disposar de `g++`, `make`, `pkg-config`, GLFW 3 i les llibreries de
 desenvolupament d'OpenGL. El codi font de GLEW, GLM i SOIL s'inclou a `libs/`.
 
-## Compilar i executar
-
-Des de l'arrel del repositori:
+Des de l'arrel del repositori, compila i executa:
 
 ```sh
-make -C 2DGame/02-Bubble
-make -C 2DGame/02-Bubble run
+make
+make run
 ```
 
-Per executar les proves:
+També pots executar les mateixes ordres des del directori del projecte,
+`2DGame/02-Bubble/`. `make` compila l'executable `bomberman` i `make run` l'obre
+en una finestra. Per compilar i executar les proves:
 
 ```sh
-make -C 2DGame/02-Bubble test
+make test
 ```
+
+### 2. Navegador (WebAssembly)
+
+Per compilar localment, cal tenir instal·lat
+[Emscripten](https://emscripten.org/docs/getting_started/downloads.html). Des de
+l'arrel del repositori:
+
+```sh
+make web
+python3 -m http.server 8000 --directory 2DGame/02-Bubble/web-build
+```
+
+Obre <http://localhost:8000> en un navegador compatible amb WebGL 2. Cal servir
+els fitxers amb un servidor HTTP; no obris `index.html` directament. La compilació
+web utilitza el mateix codi i recursos del joc, amb Web Audio per al so.
+
+### Publicació a GitHub Pages
+
+El workflow de GitHub Actions compila i publica automàticament els canvis a la
+branca `main`. Per activar-ho, ves a **Settings → Pages** i selecciona **GitHub
+Actions** com a font de desplegament. Després d'activar-ho i pujar els canvis a
+`main`, trobaràs l'adreça del joc a **Settings → Pages** o a l'execució del
+workflow de la pestanya **Actions**. També pots iniciar el workflow manualment
+des d'aquesta pestanya.
+
+Les dues versions fan servir els mateixos controls:
 
 ## Controls
 
