@@ -2,11 +2,13 @@
 #define _SCENE_INCLUDE
 
 #include "Bomb.h"
+#include "Boss.h"
 #include "Door.h"
 #include "Enemy.h"
 #include "Explosion.h"
 #include "Player.h"
 #include "PowerUp.h"
+#include "SteppableBlock.h"
 #include "ShaderProgram.h"
 #include "TileMap.h"
 #include "Sprite.h"
@@ -17,14 +19,58 @@
 #include <vector>
 #include <string>
 
+enum GameAction {
+  ACTION_MOVE_LEFT,
+  ACTION_MOVE_RIGHT,
+  ACTION_JUMP,
+  ACTION_BOMB,
+  ACTION_PAUSE,
+  ACTION_DROP_THROUGH
+};
+
+enum ControlBinding {
+  BIND_LEFT_ARROW,
+  BIND_LEFT_A,
+  BIND_RIGHT_ARROW,
+  BIND_RIGHT_D,
+  BIND_JUMP_ARROW,
+  BIND_JUMP_W,
+  BIND_BOMB_SPACE,
+  BIND_BOMB_X,
+  BIND_PAUSE,
+  BIND_DOWN_ARROW,
+  BIND_DOWN_S,
+  CONTROL_BINDING_COUNT
+};
+
+enum GameCheat {
+  CHEAT_GOD_MODE,
+  CHEAT_KILL_ENEMIES,
+  CHEAT_ADD_HEART,
+  CHEAT_ADD_BOMB,
+  CHEAT_ADD_RADIUS,
+  CHEAT_ADD_SPEED,
+  CHEAT_NEXT_LEVEL,
+  CHEAT_LEVEL_1,
+  CHEAT_LEVEL_2,
+  CHEAT_LEVEL_3,
+  CHEAT_LEVEL_4,
+  CHEAT_LEVEL_5,
+  GAME_CHEAT_COUNT
+};
+
 enum GameState {
   MAIN_MENU,
   INSTRUCTIONS,
+  CHEATS,
+  SETTINGS,
   CREDITS,
   PLAYING,
   PAUSED,
   GAME_OVER,
-  WIN
+  WIN,
+  TRY_AGAIN,
+  STAGE_INTRO
 };
 
 struct TextLabel {
@@ -59,22 +105,41 @@ public:
 
   // Power-ups API (accessible pel sistema de blocs destruïbles)
   PowerUp *spawnPowerUp(PowerUpType type, const glm::vec2 &pos);
-  PowerUp *tryDropPowerUp(const glm::vec2 &pos, float probability = 0.40f);
+  PowerUp *tryDropPowerUp(const glm::vec2 &pos, float probability = 0.50f);
   void clearPowerUps();
 
+  // Gestió de blocs que es trenquen en trepitjar-los (Steppable Blocks)
+  void initSteppableBlocks();
+  void updateSteppableBlocks(int deltaTime);
+  void clearSteppableBlocks();
+  const std::vector<SteppableBlock *> &getSteppableBlocks() const { return steppableBlocks; }
+
 private:
+  void breakDestructibleTiles(Explosion *explosion);
   void initShaders();
   bool isKeyJustPressed(int key);
+  bool isActionJustPressed(GameAction action);
+  bool isCheatJustPressed(GameCheat cheat);
 
   void initMenuScreens();
   void freeMenuScreens();
+  void refreshSettingsLabels();
+  void refreshCheatLabels();
 
   void renderMainMenu();
   void renderInstructions();
+  void renderCheats();
+  void renderSettings();
   void renderCredits();
   void renderPauseOverlay();
   void renderGameOver();
   void renderWin();
+  void renderTryAgain();
+  void initTryAgainScreen();
+  void freeTryAgainScreen();
+  void renderStageIntro();
+  void initStageIntroScreen();
+  void freeStageIntroScreen();
   void renderEnemies();
   void renderBombs();
   void renderExplosions();
@@ -82,12 +147,22 @@ private:
   void renderHUD();
   void placeBomb();
   void showGodModeMessage(bool enabled);
+  void showDoorOpenMessage();
+  void initLevelBackground(int level);
+  void freeLevelBackground();
   void startLevel(int levelNum = 1, bool keepPowerUps = true);
   void nextLevel();
   void onPlayerDeath();
+  void initHUDTextures();
+  void freeHUD();
   void updateTimerHUD();
   void updateLevelHUD();
   void updateEnemiesHUD();
+  void updateStageHUD();
+  void updateRadiusHUD();
+  void updateBombsHUD();
+  void updateLivesHUD();
+  void updateHeartsHUD();
   void initHeartTexture();
   void clearEnemies();
   void spawnEnemies();
@@ -99,9 +174,14 @@ private:
   TileMap *map;
   Player *player;
   Door *door;
+  Boss *boss;
   std::vector<Enemy *> enemies;
   int currentLevel;
   int externalLives; // Contador extern (re-runs fins al Game Over)
+
+  // Fons del nivell (Backgrounds tematics per a cada mon)
+  Texture bgTex;
+  Sprite *bgSprite;
 
   ShaderProgram texProgram;
   float currentTime;
@@ -116,14 +196,26 @@ private:
   Sprite *copyrightSprite;
   Texture hudsonTex;
   Sprite *hudsonSprite;
-  Texture cursorTex;
-  Sprite *cursorSprite;
   int menuOption;
-  TextLabel menuLabels[4];
+  TextLabel menuCursorLabel;
+  TextLabel menuLabels[6];
+  TextLabel settingsTitleLabel;
+  TextLabel settingsLabels[21];
+  TextLabel settingsFooterLabel;
+  int settingsOption;
+  int settingsBinding;
+  int settingsCheatBinding;
+  int settingsBindingSlot;
+  bool settingsBindingConflict;
+  float settingsMusicVolume;
+  float settingsSoundVolume;
   TextLabel menuFooterLabel;
 
   // Instruccions
   std::vector<TextLabel*> instructionsLabels;
+
+  // Trucs
+  std::vector<TextLabel*> cheatsLabels;
 
   // Crèdits
   std::vector<TextLabel*> creditsLabels;
@@ -131,6 +223,8 @@ private:
   // Pausa
   Texture pauseTex;
   Sprite *pauseSprite;
+  Texture pauseOverlayTex;
+  Sprite *pauseOverlaySprite;
   TextLabel pauseTitleLabel;
   TextLabel pauseResumeLabel;
   TextLabel pauseMenuLabel;
@@ -149,40 +243,92 @@ private:
   Sprite *worldClearSprite;
   Texture celebrateTex;
   Sprite *celebrateSprite;
+  Sprite *celebrateSecondSprite;
   TextLabel winCongratsLabel;
   TextLabel winSubLabel;
   TextLabel winPeaceLabel;
   TextLabel winPromptLabel;
 
+  // Pantalla intermèdia en perdre una vida (Try Again)
+  int tryAgainTimer;
+  Texture tryAgainBomberTex;
+  Sprite *tryAgainBomberSprite;
+  TextLabel tryAgainStageLabel;
+  TextLabel tryAgainTitleLabel;
+  TextLabel tryAgainLivesLabel;
+  TextLabel tryAgainChanceLabel;
+  TextLabel tryAgainEncourageLabel;
+  TextLabel tryAgainPromptLabel;
+  TextLabel tryAgainMenuLabel;
+
+  // Mini pantalla d'inici de nivell (Stage Intro)
+  int stageIntroTimer;
+  Texture stageIntroArtTex;
+  Sprite *stageIntroArtSprite;
+  Texture stageIntroBomberTex;
+  Sprite *stageIntroBomberSprite;
+  TextLabel stageIntroTitleLabel;
+  TextLabel stageIntroReadyLabel;
+  TextLabel stageIntroLivesLabel;
+  TextLabel stageIntroPromptLabel;
+
   std::vector<Bomb *> bombs;
   std::vector<Explosion *> explosions;
   std::vector<PowerUp *> powerUps;
+  std::vector<SteppableBlock *> steppableBlocks;
+  int powerUpCycle; // Rota Bomb/Fire/Heart/Skates en sortir dels blocs D
 
-  // HUD: icones de vides generals (sprites del personatge)
+  // HUD: Barra inferior estil Game Boy Color (Pocket Bomberman)
+  Texture hudBarTex;
+  Sprite *hudBarSprite;
+
+  Texture clockIconTex;
+  Sprite *clockIconSprite;
+
+  Texture doorIconTex;
+  Sprite *doorIconSprite;
+
+  Texture flameIconTex;
+  Sprite *flameIconSprite;
+
+  Texture bombIconTex;
+  Sprite *bombIconSprite;
+
   Texture hudTex;
   Sprite *lifeIcon;
 
-  // HUD: indicador de vida de nivell (cors pixel-art)
   Texture heartTex;
   Sprite *heartIcon;
 
-
-  // HUD: comptador enrere de temps
   int levelTimeLeft;
   Texture timerTex;
   Sprite *timerSprite;
   int lastDisplayedSeconds;
 
-  // HUD: indicador de nivell
-  Texture levelHUDTex;
-  Sprite *levelHUDSprite;
-  int lastDisplayedLevel;
-
-  // HUD: enemics vius del nivell
-  // HUD: indicador d'enemics restants / estat de la porta
   Texture enemiesHUDTex;
   Sprite *enemiesHUDSprite;
   int lastDisplayedEnemies;
+  int lastDisplayedBossHealth;
+
+  Texture stageHUDTex;
+  Sprite *stageHUDSprite;
+  int lastDisplayedStage;
+
+  Texture flameHUDTex;
+  Sprite *flameHUDSprite;
+  int lastDisplayedRadius;
+
+  Texture bombsHUDTex;
+  Sprite *bombsHUDSprite;
+  int lastDisplayedMaxBombs;
+
+  Texture livesHUDTex;
+  Sprite *livesHUDSprite;
+  int lastDisplayedLives;
+
+  Texture heartsHUDTex;
+  Sprite *heartsHUDSprite;
+  int lastDisplayedHearts;
 
   // Missatge temporal de god mode
   Texture godModeOnTex;
@@ -191,6 +337,11 @@ private:
   Sprite *godModeOffSprite;
   int godModeMsgTime;
   bool godModeMsgActive;
+
+  // Missatge temporal d'avís de porta oberta
+  Texture doorOpenTex;
+  Sprite *doorOpenSprite;
+  int doorOpenMsgTime;
 
   // Càmera dinàmica centrada al jugador
   float camX, camY;        // posició (cantonada superior-esquerra) de la càmera en world coords

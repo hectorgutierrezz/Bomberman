@@ -1,0 +1,33 @@
+TILEMAP
+36 28
+16 16
+images/Map/world_tileset.png
+16 16
+II22222222222222222222222222222222II
+IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+II                                II
+II                                II
+II                                II
+II                                II
+II                                II
+II       D                    D   II
+II    1111111   AAAAAAA111111111  II
+II                                II
+II AAAA      CCC          AAA     II
+II   D          D    D            II
+II  111111    111111111111AAA11AAAII
+II  HHHHHH    HHHHHHHHHHHH   HH   II
+IIAAA    AAAAA    HH    HHAAAHHAAAII
+II    DD                HH   HH D II
+IIAAAA11 AAAAAA D       HHAAAHH111II
+II    HH        D D     HH   HH   II
+IIAAAAHH       11111111111AAAHHAAAII
+II    HH   D   HHHHHHHHHHH   HH D II
+IIAAAAHH1111AACC          AAA  111II
+II    HH                          II
+II1111  AAAAA       AAAAAAAA   AAAII
+II              D           D     II
+II   AAAA  11111111       11111   II
+IID       DHHHHHHHH  D    HHHHH   II
+II11111111111111111111111111111111II
+IIHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHII

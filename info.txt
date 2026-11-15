@@ -1,0 +1,190 @@
+================================================================================
+                        POCKET BOMBERMAN 2D (GBC EDITION)
+              Facultat d'Informatica de Barcelona (FIB) - UPC
+                         Videojocs (VJ) - Curs 2026/27
+================================================================================
+
+1. AUTORS DEL PROJECTE
+--------------------------------------------------------------------------------
+- Hector Gutierrez Jose
+- Jan Diez de los Rios Penafiel
+
+
+2. DESCRIPCIO GENERAL I OBJECTIU DEL JOC
+--------------------------------------------------------------------------------
+Recreacio en 2D del classic "Pocket Bomberman" , un joc d'accio i plataformes verticals 
+("Jump Mode") on Bomberman es pot desplaçar lateralment, saltar entre plataformes, 
+utilitzar les seves propies bombes suspeses a l'aire com a graons, i 
+destruir blocs i enemics per obrir la porta de sortida de cada nivell.
+
+Objectiu de cada nivell:
+1. Eliminar tots els enemics del nivell (o derrotar el Cap Final al Nivell 5)
+   abans que s'esgoti el temps limit de 2 minuts (120 segons).
+2. Quan el comptador d'enemics arriba a 0, la porta de sortida s'obre i apareix
+   l'avis "PORTA OBERTA!" en pantalla.
+3. Arribar fins a la porta oberta (sovint protegida dins d'una cambra segellada
+   amb blocs destructibles) per passar al nivell seguent.
+
+
+3. INSTRUCCIONS I CONTROLS DEL JOC
+--------------------------------------------------------------------------------
+Tots els controls de joc i les tecles de truc es poden consultar i reconfigurar
+lliurement des de la pantalla "3. CONFIGURACIO" del menu principal.
+
+Controls per defecte durant la partida:
+- Moure a l'esquerra         : Fletxa Esquerra  o  A
+- Moure a la dreta           : Fletxa Dreta     o  D
+- Saltar                     : Fletxa Amunt     o  W
+- Baixar de plataforma prima : Fletxa Avall     o  S
+- Posar una bomba            : Espai            o  X
+- Pausar / Reprendre el joc  : P                o  ESC
+- Tornar al menu (en pausa)  : M
+
+Controls als menus i pantalles de transicio:
+- Navegar per les opcions    : Fletxes Amunt / Avall (o W / S)
+- Ajustar volum / slot tecla : Fletxes Esquerra / Dreta (a Configuracio)
+- Confirmar / Continuar      : Enter o Espai (o tecles numeriques 1-6 al menu)
+- Tornar enrere / Sortir     : ESC
+
+
+4. TECLES DE TRUC (CHEATS DE CORRECCIO)
+--------------------------------------------------------------------------------
+Les tecles de truc funcionen en qualsevol moment durant la partida i tambe es 
+poden consultar a "4. TRUCS" o reasignar a "3. CONFIGURACIO" al menu principal:
+
+- G : Activa / Desactiva el Mode Deu (invulnerabilitat davant d'explosions,
+      enemics, projectils del Boss i esgotament del temps).
+- K : Elimina instantaniament tots els enemics vius (i el Boss) i obre la porta.
+- H : Afegeix +1 cor de vida interna (escut d'impacte dins del nivell).
+- B : Afegeix +1 a la capacitat maxima de bombes simultanies (Bomb Up).
+- F : Afegeix +1 casella al radi d'abast de les explosions (Fire Up).
+- V : Augmenta la velocitat de moviment de Bomberman (Skates / Patins).
+- N : Passa directament al nivell seguent (o a la pantalla de victoria al 5).
+- 1 : Salta directament al Nivell 1 (Mon 1: Bosc / Forest World).
+- 2 : Salta directament al Nivell 2 (Mon 2: Desert / Ruines).
+- 3 : Salta directament al Nivell 3 (Mon 3: Temple Daurat / Vent).
+- 4 : Salta directament al Nivell 4 (Mon 4: Magma Volcanic).
+- 5 : Salta directament al Nivell 5 (Mon 5: Fortalesa de Gel - Combat de Boss).
+
+
+5. FUNCIONALITATS IMPLEMENTADES
+--------------------------------------------------------------------------------
+
+5.1. Estructura de Pantalles i Flux Complet de Joc
+- Menu Principal (MAIN_MENU) amb logo oficial, cursor animat i 6 seccions:
+  1. Jugar, 2. Instruccions, 3. Configuracio, 4. Trucs, 5. Credits, 6. Surt.
+- Pantalla d'Instruccions (INSTRUCTIONS), Pantalla de Trucs (CHEATS) i Pantalla
+  de Credits (CREDITS).
+- Pantalla de Configuracio interactiva (SETTINGS): permet ajustar en temps real
+  el volum de la musica (0%-100%) i dels efectes sonors (0%-100%), aixi com
+  remapejar qualsevol tecla de control (2 slots per accio) i de truc amb
+  deteccio de conflictes.
+- Pantalla d'Introduccio de Fase (STAGE_INTRO): abans de cada nivell mostra el
+  mon i fase ("NIVELL 1-X"), les vides restants i la il.lustracio pixel-art
+  oficial corresponent a cada mon (world1_art.png a world5_art.png).
+- Pantalla de Pausa (PAUSED) superposada a la partida amb silenciament temporal
+  de la musica.
+- Pantalla intermedia d'intent fallit (TRY_AGAIN): quan Bomberman perd una vida
+  pero encara li queden intents globals (3 vides inicials), mostra les vides
+  restants i permet reintentar el nivell o tornar al menu.
+- Pantalles finals diferenciades de Derrota per Vides (GAME_OVER), Derrota per
+  Temps Exhaurit (TIME_OVER) i Victoria Final en superar els 5 mons (WIN).
+
+5.2. Disseny dels 5 Nivells i Sistemes de Blocs / Plataformes
+- 5 nivells ("levels/level01.txt" a "level05.txt") dissenyats fidelment a partir
+  dels estadis originals de Pocket Bomberman GBC amb el tileset oficial de 62
+  rajoles ("images/Map/world_tileset.png") i fons tematics "seamless" propis per
+  a cada mon ("bg_world1.png" a "bg_world5.png").
+- Terreny multicapa (crosta superior d'herba/pedra/gel + subsol tematic) i
+  cambres de sortida on la porta queda protegida darrere de blocs destructibles.
+- 4 tipologies de rajoles interactives al TileMap:
+  1. Blocs solids indestructibles: tanquen el perimetre i formen l'estructura
+     de les terrasses. Les explosions s'hi aturen.
+  2. Plataformes semi-solides ("jump-through", rajoles 'A'/'B'): Bomberman les
+     pot travessar saltant des de sota i s'hi pot deixar caure d'una en una
+     prement Avall (o S) amb control de descens suau.
+  3. Blocs destructibles ('D'): es destrueixen en rebre l'impacte d'una explosio,
+     actualitzen dinamicament la malla OpenGL del TileMap i poden deixar anar
+     un power-up.
+  4. Blocs que s'esquerden en trepitjar-los (SteppableBlock, 'C'/'E'/'S'):
+     mostren esquerdes immediatament en trepitjar-los, es trenquen despres de
+     350 ms de contacte continu fent caure el jugador (si en surt abans, les
+     fissures persisteixen 250 ms i es restauren), i es regeneren sols al cap
+     de 3 segons (3000 ms).
+
+5.3. Jugador (Bomberman), Bombes i Explosions
+- Moviment horitzontal en coma flotant, salt parabolic de 44 px d'alcada i
+  gravetat progressiva amb col.lisions precises al pixel.
+- Animacions completes extretes al pixel exacte de "bomber.png": IDLE, STAND,
+  MOVE, FALL, HURT (en perdre un cor d'escut amb 2 s de parpelleig invulnerable)
+  i DIE (sequencia completa de mort de 10 frames).
+- Bombes alineades a la graella de 16x16 px amb animacio de metxa de 4 frames
+  (2,2 s). Les bombes queden suspeses i tenen la cara superior solida per a
+  Bomberman, permetent utilitzar-les com a plataformes per escalar desnivells.
+- Explosions en creu (4 direccions) d'abast variable, amb reaccio en cadena
+  instantania entre bombes properes i finestra de dany sincronitzada amb la bola
+  de foc activa (evitant dany residual durant el fum final).
+
+5.4. Sistema de Power-Ups amb Probabilitat Ponderada
+- En destruir un bloc 'D', hi ha una probabilitat independent del 30% que
+  aparegui un power-up flotant de 16x16 px.
+- Quan apareix un power-up, el tipus es selecciona de forma ponderada amb
+  generador Mersenne Twister (std::mt19937):
+  * Bomb Up (30%) : +1 bomba simultania maxima.
+  * Fire Up (30%) : +1 casella de radi d'explosio en les 4 direccions.
+  * Skates  (25%) : +0.25 px/frame de velocitat de moviment (fins a 2.10).
+  * Heart   (15%) : +1 cor de vida interna / escut d'impacte al nivell.
+
+5.5. Enemics i Intel.ligencia Artificial (3 Tipus + Cap Final al Nivell 5)
+- ENEMY_HORIZONTAL (Caminant terrestre): patrulla plataformes i inverteix la
+  direccio en topar amb parets, bombes o en detectar la vora d'un precipici
+  ("wouldFall") per no caure al buit.
+- ENEMY_VERTICAL (Volador): patrulla corredors verticals amunt i avall; canvia
+  de sentit en detectar sostre, terra o el limit del seu radi de vol.
+- ENEMY_STATIC (Globus vigilant Valcom): levita suaument, orienta la mirada cap
+  a la posicio de Bomberman, accelera l'animacio d'alerta quan el jugador s'hi
+  apropa (< 96 px) i genera una explosio en morir.
+- BOSS FINAL al Nivell 5 (Gorgola Demoniaca de 32x32 px):
+  * Maquina d'estats completa: BOSS_IDLE, BOSS_CHASE, BOSS_PAUSE, BOSS_SHOOT,
+    BOSS_SUMMON, BOSS_HURT i BOSS_DYING.
+  * Persegueix Bomberman pel cel de l'arena alternant fases de persecucio i
+    pausa, dispara raigs d'energia dirigits a la posicio del jugador i invoca
+    esbirros de suport cada 15 segons (maxim 2 simultanis).
+  * Disposa de 3 punts de vida (indicats a l'HUD com B3, B2, B1), periode
+    d'invulnerabilitat segura per al jugador despres de rebre una explosio, i
+    sequencia d'explosions multiples abans d'obrir la porta final.
+
+5.6. HUD Estil Game Boy Color, Camera i Audio
+- Barra inferior retro fixa amb totes les dades en temps real:
+  * Cronometre MM:SS (es torna vermell en quedar <= 30 s).
+  * Icona de porta + comptador d'enemics vius (o vides del Boss B3..B1), que
+    canvia a verd ("00") quan la porta s'obre.
+  * Indicador de fase actual (T1..T5).
+  * Comptador de radi de foc (Fire Up) i de bombes simultanies (Bomb Up).
+  * Comptador de cors de nivell (vides internes) i de vides globals (intents).
+- Camera 2D suau amb interpolacio lineal ("lerp") i restriccio exacta als limits
+  del mapa de cada nivell.
+- Motor d'audio multiplataforma integrat amb "miniaudio.h" (SoundManager):
+  * 9 pistes de musica BGM oficials (Title, World Intro, Forest Stage, Boss
+    Battle, Continue, Stage Clear, World Clear, Time Over, Game Over).
+  * 7 efectes sonors SFX balancejats per grups independents (plantar bomba,
+    explosio, recollir power-up, mort de Bomberman, pausa, passos i salt).
+
+
+6. EXECUCIO I COMPILACIO
+--------------------------------------------------------------------------------
+- Executable directe (Windows):
+  Executeu "Binari/Bomberman.exe" (inclou totes les carpetes d'assets "images/",
+  "levels/", "shaders/" i "sound/").
+
+- Compilacio a Windows (Visual Studio):
+  Obriu "2DGame/02-Bubble/02-Bubble.sln" en configuracio "Release | Win32" o
+  "Debug | Win32" i compileu la solucio.
+
+- Compilacio i Tests Unitaris a Linux / WSL:
+  Des de l'arrel del projecte:
+    make        -> Compila l'executable a "2DGame/02-Bubble/bomberman"
+    make run    -> Compila i executa el joc
+    make test   -> Compila i executa la bateria de tests unitaris automatitzats
+================================================================================
+

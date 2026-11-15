@@ -2,6 +2,8 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <thread>
+#include <cstdlib>
+#include <ctime>
 #include "Game.h"
 
 
@@ -10,6 +12,9 @@
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	(void)window;
+	(void)scancode;
+	(void)mods;
 	if (action == GLFW_PRESS)
 		Game::instance().keyPressed(key);
 	else if (action == GLFW_RELEASE)
@@ -18,11 +23,14 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
+	(void)window;
 	Game::instance().mouseMove(int(xpos), int(ypos));
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
+	(void)window;
+	(void)mods;
 	if (action == GLFW_PRESS)
 		Game::instance().mousePress(button);
 	else if (action == GLFW_RELEASE)
@@ -31,6 +39,7 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
+	(void)window;
 	glViewport(0, 0, width, height);
 }
 
@@ -74,6 +83,9 @@ int main(void)
 	glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
 	glViewport(0, 0, fbWidth, fbHeight);
 
+	/* Init random seed */
+	srand((unsigned int)time(NULL));
+
 	/* Init step of the game loop */
 	Game::instance().init();
 	timePreviousFrame = glfwGetTime();
@@ -110,4 +122,3 @@ int main(void)
 	glfwTerminate();
 	return 0;
 }
-

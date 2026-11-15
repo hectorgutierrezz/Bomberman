@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <random>
 
 Texture PowerUp::powerUpTexture;
 bool PowerUp::textureLoaded = false;
@@ -26,7 +27,7 @@ PowerUp::~PowerUp()
 	}
 }
 
-void PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
+bool PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 {
 	tileMapDispl = tileMapPos;
 	if(!textureLoaded)
@@ -34,6 +35,7 @@ void PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 		if(!powerUpTexture.loadFromFile("images/powerups.png", TEXTURE_PIXEL_FORMAT_RGBA))
 		{
 			std::cerr << "Error loading images/powerups.png" << std::endl;
+			return false;
 		}
 		powerUpTexture.setMinFilter(GL_NEAREST);
 		powerUpTexture.setMagFilter(GL_NEAREST);
@@ -43,8 +45,9 @@ void PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	}
 
 	// 4 frames a images/powerups.png (128x32 px) -> mida UV (0.25f, 1.0f)
+	// Escala ajustada a 16x16 px per coincidir exactament amb la graella dels tiles i la mida del jugador
 	glm::vec2 sizeInUV = glm::vec2(0.25f, 1.0f);
-	sprite = Sprite::createSprite(glm::ivec2(32, 32), sizeInUV, &powerUpTexture, &shaderProgram);
+	sprite = Sprite::createSprite(glm::ivec2(16, 16), sizeInUV, &powerUpTexture, &shaderProgram);
 	sprite->setNumberAnimations(4);
 
 	for(int i = 0; i < 4; ++i)
@@ -55,6 +58,7 @@ void PowerUp::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 	sprite->changeAnimation(int(type));
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + position.x), float(tileMapDispl.y + position.y)));
+	return true;
 }
 
 void PowerUp::update(int deltaTime)
@@ -63,7 +67,7 @@ void PowerUp::update(int deltaTime)
 		return;
 
 	bobTime += float(deltaTime) / 1000.f;
-	float bobOffset = std::sin(bobTime * 4.0f) * 3.0f; // Efecte suau de flotació (bobbing)
+	float bobOffset = std::sin(bobTime * 4.0f) * 1.5f; // Efecte suau de flotació adaptat a 16px
 	if(sprite != NULL)
 	{
 		sprite->setPosition(glm::vec2(float(tileMapDispl.x + position.x), float(tileMapDispl.y + position.y + bobOffset)));
@@ -87,11 +91,11 @@ bool PowerUp::checkCollision(const glm::ivec2 &playerPos, const glm::ivec2 &play
 	int pTop = playerPos.y;
 	int pBottom = pTop + playerSize.y;
 
-	// Bounding box de l'objecte (32x32) amb marge còmode de recol·lecció
-	int iLeft = int(position.x) + 4;
-	int iRight = int(position.x) + 28;
-	int iTop = int(position.y) + 4;
-	int iBottom = int(position.y) + 28;
+	// Bounding box de l'objecte (16x16) amb marge còmode de recol·lecció
+	int iLeft = int(position.x);
+	int iRight = int(position.x) + 16;
+	int iTop = int(position.y);
+	int iBottom = int(position.y) + 16;
 
 	return (pRight > iLeft && pLeft < iRight && pBottom > iTop && pTop < iBottom);
 }
@@ -130,4 +134,23 @@ const char *PowerUp::getTypeName(PowerUpType type)
 	case POWERUP_SKATES:  return "SKATES";
 	}
 	return "UNKNOWN";
+}
+
+bool PowerUp::chooseRandomDrop(float probability, PowerUpType &type)
+{
+	if(!(probability > 0.f))
+		return false;
+	if(probability > 1.f)
+		probability = 1.f;
+
+	static std::mt19937 randomEngine(std::random_device{}());
+	std::bernoulli_distribution drop(probability);
+	if(!drop(randomEngine))
+		return false;
+
+	// Pesos segons l'ordre de PowerUpType:
+	// POWERUP_BOMB_UP (30%), POWERUP_FIRE_UP (30%), POWERUP_HEART (15%), POWERUP_SKATES (25%)
+	std::discrete_distribution<int> weightedType({30.0, 30.0, 15.0, 25.0});
+	type = PowerUpType(weightedType(randomEngine));
+	return true;
 }

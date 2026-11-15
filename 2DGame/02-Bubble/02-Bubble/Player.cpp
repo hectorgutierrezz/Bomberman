@@ -3,13 +3,14 @@
 #include <GL/glew.h>
 #include "Player.h"
 #include "Game.h"
+#include "SoundManager.h"
 
 
 #define JUMP_ANGLE_STEP 4
-#define JUMP_HEIGHT 96
+#define JUMP_HEIGHT 44
 #define FALL_STEP 4
-#define GRAVITY 0.4f
-#define MAX_FALL_SPEED 8.0f
+#define GRAVITY 0.22f
+#define MAX_FALL_SPEED 3.5f
 
 
 enum PlayerAnims
@@ -27,10 +28,14 @@ Player::Player()
 	internalLives = 1;
 	maxBombs = 1;
 	bombRadius = 1;
-	moveSpeed = 2.0f;
+	moveSpeed = 1.35f;
 	moveAccumX = 0.0f;
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
+	dropDownTimer = 0;
+	dropThroughTileY = -1;
+	dropCooldown = 0;
+	stepSoundTimer = 0;
 	godMode = false;
 	bDying = false;
 	bDead = false;
@@ -52,10 +57,13 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	internalLives = 1;
 	maxBombs = 1;
 	bombRadius = 1;
-	moveSpeed = 2.0f;
+	moveSpeed = 1.35f;
 	moveAccumX = 0.0f;
 	invulnerableTime = 0;
 	fallSpeed = 0.0f;
+	dropDownTimer = 0;
+	dropThroughTileY = -1;
+	dropCooldown = 0;
 	godMode = false;
 	if(sprite != NULL)
 	{
@@ -64,58 +72,63 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	}
 	spritesheet.loadFromFile("images/Sprites/Original/Color/Characters/bomber.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	
-	glm::vec2 sizeInUV = glm::vec2(17.f / 253.f, 17.f / 632.f); // 17x17 pixels normalitzats
+	// Cada frame a bomber.png té una caixa exacta de 16x16 píxels amb separació variable per columna i fila
+	glm::vec2 sizeInUV = glm::vec2(16.f / 253.f, 16.f / 632.f);
 	
-	sprite = Sprite::createSprite(glm::ivec2(32, 32), sizeInUV, &spritesheet, &shaderProgram);
+	sprite = Sprite::createSprite(glm::ivec2(PLAYER_WIDTH, PLAYER_HEIGHT), sizeInUV, &spritesheet, &shaderProgram);
 	sprite->setNumberAnimations(8); // Mateix nombre d'animacions que a l'enum
 
-	auto uv = [](int col, int row) {
-		return glm::vec2(float(col * 17.f / 253.f), float(row * 17.f / 632.f));
+	auto uvPx = [](int px, int py) {
+		return glm::vec2(float(px) / 253.f, float(py) / 632.f);
 	};
 	
 	// IDLE (Frontal / Parat)
 	sprite->setAnimationSpeed(IDLE, 8);
-	sprite->addKeyframe(IDLE, uv(0, 0));
+	sprite->addKeyframe(IDLE, uvPx(54, 21));
 
 	// STAND_RIGHT (Parat cara a la dreta)
 	sprite->setAnimationSpeed(STAND_RIGHT, 8);
-	sprite->addKeyframe(STAND_RIGHT, uv(3, 0));
+	sprite->addKeyframe(STAND_RIGHT, uvPx(4, 2));
 
 	// STAND_LEFT (Parat cara a l'esquerra)
 	sprite->setAnimationSpeed(STAND_LEFT, 8);
-	sprite->addKeyframe(STAND_LEFT, uv(3, 0));
+	sprite->addKeyframe(STAND_LEFT, uvPx(4, 2));
 
 	// MOVE_RIGHT (Caminar cap a la dreta)
 	sprite->setAnimationSpeed(MOVE_RIGHT, 8);
-	sprite->addKeyframe(MOVE_RIGHT, uv(3, 0));
-	sprite->addKeyframe(MOVE_RIGHT, uv(4, 0));
-	sprite->addKeyframe(MOVE_RIGHT, uv(3, 0));
-	sprite->addKeyframe(MOVE_RIGHT, uv(5, 0));
+	sprite->addKeyframe(MOVE_RIGHT, uvPx(4, 2));
+	sprite->addKeyframe(MOVE_RIGHT, uvPx(20, 2));
+	sprite->addKeyframe(MOVE_RIGHT, uvPx(4, 2));
+	sprite->addKeyframe(MOVE_RIGHT, uvPx(36, 2));
 
 	// MOVE_LEFT (Caminar cap a l'esquerra)
 	sprite->setAnimationSpeed(MOVE_LEFT, 8);
-	sprite->addKeyframe(MOVE_LEFT, uv(3, 0));
-	sprite->addKeyframe(MOVE_LEFT, uv(4, 0));
-	sprite->addKeyframe(MOVE_LEFT, uv(3, 0));
-	sprite->addKeyframe(MOVE_LEFT, uv(5, 0));
+	sprite->addKeyframe(MOVE_LEFT, uvPx(4, 2));
+	sprite->addKeyframe(MOVE_LEFT, uvPx(20, 2));
+	sprite->addKeyframe(MOVE_LEFT, uvPx(4, 2));
+	sprite->addKeyframe(MOVE_LEFT, uvPx(36, 2));
 
-	// FALL (En l'aire / Caiguda)
+	// FALL (En l'aire / Salt i caiguda)
 	sprite->setAnimationSpeed(FALL, 8);
-	sprite->addKeyframe(FALL, uv(1, 0));
+	sprite->addKeyframe(FALL, uvPx(69, 2));
 
-	// HURT (Expressió de dolor / impacte en rebre dany)
-	sprite->setAnimationSpeed(HURT, 8);
-	sprite->addKeyframe(HURT, uv(1, 1));
+	// HURT (Expressió de xoc / dolor en rebre dany)
+	sprite->setAnimationSpeed(HURT, 10);
+	sprite->addKeyframe(HURT, uvPx(104, 2));
+	sprite->addKeyframe(HURT, uvPx(122, 2));
 
-	// DIE (Animació completa de mort oficial de Pocket Bomberman)
-	sprite->setAnimationSpeed(DIE, 6);
-	sprite->addKeyframe(DIE, uv(1, 1)); // Xoc / impacte
-	sprite->addKeyframe(DIE, uv(2, 1)); // Gir / mareig
-	sprite->addKeyframe(DIE, uv(3, 1)); // Tombarella
-	sprite->addKeyframe(DIE, uv(7, 1)); // Caigut derrotat a terra
-	sprite->addKeyframe(DIE, uv(4, 1)); // Puf / flash
-	sprite->addKeyframe(DIE, uv(5, 1)); // Anell d'esvaïment
-	sprite->addKeyframe(DIE, uv(6, 1)); // Desaparició final
+	// DIE (Seqüència completa de mort oficial de Pocket Bomberman: 10 frames a 8 fps = 1250 ms > dyingTime 1200 ms)
+	sprite->setAnimationSpeed(DIE, 8);
+	sprite->addKeyframe(DIE, uvPx(104, 2));  // 1. Xoc elèctric / impacte 1
+	sprite->addKeyframe(DIE, uvPx(122, 2));  // 2. Xoc elèctric / impacte 2
+	sprite->addKeyframe(DIE, uvPx(140, 2));  // 3. Gir d'esquena
+	sprite->addKeyframe(DIE, uvPx(19, 21));  // 4. Mareig frontal
+	sprite->addKeyframe(DIE, uvPx(37, 21));  // 5. Tombarella lateral
+	sprite->addKeyframe(DIE, uvPx(125, 21)); // 6. Caigut derrotat a terra 1
+	sprite->addKeyframe(DIE, uvPx(143, 21)); // 7. Caigut plorant a terra 2
+	sprite->addKeyframe(DIE, uvPx(71, 21));  // 8. Inflant-se en bola blanca (puf)
+	sprite->addKeyframe(DIE, uvPx(89, 21));  // 9. Esclat d'espurnes
+	sprite->addKeyframe(DIE, uvPx(107, 21)); // 10. Anell d'esvaïment final
 
 	sprite->changeAnimation(IDLE);
 	tileMapDispl = tileMapPos;
@@ -130,18 +143,61 @@ void Player::startDying()
 	bDead = false;
 	dyingTime = 1200; // 1.2 segons de durada de l'animació de mort
 	bJumping = false;
+	fallSpeed = 0.0f;
 	if(sprite != NULL)
+	{
+		sprite->setFlippedHorizontally(false);
 		sprite->changeAnimation(DIE);
+	}
+	SoundManager::instance().playSound(SFX_BOMBERMAN_KILLED);
+}
+
+bool Player::isOnJumpThroughPlatform() const
+{
+	if(map == NULL)
+		return false;
+	int tileSize = map->getTileSize();
+	int footY = posPlayer.y + PLAYER_HEIGHT;
+	int tileY = footY / tileSize;
+	int x0 = (posPlayer.x + 1) / tileSize;
+	int x1 = (posPlayer.x + PLAYER_WIDTH - 2) / tileSize;
+
+	bool hasJumpThrough = false;
+	for(int x = x0; x <= x1; ++x)
+	{
+		if(map->isTileSolid(x, tileY))
+		{
+			if(map->isTileJumpThrough(x, tileY))
+				hasJumpThrough = true;
+			else
+				return false; // Bloc de roca sòlid a sota, no es pot baixar
+		}
+	}
+	return hasJumpThrough;
 }
 
 bool Player::stepFall(int step)
 {
 	bool onGround = false;
+	int tileSize = (map != NULL) ? map->getTileSize() : 16;
+	glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+	glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
+
 	for(int s = 0; s < step; ++s)
 	{
 		posPlayer.y += 1;
-		if(map != NULL && map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+		colPos.y = posPlayer.y;
+		int footTileY = (colPos.y + colSize.y - 1) / tileSize;
+		if(dropThroughTileY >= 0 && footTileY > dropThroughTileY)
 		{
+			dropThroughTileY = -1;
+			dropDownTimer = 0;
+		}
+		bool ignoreJT = (dropDownTimer > 0) && (footTileY == dropThroughTileY);
+		int correctedY = colPos.y;
+		if(map != NULL && map->collisionMoveDown(colPos, colSize, &correctedY, ignoreJT))
+		{
+			posPlayer.y = correctedY;
 			onGround = true;
 			break;
 		}
@@ -151,7 +207,7 @@ bool Player::stepFall(int step)
 			{
 				if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 				{
-					if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+					if((*bombs)[i]->collisionDown(colPos, colSize, &posPlayer.y))
 					{
 						onGround = true;
 						break;
@@ -178,11 +234,6 @@ void Player::update(int deltaTime)
 			bDying = false;
 			bDead = true; // Senyalitza que l'animació de mort ha finalitzat
 		}
-		// Cau amb acceleració si estava en l'aire
-		fallSpeed = std::min(fallSpeed + GRAVITY, MAX_FALL_SPEED);
-		int step = std::max(1, int(fallSpeed));
-		if(stepFall(step))
-			fallSpeed = 0.0f;
 		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 		return;
 	}
@@ -213,16 +264,54 @@ void Player::update(int deltaTime)
 		for(size_t i = 0; i < bombs->size(); ++i)
 		{
 			if((*bombs)[i] != NULL && (*bombs)[i]->isActive())
-				(*bombs)[i]->updatePlayerOverlap(posPlayer, glm::ivec2(32, 32));
+				(*bombs)[i]->updatePlayerOverlap(posPlayer, glm::ivec2(PLAYER_WIDTH, PLAYER_HEIGHT));
 		}
 	}
 
-	if(Game::instance().getKey(GLFW_KEY_LEFT) || Game::instance().getKey(GLFW_KEY_A))
+	if(dropDownTimer > 0)
+	{
+		dropDownTimer -= deltaTime;
+		if(dropDownTimer <= 0)
+		{
+			dropDownTimer = 0;
+			dropThroughTileY = -1;
+		}
+	}
+	if(dropCooldown > 0)
+	{
+		dropCooldown -= deltaTime;
+		if(dropCooldown < 0)
+			dropCooldown = 0;
+	}
+
+	// Baixar de les plataformes jump-through d'una en una amb gravetat suau quan clica Avall o S
+	if(!bJumping && fallSpeed == 0.0f && dropCooldown <= 0 && isOnJumpThroughPlatform() &&
+	   Game::instance().getActionPressed(ACTION_DROP_THROUGH))
+	{
+		int tileSize = (map != NULL) ? map->getTileSize() : 16;
+		dropThroughTileY = (posPlayer.y + PLAYER_HEIGHT) / tileSize;
+		dropDownTimer = 220;
+		dropCooldown = 320;
+		posPlayer.y += 1;
+		fallSpeed = 0.0f;
+	}
+
+	if(Game::instance().getActionPressed(ACTION_MOVE_LEFT))
 	{
 		facingDirection = -1;
 		if(sprite->animation() != MOVE_LEFT)
 			sprite->changeAnimation(MOVE_LEFT);
 		sprite->setFlippedHorizontally(false);
+
+		if(!bJumping && fallSpeed == 0.0f)
+		{
+			stepSoundTimer -= deltaTime;
+			if(stepSoundTimer <= 0)
+			{
+				SoundManager::instance().playSound(SFX_STEP_HORIZONTAL);
+				stepSoundTimer = 260;
+			}
+		}
 
 		moveAccumX += moveSpeed;
 		int step = int(moveAccumX);
@@ -232,13 +321,15 @@ void Player::update(int deltaTime)
 		{
 			posPlayer.x -= 1;
 			bool hitBomb = false;
+			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
 			if(bombs != NULL)
 			{
 				for(size_t i = 0; i < bombs->size(); ++i)
 				{
 					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 					{
-						if((*bombs)[i]->collisionLeft(posPlayer, glm::ivec2(32, 32)))
+						if((*bombs)[i]->collisionLeft(colPos, colSize))
 						{
 							hitBomb = true;
 							break;
@@ -247,7 +338,7 @@ void Player::update(int deltaTime)
 				}
 			}
 
-			if(map->collisionMoveLeft(posPlayer, glm::ivec2(32, 32)) || hitBomb)
+			if(map->collisionMoveLeft(colPos, colSize) || hitBomb)
 			{
 				posPlayer.x += 1;
 				sprite->changeAnimation(STAND_LEFT);
@@ -255,12 +346,22 @@ void Player::update(int deltaTime)
 			}
 		}
 	}
-	else if(Game::instance().getKey(GLFW_KEY_RIGHT) || Game::instance().getKey(GLFW_KEY_D))
+	else if(Game::instance().getActionPressed(ACTION_MOVE_RIGHT))
 	{
 		facingDirection = 1;
 		if(sprite->animation() != MOVE_RIGHT)
 			sprite->changeAnimation(MOVE_RIGHT);
 		sprite->setFlippedHorizontally(true);
+
+		if(!bJumping && fallSpeed == 0.0f)
+		{
+			stepSoundTimer -= deltaTime;
+			if(stepSoundTimer <= 0)
+			{
+				SoundManager::instance().playSound(SFX_STEP_HORIZONTAL);
+				stepSoundTimer = 260;
+			}
+		}
 
 		moveAccumX += moveSpeed;
 		int step = int(moveAccumX);
@@ -270,13 +371,15 @@ void Player::update(int deltaTime)
 		{
 			posPlayer.x += 1;
 			bool hitBomb = false;
+			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
 			if(bombs != NULL)
 			{
 				for(size_t i = 0; i < bombs->size(); ++i)
 				{
 					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 					{
-						if((*bombs)[i]->collisionRight(posPlayer, glm::ivec2(32, 32)))
+						if((*bombs)[i]->collisionRight(colPos, colSize))
 						{
 							hitBomb = true;
 							break;
@@ -285,7 +388,7 @@ void Player::update(int deltaTime)
 				}
 			}
 
-			if(map->collisionMoveRight(posPlayer, glm::ivec2(32, 32)) || hitBomb)
+			if(map->collisionMoveRight(colPos, colSize) || hitBomb)
 			{
 				posPlayer.x -= 1;
 				sprite->changeAnimation(STAND_RIGHT);
@@ -295,6 +398,7 @@ void Player::update(int deltaTime)
 	}
 	else
 	{
+		stepSoundTimer = 0;
 		moveAccumX = 0.0f;
 		if(sprite->animation() == MOVE_LEFT)
 		{
@@ -311,18 +415,25 @@ void Player::update(int deltaTime)
 	if(bJumping)
 	{
 		jumpAngle += JUMP_ANGLE_STEP;
-		if(jumpAngle == 180)
+		if(jumpAngle >= 180)
 		{
 			bJumping = false;
 			posPlayer.y = startY;
-			bool onGround = (map != NULL && map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y));
+			bool ignoreJT = (dropDownTimer > 0) ||
+			                Game::instance().getActionPressed(ACTION_DROP_THROUGH);
+			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
+			int correctedY = colPos.y;
+			bool onGround = (map != NULL && map->collisionMoveDown(colPos, colSize, &correctedY, ignoreJT));
+			if(onGround)
+				posPlayer.y = correctedY;
 			if(!onGround && bombs != NULL)
 			{
 				for(size_t i = 0; i < bombs->size(); ++i)
 				{
 					if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 					{
-						if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+						if((*bombs)[i]->collisionDown(colPos, colSize, &posPlayer.y))
 						{
 							onGround = true;
 							break;
@@ -333,29 +444,37 @@ void Player::update(int deltaTime)
 			if(onGround)
 				fallSpeed = 0.0f;
 			else
-				fallSpeed = 6.0f; // Continuïtat suau de la caiguda si s'acaba el salt en l'aire
+				fallSpeed = 2.0f; // Continuïtat suau de la caiguda si s'acaba el salt en l'aire
 		}
 		else
 		{
-			posPlayer.y = int(startY - 96 * sin(3.14159f * jumpAngle / 180.f));
+			posPlayer.y = int(startY - JUMP_HEIGHT * sin(3.14159f * jumpAngle / 180.f));
+			glm::ivec2 colPos(posPlayer.x + 1, posPlayer.y);
+			glm::ivec2 colSize(PLAYER_WIDTH - 2, PLAYER_HEIGHT);
 			if(jumpAngle < 90)
 			{
-				if(map->collisionMoveUp(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+				int correctedY = colPos.y;
+				if(map->collisionMoveUp(colPos, colSize, &correctedY))
 				{
+					posPlayer.y = correctedY;
 					bJumping = false;
 					fallSpeed = 0.0f;
 				}
 			}
 			else if(jumpAngle > 90)
 			{
-				bool hitGround = map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y);
+				bool ignoreJT = false;
+				int correctedY = colPos.y;
+				bool hitGround = map->collisionMoveDown(colPos, colSize, &correctedY, ignoreJT);
+				if(hitGround)
+					posPlayer.y = correctedY;
 				if(!hitGround && bombs != NULL)
 				{
 					for(size_t i = 0; i < bombs->size(); ++i)
 					{
 						if((*bombs)[i] != NULL && (*bombs)[i]->isSolidForPlayer())
 						{
-							if((*bombs)[i]->collisionDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
+							if((*bombs)[i]->collisionDown(colPos, colSize, &posPlayer.y))
 							{
 								hitGround = true;
 								break;
@@ -381,12 +500,13 @@ void Player::update(int deltaTime)
 		if(onGround)
 		{
 			fallSpeed = 0.0f;
-			if(Game::instance().getKey(GLFW_KEY_UP) || Game::instance().getKey(GLFW_KEY_W))
+			if(Game::instance().getActionPressed(ACTION_JUMP))
 			{
 				bJumping = true;
 				jumpAngle = 0;
 				startY = posPlayer.y;
 				fallSpeed = 0.0f;
+				SoundManager::instance().playSound(SFX_STEP_VERTICAL);
 			}
 		}
 	}
@@ -423,7 +543,7 @@ void Player::resetPowerUps()
 	maxBombs = 1;
 	bombRadius = 1;
 	internalLives = 1;
-	moveSpeed = 2.0f;
+	moveSpeed = 1.35f;
 	moveAccumX = 0.0f;
 }
 
@@ -436,10 +556,17 @@ void Player::respawn(const glm::vec2 &pos)
 	invulnerableTime = 0;
 	internalLives = 1;
 	fallSpeed = 0.0f;
+	dropDownTimer = 0;
+	dropThroughTileY = -1;
+	dropCooldown = 0;
 	moveAccumX = 0.0f;
+	facingDirection = 1;
+	stepSoundTimer = 0;
 	setPosition(pos);
-	if(sprite != NULL)
+	if(sprite != NULL) {
+		sprite->setFlippedHorizontally(false);
 		sprite->changeAnimation(IDLE);
+	}
 }
 
 bool Player::hit()
@@ -460,8 +587,6 @@ bool Player::hit()
 	startDying();
 	return true;
 }
-
-
 
 
 

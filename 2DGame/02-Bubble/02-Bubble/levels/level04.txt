@@ -1,38 +1,33 @@
 TILEMAP
-36 33 							-- Size of tile map in tiles
-16 32 							-- Tile size & block size
-images/blocks.png 	-- Tilesheet
-2 2 								-- Number of tiles in tilesheet
-111111111111111111111111111111111111
-11                                11
-11                                11
-11                                11
-11                                11
-11                                11
-11                                11
-11      111111        111111      11
-11                                11
-11                                11
-11                                11
-11                                11
-1111   4444   11111111   4444   1111
-11                                11
-11                                11
-11                                11
-11                                11
-11   3333   1111    1111   3333   11
-11                                11
-11                                11
-11                                11
-11                                11
-1111   2222   11111111   2222   1111
-11                                11
-11                                11
-11                                11
-11                                11
-1111   1111111111111111111111   1111
-11                                11
-11                                11
-11                                11
-11                                11
-111111111111111111111111111111111111
+36 28
+16 16
+images/Map/world_tileset.png
+16 16
+PP99999999999999999999999999999999PP
+PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP
+PP                                PP
+PP                                PP
+PP                                PP
+PP                                PP
+PP          77    77  77          PP
+PP          NN    NN  NN          PP
+PP          DD    DD  NN          PP
+PP          DD    DDDDNN          PP
+PP      AAA7777777777777CCCC666   PP
+PP                                PP
+PP   66666    AAAA   AAAA 66      PP
+PP     D  D               MM      PP
+PP   666666AAAA  66 AAAA  MMAAA   PP
+PP   MM   MM     MM     D MM      PP
+PP  AAM   MMCCC6666666AAAA66666   PP
+PP   MM D MM    D   D             PP
+PPAAAM66 66M  77777777       AAA  PP
+PP            N      N            PP
+PPAAA  AAAACCCN      N66666DDDD666PP
+PP            N      N     DDDD   PP
+PP   AAAAA    N      N 66666666AAAPP
+PP            77777777            PP
+PP6666     AAA        AAA      AAAPP
+PP      D   D                     PP
+PP66666666666666666666666666666666PP
+PPMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMPP

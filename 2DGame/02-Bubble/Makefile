@@ -4,8 +4,8 @@
 
 CXX      ?= g++
 CC       ?= gcc
-CXXFLAGS ?= -std=c++11 -Wall -Wextra -O2 -DGLEW_NO_GLU
-CFLAGS   ?= -Wall -Wextra -O2 -DGLEW_NO_GLU
+CXXFLAGS ?= -std=c++11 -Wall -Wextra -O2 -g -DGLEW_NO_GLU -MMD -MP
+CFLAGS   ?= -Wall -Wextra -O2 -g -DGLEW_NO_GLU -MMD -MP
 
 # Directorios relativos
 SRC_DIR   := 02-Bubble
@@ -49,7 +49,7 @@ GLEW_OBJ  := $(BUILD_DIR)/glew.o
 # Todos los objetos
 ALL_OBJS := $(CPP_OBJS) $(SOIL_OBJS) $(GLEW_OBJ)
 
-.PHONY: all run clean help assets
+.PHONY: all run clean help assets test
 
 all: assets $(TARGET)
 	@echo "=================================================="
@@ -58,11 +58,23 @@ all: assets $(TARGET)
 	@echo " Ejecutar con: make run"
 	@echo "=================================================="
 
+TEST_TARGET := test_features
+TEST_SRC    := ../../tests/test_features.cpp
+TEST_OBJS   := $(filter-out $(BUILD_DIR)/game_main.o,$(ALL_OBJS))
+
+test: assets $(TARGET)
+	@echo "Compilando tests..."
+	@$(CXX) $(CXXFLAGS) $(INCLUDES) $(TEST_SRC) $(TEST_OBJS) $(LIBS) -o $(TEST_TARGET)
+	@echo "Ejecutando tests de funcionalidades..."
+	@./$(TEST_TARGET)
+	@rm -f $(TEST_TARGET)
+
 # Enlaces a recursos en 2DGame/02-Bubble para que se puedan cargar directamente desde aquí
 assets:
 	@if [ ! -e images ]; then ln -s $(SRC_DIR)/images images; fi
 	@if [ ! -e shaders ]; then ln -s $(SRC_DIR)/shaders shaders; fi
 	@if [ ! -e levels ]; then ln -s $(SRC_DIR)/levels levels; fi
+	@if [ ! -e sound ]; then ln -s $(SRC_DIR)/sound sound; fi
 
 $(TARGET): $(ALL_OBJS)
 	@echo "Enlazando ejecutable $@..."
@@ -87,6 +99,8 @@ $(BUILD_DIR)/glew.o: $(GLEW_SRC) | $(BUILD_DIR)
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
+-include $(wildcard $(BUILD_DIR)/*.d)
+
 run: all
 	@echo "Iniciando $(TARGET)..."
 	./$(TARGET)
@@ -94,7 +108,7 @@ run: all
 clean:
 	@echo "Limpiando archivos de compilacion..."
 	@rm -rf $(BUILD_DIR) $(TARGET) $(SRC_DIR)/$(TARGET)
-	@rm -f images shaders levels
+	@rm -f images shaders levels sound
 	@echo "Limpieza completada."
 
 help:
